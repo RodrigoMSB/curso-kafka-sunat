@@ -38,11 +38,11 @@ El CTO te encarga:
 ## Inicio rápido
 
 ```bash
-chmod +x bin/*.sh kafka-cli/*.sh schema-cli/*.sh ksql-cli/*.sh infra/scripts/*.sh
+chmod +x bin/*.sh kafka-cli/*.sh schema-cli/*.sh infra/scripts/*.sh
 bin/start-lab.sh
 ```
 
-⏰ La primera vez tarda 3-5 minutos (descarga de imágenes + arranque de ksqlDB).
+⏰ La primera vez tarda 3-5 minutos (descarga de imágenes + arranque de Schema Registry).
 
 Luego abre `guia/01-schema-registry.md`.
 
@@ -52,9 +52,8 @@ Luego abre `guia/01-schema-registry.md`.
 
 | Servicio | URL | Para qué |
 |---|---|---|
-| Kafbat UI | http://localhost:8090 | Vista general (incluye Schema Registry y ksqlDB) |
+| Kafbat UI | http://localhost:8090 | Vista general (incluye Schema Registry) |
 | Schema Registry | http://localhost:8081 | API REST para schemas |
-| ksqlDB Server | http://localhost:8088 | API REST para queries |
 
 ---
 
@@ -71,9 +70,6 @@ Luego abre `guia/01-schema-registry.md`.
 | Producir cliente Avro | `kafka-cli/produce-cliente-avro.sh` |
 | Flood de pedidos | `kafka-cli/produce-flood-pedidos.sh N` |
 | Consumir Avro | `kafka-cli/consume-avro.sh <topic>` |
-| Abrir ksqlDB CLI | `ksql-cli/ksql-shell.sh` |
-| Mostrar streams/tables | `ksql-cli/show-streams.sh` |
-| Ejecutar archivo .sql | `ksql-cli/execute-file.sh <archivo.sql>` |
 
 ---
 
@@ -82,9 +78,8 @@ Luego abre `guia/01-schema-registry.md`.
 | Tópico | Particiones | RF | Propósito |
 |--------|-------------|----|-----------|
 | `novatech.lab10.pedidos` | 12 | 3 | Stream principal de pedidos (Avro) |
-| `novatech.lab10.clientes` | 3 | 3 | Tabla de clientes para JOINs (Avro) |
+| `novatech.lab10.clientes` | 3 | 3 | Clientes en formato Avro |
 | `_schemas` | 1 | 3 | Interno de Schema Registry |
-| `_confluent-ksql-novatech_*` | varios | 3 | Internos de ksqlDB |
 
 ---
 
@@ -93,27 +88,25 @@ Luego abre `guia/01-schema-registry.md`.
 - Apache Kafka 4.2 (modo KRaft, sin ZooKeeper) — vía `confluentinc/cp-kafka:8.2.0` (Confluent Platform 8.2)
 - **OpenJDK 17** — embebido en las imágenes Docker, no requiere instalación local
 - Confluent Schema Registry 8.2.0
-- ksqlDB Server + CLI 8.2.0
 - Avro como formato de serialización
-- Kafbat UI con integración a Schema Registry y ksqlDB
+- Kafbat UI con integración a Schema Registry
 - Bash + curl + Docker Compose v2
 
 ---
 
 ## Diferencias con Labs anteriores
 
-| Aspecto | Lab 10 |
+| Aspecto | Lab 11 |
 |---|---|
 | Stack | CP 8.2.0 / Kafka 4.2 |
-| Servicios nuevos | Schema Registry, ksqlDB Server, ksqlDB CLI |
+| Servicios nuevos | Schema Registry |
 | RAM Docker | 6 GB |
-| Total contenedores | 7 |
+| Total contenedores | 5 |
 
 ---
 
 ## Honestidad pedagógica
 
-- **ksqlDB no reemplaza Kafka Streams (Java)** en casos complejos. Es una herramienta para analistas y prototipado rápido. Las queries persistent SON aplicaciones Kafka Streams compiladas dinámicamente.
 - **Schema Registry en producción real** se despliega como cluster de alta disponibilidad. Aquí 1 instancia para simplicidad.
 - **Avro vs JSON Schema vs Protobuf**: Avro es el más maduro en el ecosistema Kafka, pero las alternativas también funcionan.
 
