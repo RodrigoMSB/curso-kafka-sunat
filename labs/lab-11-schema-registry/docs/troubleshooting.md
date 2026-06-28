@@ -1,4 +1,4 @@
-# Troubleshooting - Lab 10
+# Troubleshooting - Lab 11
 
 ## Síntoma 1: Schema Registry no responde
 
@@ -145,7 +145,7 @@ bin/stop-lab.sh
 
 ## Síntoma 10: Cambiar puerto Kafbat UI
 
-Ver troubleshooting del Lab 01.
+Si el puerto 8090 está ocupado por otro proceso, libéralo o cambia `KAFBAT_UI_PORT` en `infra/.env`.
 
 ---
 
@@ -240,4 +240,4 @@ es mejor crearlos con el mismo número de particiones desde el inicio.
 
 ---
 
-*Troubleshooting - Lab 10*
+*Troubleshooting - Lab 11*

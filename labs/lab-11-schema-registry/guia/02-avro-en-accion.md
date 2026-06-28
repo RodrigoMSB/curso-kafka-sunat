@@ -130,6 +130,6 @@ kafka-cli/consume-avro.sh novatech.lab10.clientes
 
 ---
 
-## Siguiente paso
+## Cierre del laboratorio
 
-Continúa con [Parte 3: ksqlDB fundamentos](03-ksqldb-fundamentos.md).
+Con esto los equipos de NovaTech tienen su contrato de datos: Schema Registry valida cada mensaje contra el schema Avro y nadie puede romper el formato. Completa el reporte entregable en `plantillas/reporte-entregable.md`.

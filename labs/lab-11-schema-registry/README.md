@@ -1,22 +1,17 @@
-# Lab 10: Schema Registry + ksqlDB - Streaming SQL en tiempo real
+# Lab 11: Schema Registry
 
-**Curso**: Administración de Apache Kafka con Confluent Platform  
-**Capítulo**: 4 - Integración con sistemas externos  
-**Cubre los ítems**: 4, 5 y 6 del Capítulo 4  
-**Duración estimada**: ~120 minutos
+**Curso**: Administración de Confluent Apache Kafka (SUNAT)  
+**Unidad**: 4 - Avanzado, ecosistema, HA/DR y seguridad  
+**Duración estimada**: ~60 minutos
 
 ---
 
 ## Contexto narrativo
 
-Tras el éxito del Lab 09 (los pedidos de NovaTech ahora fluyen automáticamente desde PostgreSQL hacia Kafka), surgen 2 problemas reales:
-
-**Problema 1**: Los equipos de analytics, fulfillment y notificaciones cada uno consume el tópico `pedidos`, pero **no se pusieron de acuerdo en el formato**. Uno espera `cliente_id` (camelCase), otro `clienteId`, otro `client_id`. Cada cambio rompe a alguien. **NovaTech necesita un contrato de datos**.
-
-**Problema 2**: El equipo de analytics quiere consultas en tiempo real: "¿cuántos pedidos por minuto?", "¿cuál es el monto promedio por cliente VIP?", "¿qué pedidos superan los $100K?". **Hoy no tienen forma de hacerlo sin escribir aplicaciones Java/Python**.
+Los equipos de analytics, fulfillment y notificaciones de NovaTech consumen cada uno el tópico `pedidos`, pero **no se pusieron de acuerdo en el formato**. Uno espera `cliente_id` (camelCase), otro `clienteId`, otro `client_id`. Cada cambio rompe a alguien. **NovaTech necesita un contrato de datos**.
 
 El CTO te encarga:
-*"Levanta Schema Registry para que los equipos firmen un contrato Avro y nadie pueda romperlo. Luego levanta ksqlDB para que los analistas hagan SQL contra el stream sin escribir código. Quiero ver pedidos clasificados, agregados y filtrados en tiempo real."*
+*"Levanta Schema Registry para que los equipos firmen un contrato Avro y nadie pueda romperlo. Quiero que ningún productor pueda enviar un mensaje que no respete el schema."*
 
 ---
 
@@ -25,9 +20,6 @@ El CTO te encarga:
 - Por qué los schemas son críticos en Kafka
 - Schema Registry: arquitectura, compatibility modes (BACKWARD, FORWARD, FULL)
 - Avro: schemas vs JSON Schema, ventajas (binario, evolutivo)
-- ksqlDB: STREAM vs TABLE, persistent queries
-- Cómo hacer JOIN entre streams en tiempo real
-- Cómo hacer agregaciones con ventanas de tiempo
 
 ---
 
@@ -38,8 +30,8 @@ El CTO te encarga:
 | Docker Desktop | v4.x |
 | RAM Docker | 6 GB |
 | Disco libre | 10 GB |
-| Puertos libres | 9092, 9093, 9094, 8090, 8081, 8088 |
-| Labs 01-09 detenidos | Sí |
+| Puertos libres | 9092, 9093, 9094, 8090, 8081 |
+| Otro clúster Kafka detenido | Sí |
 
 ---
 
@@ -127,4 +119,4 @@ Luego abre `guia/01-schema-registry.md`.
 
 ---
 
-*Lab 10 - Curso de Administración de Apache Kafka con Confluent Platform*
+*Lab 11 - Curso de Administración de Confluent Apache Kafka (SUNAT)*
