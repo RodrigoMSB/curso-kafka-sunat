@@ -1,4 +1,4 @@
-# Troubleshooting - Lab 02
+# Troubleshooting - Lab 06
 
 ## Problemas comunes y soluciones
 
@@ -85,8 +85,8 @@ kafka-cli/produce-event.sh "test"
 cd ../lab-01-radiografia-cluster
 bin/stop-lab.sh
 
-# Volver y reiniciar el Lab 02
-cd ../lab-02-pubsub-en-accion
+# Volver y reiniciar el Lab 06
+cd ../lab-06-produccion-consumo-cli
 bin/start-lab.sh
 ```
 
@@ -98,4 +98,4 @@ Si el puerto 8090 está ocupado por otro proceso, ver la solución en el `troubl
 
 ---
 
-*Troubleshooting - Lab 02*
+*Troubleshooting - Lab 06*

@@ -134,4 +134,4 @@ Consulta la [guía de troubleshooting](docs/troubleshooting.md) si encuentras pr
 
 ---
 
-*Lab 02 - Curso de Administración de Apache Kafka con Confluent Platform*
+*Lab 06 - Curso de Administración de Confluent Apache Kafka (SUNAT)*
