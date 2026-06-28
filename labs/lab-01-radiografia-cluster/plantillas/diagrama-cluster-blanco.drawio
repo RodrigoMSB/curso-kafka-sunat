@@ -1,0 +1,127 @@
+<mxfile host="app.diagrams.net" modified="2026-01-01T00:00:00.000Z" agent="Lab01" version="21.0.0" type="device">
+  <diagram id="lab01-cluster" name="Arquitectura del Clúster NovaTech - Lab 01">
+    <mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Título -->
+        <mxCell id="title" value="&lt;b&gt;Arquitectura del Clúster NovaTech - Lab 01&lt;/b&gt;&lt;br&gt;Completa este diagrama con los datos que observes" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=16;" vertex="1" parent="1">
+          <mxGeometry x="400" y="20" width="500" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Cluster boundary -->
+        <mxCell id="cluster-boundary" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#666666;strokeWidth=2;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="90" width="1100" height="500" as="geometry" />
+        </mxCell>
+        <mxCell id="cluster-label" value="&lt;b&gt;Clúster Kafka NovaTech&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="100" y="95" width="220" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Broker 1 -->
+        <mxCell id="broker1" value="&lt;b&gt;Broker 1&lt;/b&gt;&lt;br&gt;node.id = 1&lt;br&gt;Puerto: ____&lt;br&gt;&lt;br&gt;¿Es controlador? ___" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;verticalAlign=top;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="120" y="150" width="280" height="280" as="geometry" />
+        </mxCell>
+
+        <!-- Broker 2 -->
+        <mxCell id="broker2" value="&lt;b&gt;Broker 2&lt;/b&gt;&lt;br&gt;node.id = 2&lt;br&gt;Puerto: ____&lt;br&gt;&lt;br&gt;¿Es controlador? ___" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;verticalAlign=top;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="450" y="150" width="280" height="280" as="geometry" />
+        </mxCell>
+
+        <!-- Broker 3 -->
+        <mxCell id="broker3" value="&lt;b&gt;Broker 3&lt;/b&gt;&lt;br&gt;node.id = 3&lt;br&gt;Puerto: ____&lt;br&gt;&lt;br&gt;¿Es controlador? ___" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;verticalAlign=top;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="780" y="150" width="280" height="280" as="geometry" />
+        </mxCell>
+
+        <!-- Controlador KRaft -->
+        <mxCell id="kraft-controller" value="&lt;b&gt;Controlador KRaft&lt;/b&gt;&lt;br&gt;&lt;br&gt;Leader ID: ___&lt;br&gt;Votantes: ___" style="shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=2;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="150" width="180" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Particiones vacías - Broker 1 -->
+        <mxCell id="p0" value="P0: ___" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="140" y="280" width="110" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="p1" value="P1: ___" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="270" y="280" width="110" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Particiones vacías - Broker 2 -->
+        <mxCell id="p2" value="P2: ___" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="470" y="280" width="110" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="p3" value="P3: ___" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="600" y="280" width="110" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Particiones vacías - Broker 3 -->
+        <mxCell id="p4" value="P4: ___" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="800" y="280" width="110" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="p5" value="P5: ___" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="930" y="280" width="110" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Espacio para réplicas -->
+        <mxCell id="replicas-hint" value="Agrega más cajas para las réplicas de cada partición.&lt;br&gt;Colorea: Verde=Líder, Azul=ISR, Rojo=Fuera de sync" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=10;fontColor=#999999;" vertex="1" parent="1">
+          <mxGeometry x="300" y="340" width="350" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Productor GPS -->
+        <mxCell id="producer" value="&lt;b&gt;gps-producer&lt;/b&gt;&lt;br&gt;Generador GPS&lt;br&gt;Estrategia: ___" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="120" y="620" width="200" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Flechas punteadas del productor -->
+        <mxCell id="arrow-prod-1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;dashed=1;strokeColor=#82b366;strokeWidth=2;" edge="1" source="producer" target="broker1" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow-prod-2" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;dashed=1;strokeColor=#82b366;strokeWidth=2;" edge="1" source="producer" target="broker2" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow-prod-3" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;dashed=1;strokeColor=#82b366;strokeWidth=2;" edge="1" source="producer" target="broker3" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Consumidor -->
+        <mxCell id="consumer" value="&lt;b&gt;Consumidor&lt;/b&gt;&lt;br&gt;Grupo: ___&lt;br&gt;Particiones: ___" style="shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=2;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="900" y="620" width="200" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Flechas punteadas del consumidor -->
+        <mxCell id="arrow-cons-1" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;dashed=1;strokeColor=#9673a6;strokeWidth=2;" edge="1" source="broker1" target="consumer" parent="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Kafbat UI -->
+        <mxCell id="kafbat-ui" value="&lt;b&gt;Kafbat UI&lt;/b&gt;&lt;br&gt;http://localhost:8090" style="shape=mxgraph.cisco.management;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;strokeWidth=2;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="350" width="180" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Leyenda -->
+        <mxCell id="legend-title" value="&lt;b&gt;Leyenda&lt;/b&gt;" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="500" width="80" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-leader" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="530" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-leader-text" value="Partición Líder" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1225" y="530" width="100" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-isr" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="555" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-isr-text" value="Réplica ISR" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1225" y="555" width="80" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-oos" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="1200" y="580" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend-oos-text" value="Fuera de servicio" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1225" y="580" width="110" height="20" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

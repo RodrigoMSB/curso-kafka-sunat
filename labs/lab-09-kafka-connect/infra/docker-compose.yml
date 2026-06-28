@@ -1,0 +1,232 @@
+# ============================================================
+# NovaTech Logistics - Lab 09: Kafka Connect con PostgreSQL
+# Stack: 3 brokers cp-kafka:8.2.0 + Kafbat UI + PostgreSQL 16 + Kafka Connect 8.2.0
+# Volvemos a CP 8.2.0 (Kafka 4.2) desde el Lab 08 que usaba 7.9.0 por requisito de CC Legacy.
+# ============================================================
+
+services:
+  # ═══════════════════════════════════════════════════════════
+  # 3 BROKERS Kafka 4.2 con cp-kafka (modo KRaft combinado)
+  # ═══════════════════════════════════════════════════════════
+  kafka-broker-1:
+    image: confluentinc/cp-kafka:8.2.0
+    hostname: kafka-broker-1
+    container_name: kafka-broker-1
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CLUSTER_ID: "novatech-lab09-cluster-9091"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka-broker-1:39092,2@kafka-broker-2:39093,3@kafka-broker-3:39094"
+      KAFKA_LISTENERS: "PLAINTEXT://:29092,EXTERNAL://:9092,CONTROLLER://:39092"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-broker-1:29092,EXTERNAL://localhost:9092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka-broker-1-data:/var/lib/kafka/data
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:29092 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 30s
+
+  kafka-broker-2:
+    image: confluentinc/cp-kafka:8.2.0
+    hostname: kafka-broker-2
+    container_name: kafka-broker-2
+    ports:
+      - "9093:9093"
+    environment:
+      KAFKA_NODE_ID: 2
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CLUSTER_ID: "novatech-lab09-cluster-9091"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka-broker-1:39092,2@kafka-broker-2:39093,3@kafka-broker-3:39094"
+      KAFKA_LISTENERS: "PLAINTEXT://:29093,EXTERNAL://:9093,CONTROLLER://:39093"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-broker-2:29093,EXTERNAL://localhost:9093"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka-broker-2-data:/var/lib/kafka/data
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:29093 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 30s
+
+  kafka-broker-3:
+    image: confluentinc/cp-kafka:8.2.0
+    hostname: kafka-broker-3
+    container_name: kafka-broker-3
+    ports:
+      - "9094:9094"
+    environment:
+      KAFKA_NODE_ID: 3
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CLUSTER_ID: "novatech-lab09-cluster-9091"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka-broker-1:39092,2@kafka-broker-2:39093,3@kafka-broker-3:39094"
+      KAFKA_LISTENERS: "PLAINTEXT://:29094,EXTERNAL://:9094,CONTROLLER://:39094"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-broker-3:29094,EXTERNAL://localhost:9094"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka-broker-3-data:/var/lib/kafka/data
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:29094 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 30s
+
+  # ═══════════════════════════════════════════════════════════
+  # KAFBAT UI con pestaña de Kafka Connect
+  # ═══════════════════════════════════════════════════════════
+  kafbat-ui:
+    image: ghcr.io/kafbat/kafka-ui:latest
+    hostname: kafbat-ui
+    container_name: kafbat-ui
+    ports:
+      - "8090:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: novatech-lab09-cluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-broker-1:29092,kafka-broker-2:29093,kafka-broker-3:29094
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_NAME: connect-novatech
+      KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS: http://kafka-connect:8083
+      DYNAMIC_CONFIG_ENABLED: "true"
+    depends_on:
+      kafka-broker-1:
+        condition: service_healthy
+      kafka-broker-2:
+        condition: service_healthy
+      kafka-broker-3:
+        condition: service_healthy
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════════════════════
+  # PostgreSQL con datos seed (tabla pedidos)
+  # ═══════════════════════════════════════════════════════════
+  postgres:
+    image: postgres:16-alpine
+    hostname: postgres
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: novatech
+      POSTGRES_PASSWORD: novatech_secret
+      POSTGRES_DB: novatech_orders
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init-novatech.sql:/docker-entrypoint-initdb.d/init-novatech.sql:ro
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U novatech -d novatech_orders"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ═══════════════════════════════════════════════════════════
+  # Kafka Connect (modo distributed)
+  # Instala plugin JDBC y driver PostgreSQL al arrancar
+  # ═══════════════════════════════════════════════════════════
+  kafka-connect:
+    image: confluentinc/cp-kafka-connect:8.2.0
+    hostname: kafka-connect
+    container_name: kafka-connect
+    depends_on:
+      kafka-broker-1:
+        condition: service_healthy
+      kafka-broker-2:
+        condition: service_healthy
+      kafka-broker-3:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8083:8083"
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: "kafka-broker-1:29092,kafka-broker-2:29093,kafka-broker-3:29094"
+      CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect"
+      CONNECT_GROUP_ID: "connect-novatech"
+      CONNECT_CONFIG_STORAGE_TOPIC: "_connect-configs"
+      CONNECT_OFFSET_STORAGE_TOPIC: "_connect-offsets"
+      CONNECT_STATUS_STORAGE_TOPIC: "_connect-status"
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 3
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 3
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 3
+      CONNECT_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_PLUGIN_PATH: "/usr/share/java,/usr/share/confluent-hub-components"
+    command:
+      - bash
+      - -c
+      - |
+        echo "Instalando connector JDBC..."
+        confluent-hub install --no-prompt confluentinc/kafka-connect-jdbc:10.9.0
+        echo "Descargando driver PostgreSQL..."
+        curl -sSL -o /usr/share/java/kafka/postgresql-42.7.4.jar \
+          https://repo1.maven.org/maven2/org/postgresql/postgresql/42.7.4/postgresql-42.7.4.jar
+        echo "Iniciando Kafka Connect..."
+        /etc/confluent/docker/run
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8083/connectors || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 90s
+
+volumes:
+  kafka-broker-1-data:
+  kafka-broker-2-data:
+  kafka-broker-3-data:
+  postgres-data:
+
+networks:
+  default:
+    name: novatech-lab09-net
+    driver: bridge

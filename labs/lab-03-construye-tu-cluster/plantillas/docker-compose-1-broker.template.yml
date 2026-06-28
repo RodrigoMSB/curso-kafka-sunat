@@ -1,0 +1,57 @@
+# ────────────────────────────────────────────────────────────────────
+# Plantilla: 1 broker Kafka en modo KRaft
+# ────────────────────────────────────────────────────────────────────
+# Lee la guía 02 (guia/02-mi-primer-broker.md) ANTES de completar este archivo.
+#
+# Tu trabajo:
+#   1. Reemplaza cada {{TODO}} por el valor correcto
+#   2. NO copies de las soluciones todavía (son para verificar al final)
+#   3. Cuando esté listo, copia este archivo a mi-cluster/docker-compose.yml
+# ────────────────────────────────────────────────────────────────────
+
+# NovaTech Logistics - Lab 03 / Etapa 1: Un solo broker
+
+services:
+  kafka-broker:
+    image: confluentinc/cp-kafka:{{TODO_VERSION}}      # Pista: la versión está en el README
+    hostname: kafka-broker
+    container_name: kafka-broker
+    ports:
+      - "{{TODO_HOST_PORT}}:9092"                       # Puerto que expones al host
+    environment:
+      # Identificación del nodo
+      KAFKA_NODE_ID: {{TODO_NODE_ID}}                   # Pista: número entero único, normalmente 1
+
+      # Roles que cumple este nodo (en KRaft, un nodo puede ser broker, controller o ambos)
+      KAFKA_PROCESS_ROLES: '{{TODO_ROLES}}'             # Pista: para 1 broker solitario, debe cumplir AMBOS roles
+
+      # Quorum de controladores: lista de NODE_IDs que pueden ser elegidos controlador
+      # Formato: NODE_ID@HOSTNAME:PORT_CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '{{TODO_QUORUM_VOTERS}}'
+
+      # Listeners: nombres y puertos donde el broker escucha
+      KAFKA_LISTENERS: '{{TODO_LISTENERS}}'             # Pista: incluye PLAINTEXT y CONTROLLER
+      KAFKA_ADVERTISED_LISTENERS: '{{TODO_ADV_LISTENERS}}'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: '{{TODO_PROTOCOL_MAP}}'
+      KAFKA_CONTROLLER_LISTENER_NAMES: '{{TODO_CTRL_NAMES}}'
+      KAFKA_INTER_BROKER_LISTENER_NAME: '{{TODO_INTER_BROKER}}'
+
+      # ID del clúster (lo generas con: kafka-cli/generate-cluster-id.sh)
+      CLUSTER_ID: '{{TODO_CLUSTER_ID}}'
+
+      # Configuración para clúster de UN SOLO broker
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: {{TODO_RF_OFFSETS}}     # Pista: con 1 broker no puede ser 3
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: {{TODO_RF_TXN}}
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_DEFAULT_REPLICATION_FACTOR: {{TODO_RF_DEFAULT}}
+      KAFKA_MIN_INSYNC_REPLICAS: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+
+      # Storage
+      KAFKA_LOG_DIRS: '/var/lib/kafka/data'
+
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+
+volumes:
+  kafka-data:

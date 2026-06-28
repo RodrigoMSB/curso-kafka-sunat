@@ -1,0 +1,247 @@
+# ============================================================
+# NovaTech Logistics - Lab 08: Monitoreo profesional con Confluent Control Center
+# ============================================================
+# Stack: cp-server:7.9.0 + cp-enterprise-control-center:7.9.0 + Kafbat UI
+#
+# NOTA PEDAGÓGICA: Este lab usa CC Legacy 7.9.0 con arquitectura tradicional
+# (ConfluentMetricsReporter -> tópico _confluent-metrics -> Control Center).
+#
+# Confluent lanzó CC Next-Gen 2.x en 2025 con arquitectura basada en
+# Prometheus + OTLP + Alertmanager. Esa versión requiere setup más complejo
+# y documentación parca (el escapado de variables Telemetry tiene quirks
+# en Docker). En este lab usamos la versión Legacy por simplicidad operacional;
+# los conceptos de monitoreo son idénticos.
+#
+# Optimizado para enseñanza con 6-8 GB Docker RAM.
+# ============================================================
+
+services:
+  # ═══════════════════════════════════════════════════════════
+  # 3 BROKERS Kafka 3.7 con cp-server (modo KRaft combinado)
+  # ═══════════════════════════════════════════════════════════
+  kafka-broker-1:
+    image: confluentinc/cp-server:7.9.0
+    hostname: kafka-broker-1
+    container_name: kafka-broker-1
+    ports:
+      - "9092:9092"
+      - "9101:9101"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
+      KAFKA_LISTENERS: "PLAINTEXT://kafka-broker-1:29092,CONTROLLER://kafka-broker-1:39092,PLAINTEXT_HOST://0.0.0.0:9092"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-broker-1:29092,PLAINTEXT_HOST://localhost:9092"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka-broker-1:39092,2@kafka-broker-2:39093,3@kafka-broker-3:39094"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: kafka-broker-1
+      CLUSTER_ID: "novatech-lab08-cluster-7421"
+      # ── ConfluentMetricsReporter (clave para CC Legacy) ──
+      KAFKA_METRIC_REPORTERS: "io.confluent.metrics.reporter.ConfluentMetricsReporter"
+      KAFKA_CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: "kafka-broker-1:29092,kafka-broker-2:29093,kafka-broker-3:29094"
+      KAFKA_CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 3
+      KAFKA_CONFLUENT_METRICS_ENABLE: "true"
+      KAFKA_CONFLUENT_SUPPORT_CUSTOMER_ID: "anonymous"
+      # ── License para cp-server (placeholder de evaluación) ──
+      KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 3
+    volumes:
+      - kafka-broker-1-data:/var/lib/kafka/data
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "kafka-broker-1:29092"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+
+  kafka-broker-2:
+    image: confluentinc/cp-server:7.9.0
+    hostname: kafka-broker-2
+    container_name: kafka-broker-2
+    ports:
+      - "9093:9093"
+      - "9102:9102"
+    environment:
+      KAFKA_NODE_ID: 2
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
+      KAFKA_LISTENERS: "PLAINTEXT://kafka-broker-2:29093,CONTROLLER://kafka-broker-2:39093,PLAINTEXT_HOST://0.0.0.0:9093"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-broker-2:29093,PLAINTEXT_HOST://localhost:9093"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka-broker-1:39092,2@kafka-broker-2:39093,3@kafka-broker-3:39094"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_JMX_PORT: 9102
+      KAFKA_JMX_HOSTNAME: kafka-broker-2
+      CLUSTER_ID: "novatech-lab08-cluster-7421"
+      KAFKA_METRIC_REPORTERS: "io.confluent.metrics.reporter.ConfluentMetricsReporter"
+      KAFKA_CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: "kafka-broker-1:29092,kafka-broker-2:29093,kafka-broker-3:29094"
+      KAFKA_CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 3
+      KAFKA_CONFLUENT_METRICS_ENABLE: "true"
+      KAFKA_CONFLUENT_SUPPORT_CUSTOMER_ID: "anonymous"
+      KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 3
+    volumes:
+      - kafka-broker-2-data:/var/lib/kafka/data
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "kafka-broker-2:29093"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+
+  kafka-broker-3:
+    image: confluentinc/cp-server:7.9.0
+    hostname: kafka-broker-3
+    container_name: kafka-broker-3
+    ports:
+      - "9094:9094"
+      - "9103:9103"
+    environment:
+      KAFKA_NODE_ID: 3
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
+      KAFKA_LISTENERS: "PLAINTEXT://kafka-broker-3:29094,CONTROLLER://kafka-broker-3:39094,PLAINTEXT_HOST://0.0.0.0:9094"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-broker-3:29094,PLAINTEXT_HOST://localhost:9094"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka-broker-1:39092,2@kafka-broker-2:39093,3@kafka-broker-3:39094"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_JMX_PORT: 9103
+      KAFKA_JMX_HOSTNAME: kafka-broker-3
+      CLUSTER_ID: "novatech-lab08-cluster-7421"
+      KAFKA_METRIC_REPORTERS: "io.confluent.metrics.reporter.ConfluentMetricsReporter"
+      KAFKA_CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: "kafka-broker-1:29092,kafka-broker-2:29093,kafka-broker-3:29094"
+      KAFKA_CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 3
+      KAFKA_CONFLUENT_METRICS_ENABLE: "true"
+      KAFKA_CONFLUENT_SUPPORT_CUSTOMER_ID: "anonymous"
+      KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 3
+    volumes:
+      - kafka-broker-3-data:/var/lib/kafka/data
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "kafka-broker-3:29094"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+
+  # ═══════════════════════════════════════════════════════════
+  # PRODUCTOR GPS (mantener para hilo narrativo NovaTech)
+  # ═══════════════════════════════════════════════════════════
+  gps-producer:
+    image: confluentinc/cp-server:7.9.0
+    hostname: gps-producer
+    container_name: gps-producer
+    entrypoint: ["/bin/bash", "/scripts/gps-data-generator.sh"]
+    environment:
+      BOOTSTRAP_SERVER: kafka-broker-1:29092
+      TOPIC_NAME: novatech.fleet.gps
+    volumes:
+      - ./scripts/gps-data-generator.sh:/scripts/gps-data-generator.sh:ro
+      - ./scripts/init-topics.sh:/scripts/init-topics.sh:ro
+    depends_on:
+      kafka-broker-1:
+        condition: service_healthy
+      kafka-broker-2:
+        condition: service_healthy
+      kafka-broker-3:
+        condition: service_healthy
+    networks:
+      - default
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════════════════════
+  # KAFBAT UI (mantener para comparativa con CC)
+  # ═══════════════════════════════════════════════════════════
+  kafbat-ui:
+    image: ghcr.io/kafbat/kafka-ui:latest
+    hostname: kafbat-ui
+    container_name: kafbat-ui
+    ports:
+      - "8090:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: novatech-lab08-cluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-broker-1:29092,kafka-broker-2:29093,kafka-broker-3:29094
+      DYNAMIC_CONFIG_ENABLED: "true"
+    depends_on:
+      kafka-broker-1:
+        condition: service_healthy
+      kafka-broker-2:
+        condition: service_healthy
+      kafka-broker-3:
+        condition: service_healthy
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════════════════════
+  # CONFLUENT CONTROL CENTER (Legacy 7.9.0)
+  # ═══════════════════════════════════════════════════════════
+  control-center:
+    image: confluentinc/cp-enterprise-control-center:7.9.0
+    hostname: control-center
+    container_name: control-center
+    depends_on:
+      kafka-broker-1:
+        condition: service_healthy
+      kafka-broker-2:
+        condition: service_healthy
+      kafka-broker-3:
+        condition: service_healthy
+    ports:
+      - "9021:9021"
+    environment:
+      CONTROL_CENTER_BOOTSTRAP_SERVERS: "kafka-broker-1:29092,kafka-broker-2:29093,kafka-broker-3:29094"
+      CONTROL_CENTER_REPLICATION_FACTOR: 3
+      CONTROL_CENTER_INTERNAL_TOPICS_PARTITIONS: 1
+      CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
+      CONFLUENT_METRICS_TOPIC_REPLICATION: 3
+      CONTROL_CENTER_COMMAND_TOPIC_REPLICATION: 3
+      PORT: 9021
+    networks:
+      - default
+    restart: unless-stopped
+
+volumes:
+  kafka-broker-1-data:
+  kafka-broker-2-data:
+  kafka-broker-3-data:
+
+networks:
+  default:
+    name: novatech-lab08-net
+    driver: bridge

@@ -1,0 +1,19 @@
+{
+  "name": "novatech-source-pedidos",
+  "config": {
+    "connector.class": "io.confluent.connect.jdbc.JdbcSourceConnector",
+    "tasks.max": "1",
+    "connection.url": "jdbc:postgresql://postgres:5432/novatech_orders",
+    "connection.user": "novatech",
+    "connection.password": "novatech_secret",
+    "table.whitelist": "pedidos",
+    "mode": "incrementing",
+    "incrementing.column.name": "id",
+    "topic.prefix": "novatech.lab09.",
+    "poll.interval.ms": "5000",
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "false",
+    "value.converter.schemas.enable": "false"
+  }
+}

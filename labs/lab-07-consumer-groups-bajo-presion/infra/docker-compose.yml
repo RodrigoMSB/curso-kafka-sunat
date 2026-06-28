@@ -1,0 +1,186 @@
+# ============================================================
+# NovaTech Logistics - Lab 07: Consumer groups bajo presión
+# Clúster Kafka 4.2 (KRaft) con 3 brokers + Kafbat UI + productor GPS simulado
+# ============================================================
+
+networks:
+  novatech-network:
+    driver: bridge
+    name: novatech-network
+
+volumes:
+  kafka-broker-1-data:
+  kafka-broker-2-data:
+  kafka-broker-3-data:
+
+services:
+  # ──────────────────────────────────────────────
+  # Broker 1 - KRaft (broker + controller)
+  # ──────────────────────────────────────────────
+  kafka-broker-1:
+    image: confluentinc/cp-kafka:${KAFKA_VERSION}
+    hostname: kafka-broker-1
+    container_name: kafka-broker-1
+    ports:
+      - "${BROKER1_EXTERNAL_PORT}:${BROKER1_EXTERNAL_PORT}"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CLUSTER_ID: ${CLUSTER_ID}
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-broker-1:${BROKER1_CONTROLLER_PORT},2@kafka-broker-2:${BROKER2_CONTROLLER_PORT},3@kafka-broker-3:${BROKER3_CONTROLLER_PORT}
+      KAFKA_LISTENERS: PLAINTEXT://:${BROKER1_INTERNAL_PORT},EXTERNAL://:${BROKER1_EXTERNAL_PORT},CONTROLLER://:${BROKER1_CONTROLLER_PORT}
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker-1:${BROKER1_INTERNAL_PORT},EXTERNAL://localhost:${BROKER1_EXTERNAL_PORT}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+    volumes:
+      - kafka-broker-1-data:/var/lib/kafka/data
+    networks:
+      - novatech-network
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:${BROKER1_INTERNAL_PORT} > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 30s
+
+  # ──────────────────────────────────────────────
+  # Broker 2 - KRaft (broker + controller)
+  # ──────────────────────────────────────────────
+  kafka-broker-2:
+    image: confluentinc/cp-kafka:${KAFKA_VERSION}
+    hostname: kafka-broker-2
+    container_name: kafka-broker-2
+    ports:
+      - "${BROKER2_EXTERNAL_PORT}:${BROKER2_EXTERNAL_PORT}"
+    environment:
+      KAFKA_NODE_ID: 2
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CLUSTER_ID: ${CLUSTER_ID}
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-broker-1:${BROKER1_CONTROLLER_PORT},2@kafka-broker-2:${BROKER2_CONTROLLER_PORT},3@kafka-broker-3:${BROKER3_CONTROLLER_PORT}
+      KAFKA_LISTENERS: PLAINTEXT://:${BROKER2_INTERNAL_PORT},EXTERNAL://:${BROKER2_EXTERNAL_PORT},CONTROLLER://:${BROKER2_CONTROLLER_PORT}
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker-2:${BROKER2_INTERNAL_PORT},EXTERNAL://localhost:${BROKER2_EXTERNAL_PORT}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+    volumes:
+      - kafka-broker-2-data:/var/lib/kafka/data
+    networks:
+      - novatech-network
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:${BROKER2_INTERNAL_PORT} > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 30s
+
+  # ──────────────────────────────────────────────
+  # Broker 3 - KRaft (broker + controller)
+  # ──────────────────────────────────────────────
+  kafka-broker-3:
+    image: confluentinc/cp-kafka:${KAFKA_VERSION}
+    hostname: kafka-broker-3
+    container_name: kafka-broker-3
+    ports:
+      - "${BROKER3_EXTERNAL_PORT}:${BROKER3_EXTERNAL_PORT}"
+    environment:
+      KAFKA_NODE_ID: 3
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CLUSTER_ID: ${CLUSTER_ID}
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-broker-1:${BROKER1_CONTROLLER_PORT},2@kafka-broker-2:${BROKER2_CONTROLLER_PORT},3@kafka-broker-3:${BROKER3_CONTROLLER_PORT}
+      KAFKA_LISTENERS: PLAINTEXT://:${BROKER3_INTERNAL_PORT},EXTERNAL://:${BROKER3_EXTERNAL_PORT},CONTROLLER://:${BROKER3_CONTROLLER_PORT}
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-broker-3:${BROKER3_INTERNAL_PORT},EXTERNAL://localhost:${BROKER3_EXTERNAL_PORT}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+    volumes:
+      - kafka-broker-3-data:/var/lib/kafka/data
+    networks:
+      - novatech-network
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:${BROKER3_INTERNAL_PORT} > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 30s
+
+  # ──────────────────────────────────────────────
+  # Kafbat UI - Interfaz web open-source para Kafka
+  # Visualiza brokers, tópicos, particiones, ISR y mensajes en vivo
+  # ──────────────────────────────────────────────
+  kafbat-ui:
+    image: ghcr.io/kafbat/kafka-ui:${KAFBAT_UI_VERSION}
+    hostname: kafbat-ui
+    container_name: kafbat-ui
+    ports:
+      - "${KAFBAT_UI_PORT}:8080"
+    environment:
+      # Pre-configura el clúster NovaTech para que aparezca al abrir la UI
+      KAFKA_CLUSTERS_0_NAME: novatech-cluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-broker-1:${BROKER1_INTERNAL_PORT},kafka-broker-2:${BROKER2_INTERNAL_PORT},kafka-broker-3:${BROKER3_INTERNAL_PORT}
+      DYNAMIC_CONFIG_ENABLED: "true"
+    depends_on:
+      kafka-broker-1:
+        condition: service_healthy
+      kafka-broker-2:
+        condition: service_healthy
+      kafka-broker-3:
+        condition: service_healthy
+    networks:
+      - novatech-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  # ──────────────────────────────────────────────
+  # Productor GPS (genera datos simulados)
+  # ──────────────────────────────────────────────
+  gps-producer:
+    image: confluentinc/cp-kafka:${KAFKA_VERSION}
+    hostname: gps-producer
+    container_name: gps-producer
+    entrypoint: ["/bin/bash", "/scripts/gps-data-generator.sh"]
+    environment:
+      BOOTSTRAP_SERVER: kafka-broker-1:${BROKER1_INTERNAL_PORT}
+      TOPIC_NAME: ${TOPIC_NAME}
+    volumes:
+      - ./scripts/gps-data-generator.sh:/scripts/gps-data-generator.sh:ro
+      - ./scripts/init-topics.sh:/scripts/init-topics.sh:ro
+    depends_on:
+      kafka-broker-1:
+        condition: service_healthy
+      kafka-broker-2:
+        condition: service_healthy
+      kafka-broker-3:
+        condition: service_healthy
+    networks:
+      - novatech-network
+    restart: unless-stopped

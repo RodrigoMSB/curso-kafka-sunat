@@ -1,0 +1,230 @@
+# ============================================================
+# NovaTech Logistics - Lab 11: Monitoreo con Prometheus + Grafana
+# Stack: 3 brokers cp-kafka:8.2.0 con JMX Exporter + Kafbat + Prometheus + Grafana
+#
+# NOTA PEDAGÓGICA: la parte de Confluent Cloud del temario se entrega como
+# tour visual (guía 04) usando capturas reales del instructor. Esto evita
+# pedir tarjeta de crédito personal a los alumnos. Ver docs/notas-instructor.md.
+# ============================================================
+
+services:
+  # ═══════════════════════════════════════════════════════════
+  # 3 BROKERS Kafka 4.2 con JMX Exporter como Java agent
+  # ═══════════════════════════════════════════════════════════
+  kafka-broker-1:
+    image: confluentinc/cp-kafka:8.2.0
+    hostname: kafka-broker-1
+    container_name: kafka-broker-1
+    ports:
+      - "9092:9092"
+      - "7071:7071"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CLUSTER_ID: "novatech-lab11-cluster-1111"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka-broker-1:39092,2@kafka-broker-2:39093,3@kafka-broker-3:39094"
+      KAFKA_LISTENERS: "PLAINTEXT://:29092,EXTERNAL://:9092,CONTROLLER://:39092"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-broker-1:29092,EXTERNAL://localhost:9092"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      # ── JMX Exporter como Java agent ──
+      KAFKA_OPTS: "-javaagent:/opt/jmx-exporter/jmx_prometheus_javaagent.jar=7071:/opt/jmx-exporter/kafka-broker.yml"
+    volumes:
+      - kafka-broker-1-data:/var/lib/kafka/data
+      - ./jmx-exporter/jmx_prometheus_javaagent.jar:/opt/jmx-exporter/jmx_prometheus_javaagent.jar:ro
+      - ./jmx-exporter/kafka-broker.yml:/opt/jmx-exporter/kafka-broker.yml:ro
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3</dev/tcp/localhost/29092' || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 30s
+
+  kafka-broker-2:
+    image: confluentinc/cp-kafka:8.2.0
+    hostname: kafka-broker-2
+    container_name: kafka-broker-2
+    ports:
+      - "9093:9093"
+      - "7072:7071"
+    environment:
+      KAFKA_NODE_ID: 2
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CLUSTER_ID: "novatech-lab11-cluster-1111"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka-broker-1:39092,2@kafka-broker-2:39093,3@kafka-broker-3:39094"
+      KAFKA_LISTENERS: "PLAINTEXT://:29093,EXTERNAL://:9093,CONTROLLER://:39093"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-broker-2:29093,EXTERNAL://localhost:9093"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OPTS: "-javaagent:/opt/jmx-exporter/jmx_prometheus_javaagent.jar=7071:/opt/jmx-exporter/kafka-broker.yml"
+    volumes:
+      - kafka-broker-2-data:/var/lib/kafka/data
+      - ./jmx-exporter/jmx_prometheus_javaagent.jar:/opt/jmx-exporter/jmx_prometheus_javaagent.jar:ro
+      - ./jmx-exporter/kafka-broker.yml:/opt/jmx-exporter/kafka-broker.yml:ro
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3</dev/tcp/localhost/29093' || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 30s
+
+  kafka-broker-3:
+    image: confluentinc/cp-kafka:8.2.0
+    hostname: kafka-broker-3
+    container_name: kafka-broker-3
+    ports:
+      - "9094:9094"
+      - "7073:7071"
+    environment:
+      KAFKA_NODE_ID: 3
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CLUSTER_ID: "novatech-lab11-cluster-1111"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka-broker-1:39092,2@kafka-broker-2:39093,3@kafka-broker-3:39094"
+      KAFKA_LISTENERS: "PLAINTEXT://:29094,EXTERNAL://:9094,CONTROLLER://:39094"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka-broker-3:29094,EXTERNAL://localhost:9094"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OPTS: "-javaagent:/opt/jmx-exporter/jmx_prometheus_javaagent.jar=7071:/opt/jmx-exporter/kafka-broker.yml"
+    volumes:
+      - kafka-broker-3-data:/var/lib/kafka/data
+      - ./jmx-exporter/jmx_prometheus_javaagent.jar:/opt/jmx-exporter/jmx_prometheus_javaagent.jar:ro
+      - ./jmx-exporter/kafka-broker.yml:/opt/jmx-exporter/kafka-broker.yml:ro
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3</dev/tcp/localhost/29094' || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+      start_period: 30s
+
+  # ═══════════════════════════════════════════════════════════
+  # KAFBAT UI (comparativa con Grafana)
+  # ═══════════════════════════════════════════════════════════
+  kafbat-ui:
+    image: ghcr.io/kafbat/kafka-ui:latest
+    hostname: kafbat-ui
+    container_name: kafbat-ui
+    ports:
+      - "8090:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: novatech-lab11-cluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka-broker-1:29092,kafka-broker-2:29093,kafka-broker-3:29094
+      DYNAMIC_CONFIG_ENABLED: "true"
+    depends_on:
+      kafka-broker-1:
+        condition: service_healthy
+      kafka-broker-2:
+        condition: service_healthy
+      kafka-broker-3:
+        condition: service_healthy
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════════════════════
+  # PROMETHEUS (open-source)
+  # ═══════════════════════════════════════════════════════════
+  prometheus:
+    image: prom/prometheus:v3.0.1
+    hostname: prometheus
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--web.enable-lifecycle"
+    depends_on:
+      kafka-broker-1:
+        condition: service_healthy
+      kafka-broker-2:
+        condition: service_healthy
+      kafka-broker-3:
+        condition: service_healthy
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:9090/-/healthy || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # ═══════════════════════════════════════════════════════════
+  # GRAFANA (open-source) con dashboard pre-cargado
+  # ═══════════════════════════════════════════════════════════
+  grafana:
+    image: grafana/grafana:11.4.0
+    hostname: grafana
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  kafka-broker-1-data:
+  kafka-broker-2-data:
+  kafka-broker-3-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  default:
+    name: novatech-lab11-net
+    driver: bridge

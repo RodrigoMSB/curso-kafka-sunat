@@ -1,0 +1,81 @@
+# ────────────────────────────────────────────────────────────────────
+# Plantilla: 3 brokers Kafka en modo KRaft (con quorum)
+# ────────────────────────────────────────────────────────────────────
+# Lee la guía 03 (guia/03-creciendo-a-tres-brokers.md) ANTES de completar.
+#
+# Tu trabajo:
+#   1. Replicar el patrón del broker 1 para los brokers 2 y 3
+#   2. Configurar el QUORUM_VOTERS con los 3 nodos
+#   3. Asignar puertos host únicos a cada broker (9092, 9093, 9094)
+#   4. Asignar puertos CONTROLLER internos únicos (39092, 39093, 39094)
+# ────────────────────────────────────────────────────────────────────
+
+# NovaTech Logistics - Lab 03 / Etapa 2: Tres brokers con quorum KRaft
+
+services:
+  kafka-broker-1:
+    image: confluentinc/cp-kafka:8.2.0
+    hostname: kafka-broker-1
+    container_name: kafka-broker-1
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+
+      # ── QUORUM (igual en los 3 brokers) ──
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '{{TODO_VOTERS_3_NODES}}'
+      # Pista: formato 1@kafka-broker-1:39092,2@kafka-broker-2:39093,3@kafka-broker-3:39094
+
+      # ── LISTENERS ──
+      KAFKA_LISTENERS: 'PLAINTEXT://kafka-broker-1:29092,CONTROLLER://kafka-broker-1:39092,EXTERNAL://0.0.0.0:9092'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka-broker-1:29092,EXTERNAL://localhost:9092'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+
+      CLUSTER_ID: '{{TODO_CLUSTER_ID}}'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+      KAFKA_MIN_INSYNC_REPLICAS: 2
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_LOG_DIRS: '/var/lib/kafka/data'
+    volumes:
+      - kafka-broker-1-data:/var/lib/kafka/data
+    networks:
+      - mi-cluster-network
+
+  # ────────────────────────────────────────────────
+  # TU TURNO: Replica el bloque de arriba para los brokers 2 y 3
+  # ────────────────────────────────────────────────
+  # Pistas:
+  #   - kafka-broker-2:
+  #       NODE_ID = 2
+  #       host port = 9093
+  #       CONTROLLER port = 39093
+  #       PLAINTEXT port = 29093
+  #
+  #   - kafka-broker-3:
+  #       NODE_ID = 3
+  #       host port = 9094
+  #       CONTROLLER port = 39094
+  #       PLAINTEXT port = 29094
+  #
+  # IMPORTANTE: el CLUSTER_ID y el QUORUM_VOTERS deben ser EXACTAMENTE iguales en los 3 brokers.
+
+  # kafka-broker-2:
+  #   ...
+
+  # kafka-broker-3:
+  #   ...
+
+volumes:
+  kafka-broker-1-data:
+  # kafka-broker-2-data:
+  # kafka-broker-3-data:
+
+networks:
+  mi-cluster-network:
+    driver: bridge

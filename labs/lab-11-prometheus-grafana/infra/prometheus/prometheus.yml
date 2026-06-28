@@ -1,0 +1,19 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Auto-scrape: Prometheus monitorea a sí mismo
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # JMX Exporter de los 3 brokers (puerto interno 7071)
+  - job_name: "kafka-brokers"
+    static_configs:
+      - targets:
+          - "kafka-broker-1:7071"
+          - "kafka-broker-2:7071"
+          - "kafka-broker-3:7071"
+        labels:
+          cluster: "novatech-lab11"

@@ -1,0 +1,32 @@
+# ---------------------------------------------------------------------------
+# macOS / artefactos del sistema
+# ---------------------------------------------------------------------------
+**/.DS_Store
+**/__MACOSX/
+
+# ---------------------------------------------------------------------------
+# Lab 03 — "mi-cluster": directorio de trabajo del alumno.
+# Se versiona solo el placeholder y el README; nada de lo que genere el alumno.
+# ---------------------------------------------------------------------------
+**/mi-cluster/*
+!**/mi-cluster/.gitkeep
+!**/mi-cluster/README.md
+
+# ---------------------------------------------------------------------------
+# Lab 12 — material criptográfico. CRÍTICO: NO debe viajar al repo.
+# (ca.key, *.keystore.jks, *.truststore.jks, cert-credentials, *.crt, *.csr, *.srl)
+# Se versiona únicamente el placeholder .gitkeep.
+# ---------------------------------------------------------------------------
+**/infra/certs/*
+!**/infra/certs/.gitkeep
+
+# ---------------------------------------------------------------------------
+# Script de diagnóstico — logs locales de ejecución
+# (también cubierto por scripts/diagnostico/.gitignore)
+# ---------------------------------------------------------------------------
+scripts/diagnostico/logs/
+
+# ---------------------------------------------------------------------------
+# Artefactos temporales y volúmenes locales
+# ---------------------------------------------------------------------------
+*.log

@@ -1,0 +1,105 @@
+# JMX Exporter rules para Kafka broker
+# Basado en https://github.com/confluentinc/jmx-monitoring-stacks/blob/main/shared-assets/jmx-exporter/kafka_broker.yml
+# Adaptado y simplificado para el Lab 11.
+
+lowercaseOutputName: true
+rules:
+  # ──────────────────────────────────────────────────────────────────
+  # 1) BrokerTopicMetrics: throughput por topic (tiene labels topic)
+  # ──────────────────────────────────────────────────────────────────
+  - pattern: 'kafka.server<type=BrokerTopicMetrics, name=(.+), topic=(.+)><>OneMinuteRate'
+    name: kafka_server_brokertopicmetrics_$1_per_second
+    labels:
+      topic: "$2"
+    type: GAUGE
+
+  - pattern: 'kafka.server<type=BrokerTopicMetrics, name=(.+), topic=(.+)><>Count'
+    name: kafka_server_brokertopicmetrics_$1_total
+    labels:
+      topic: "$2"
+    type: COUNTER
+
+  # ──────────────────────────────────────────────────────────────────
+  # 2) BrokerTopicMetrics: throughput agregado del broker (sin topic)
+  # ──────────────────────────────────────────────────────────────────
+  - pattern: 'kafka.server<type=BrokerTopicMetrics, name=(.+)><>OneMinuteRate'
+    name: kafka_server_brokertopicmetrics_$1_per_second
+    type: GAUGE
+
+  - pattern: 'kafka.server<type=BrokerTopicMetrics, name=(.+)><>Count'
+    name: kafka_server_brokertopicmetrics_$1_total
+    type: COUNTER
+
+  # ──────────────────────────────────────────────────────────────────
+  # 3) ReplicaManager: ISR, particiones, under-replicated, etc.
+  # ──────────────────────────────────────────────────────────────────
+  - pattern: 'kafka.server<type=ReplicaManager, name=(.+)><>Value'
+    name: kafka_server_replicamanager_$1
+    type: GAUGE
+
+  # ──────────────────────────────────────────────────────────────────
+  # 4) Controller: active controller count, etc. (CRÍTICO para health)
+  # ──────────────────────────────────────────────────────────────────
+  - pattern: 'kafka.controller<type=KafkaController, name=(.+)><>Value'
+    name: kafka_controller_kafkacontroller_$1
+    type: GAUGE
+
+  - pattern: 'kafka.controller<type=ControllerStats, name=(.+)><>Count'
+    name: kafka_controller_controllerstats_$1_total
+    type: COUNTER
+
+  # ──────────────────────────────────────────────────────────────────
+  # 5) RequestHandlerPool: idle percent del thread pool
+  # ──────────────────────────────────────────────────────────────────
+  - pattern: 'kafka.server<type=KafkaRequestHandlerPool, name=RequestHandlerAvgIdlePercent><>OneMinuteRate'
+    name: kafka_server_kafkarequesthandlerpool_requesthandleravgidlepercent
+    type: GAUGE
+
+  # ──────────────────────────────────────────────────────────────────
+  # 6) RequestMetrics: latencias y throughput por tipo de request
+  # ──────────────────────────────────────────────────────────────────
+  - pattern: 'kafka.network<type=RequestMetrics, name=(RequestsPerSec), request=(.+), version=(.+)><>OneMinuteRate'
+    name: kafka_network_requestmetrics_requestspersec
+    labels:
+      request: "$2"
+      version: "$3"
+    type: GAUGE
+
+  - pattern: 'kafka.network<type=RequestMetrics, name=(.+), request=(.+)><>Mean'
+    name: kafka_network_requestmetrics_$1_mean
+    labels:
+      request: "$2"
+    type: GAUGE
+
+  - pattern: 'kafka.network<type=RequestMetrics, name=(.+), request=(.+)><>(\d+)thPercentile'
+    name: kafka_network_requestmetrics_$1
+    labels:
+      request: "$2"
+      quantile: "0.$3"
+    type: GAUGE
+
+  # ──────────────────────────────────────────────────────────────────
+  # 7) Partition (cluster level): InSync, AtMinIsr, etc. CON labels
+  # ──────────────────────────────────────────────────────────────────
+  - pattern: 'kafka.cluster<type=Partition, name=(.+), topic=(.+), partition=(.+)><>Value'
+    name: kafka_cluster_partition_$1
+    labels:
+      topic: "$2"
+      partition: "$3"
+    type: GAUGE
+
+  # ──────────────────────────────────────────────────────────────────
+  # 8) Log: bytes y mensajes por topic/partition CON labels
+  # ──────────────────────────────────────────────────────────────────
+  - pattern: 'kafka.log<type=Log, name=(.+), topic=(.+), partition=(.+)><>Value'
+    name: kafka_log_$1
+    labels:
+      topic: "$2"
+      partition: "$3"
+    type: GAUGE
+
+  # ──────────────────────────────────────────────────────────────────
+  # NOTA: No hay catch-all genérico. Si una métrica no encaja en las
+  # reglas anteriores, se IGNORA. Esto evita generar métricas con
+  # nombres deformados que no se pueden consultar desde Grafana.
+  # ──────────────────────────────────────────────────────────────────
