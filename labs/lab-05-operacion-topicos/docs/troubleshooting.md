@@ -4,7 +4,7 @@
 
 ### 1. Conflicto de puertos al iniciar
 
-Mismo problema que Labs anteriores. Detener Labs 01/02/03 antes de levantar este.
+Mismo problema de puertos: detener cualquier otro clúster Kafka antes de levantar este.
 
 ### 2. `Topic already exists`
 

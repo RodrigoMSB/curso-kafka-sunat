@@ -36,7 +36,7 @@ Tu misión: crear cada tópico con la configuración exacta, modificarlos cuando
 | Docker Compose | v2.x |
 | RAM Docker | 6 GB |
 | Puertos libres | 9092, 9093, 9094, 8090 |
-| Labs 01-03 detenidos | Sí |
+| Otro clúster Kafka detenido | Sí |
 
 ---
 
