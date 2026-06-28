@@ -72,4 +72,4 @@
 
 ---
 
-*Solución - Lab 03*
+*Solución - Lab 03 (SUNAT)*

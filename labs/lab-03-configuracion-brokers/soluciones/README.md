@@ -1,4 +1,4 @@
-# Soluciones del Lab 03 — Construye tu propio clúster KRaft
+# Soluciones del Lab 03 — Configuración e inicialización de brokers
 
 Esta carpeta contiene las soluciones de referencia del laboratorio.
 
