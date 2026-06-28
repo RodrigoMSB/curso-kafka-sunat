@@ -1,4 +1,4 @@
-# Soluciones del Lab 10 — Schema Registry y ksqlDB
+# Soluciones del Lab 12 — ksqlDB
 
 Esta carpeta contiene las soluciones de referencia del laboratorio.
 

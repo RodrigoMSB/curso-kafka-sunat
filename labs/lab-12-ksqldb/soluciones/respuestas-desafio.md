@@ -1,4 +1,4 @@
-# Lab 10 — Respuestas del desafío (solución de referencia)
+# Lab 12 — Respuestas del desafío (solución de referencia)
 
 > **⚠ Importante**: estas son las soluciones de referencia del lab.
 > Antes de consultarlas, intenta resolver cada actividad por tu cuenta.
@@ -151,4 +151,4 @@ Es decir: **ksqlDB es un compilador SQL → Kafka Streams**. Si miras `docker lo
 
 ---
 
-*Soluciones del desafío - Lab 10*
+*Soluciones del desafío - Lab 12*

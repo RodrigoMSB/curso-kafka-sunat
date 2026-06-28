@@ -1,4 +1,4 @@
-# Troubleshooting - Lab 10
+# Troubleshooting - Lab 12
 
 ## Síntoma 1: Schema Registry no responde
 
@@ -133,9 +133,9 @@ curl -s -X PUT \
 
 ---
 
-## Síntoma 9: Conflicto de puertos con labs anteriores
+## Síntoma 9: Conflicto de puertos con otro clúster
 
-Detener TODOS los demás labs antes:
+Detener cualquier otro clúster Kafka antes:
 ```bash
 # desde labs/<otro-lab>/
 bin/stop-lab.sh
@@ -145,7 +145,7 @@ bin/stop-lab.sh
 
 ## Síntoma 10: Cambiar puerto Kafbat UI
 
-Ver troubleshooting del Lab 01.
+Libera el puerto 8090 o cambia `KAFBAT_UI_PORT` en `infra/.env`.
 
 ---
 
@@ -240,4 +240,4 @@ es mejor crearlos con el mismo número de particiones desde el inicio.
 
 ---
 
-*Troubleshooting - Lab 10*
+*Troubleshooting - Lab 12*

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ============================================================
-# NovaTech Logistics - Lab 10: Iniciar laboratorio
+# NovaTech Logistics - Lab 12: Iniciar laboratorio
 # ============================================================
 
 GREEN='\033[0;32m'
@@ -27,7 +27,7 @@ echo "║     ██║ ╚████║╚██████╔╝ ╚██�
 echo "║     ╚═╝  ╚═══╝ ╚═════╝   ╚═══╝  ╚═╝  ╚═╝                ║"
 echo "║              T E C H   L O G I S T I C S                ║"
 echo "║                                                          ║"
-echo "║     Lab 10: Schema Registry + ksqlDB                     ║"
+echo "║     Lab 12: ksqlDB                                       ║"
 echo "║                                                          ║"
 echo "╚══════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
@@ -43,7 +43,7 @@ if [ "$DOCKER_MEM_GB" -lt 5 ]; then
     echo -e "${YELLOW}[ADVERTENCIA] Docker tiene ${DOCKER_MEM_GB} GB de RAM. Se recomiendan al menos 6 GB.${NC}"
 fi
 
-echo -e "${YELLOW}[1/7] Levantando contenedores del clúster NovaTech Lab 10...${NC}"
+echo -e "${YELLOW}[1/7] Levantando contenedores del clúster NovaTech Lab 12...${NC}"
 # Cleanup defensivo:
 # (1) Force-remove contenedores con nombres canónicos compartidos (cross-lab):
 #     compose down -v sólo limpia los del proyecto actual; cuando el alumno
@@ -141,7 +141,7 @@ bash "$(dirname "$0")/../infra/scripts/init-lab10-topics.sh"
 
 echo ""
 echo -e "${GREEN}${BOLD}════════════════════════════════════════════════════════════${NC}"
-echo -e "${GREEN}${BOLD}  CLÚSTER NOVATECH LAB 10 OPERATIVO${NC}"
+echo -e "${GREEN}${BOLD}  CLÚSTER NOVATECH LAB 12 OPERATIVO${NC}"
 echo -e "${GREEN}${BOLD}════════════════════════════════════════════════════════════${NC}"
 echo ""
 echo -e "${CYAN}  Componentes:${NC}"
@@ -153,7 +153,7 @@ echo -e "    Schema Registry:    http://localhost:8081    ← API REST"
 echo -e "    ksqlDB Server:      http://localhost:8088    ← API REST"
 echo -e "    ksqlDB CLI:         ${BOLD}ksql-cli/ksql-shell.sh${NC}"
 echo ""
-echo -e "${CYAN}  Tópicos del Lab 10:${NC}"
+echo -e "${CYAN}  Tópicos del Lab 12:${NC}"
 echo -e "    ${BOLD}novatech.lab10.pedidos${NC}    - 12 particiones, datos Avro"
 echo -e "    ${BOLD}novatech.lab10.clientes${NC}   - 3 particiones, datos Avro"
 echo ""
@@ -166,5 +166,5 @@ echo ""
 echo -e "${CYAN}  Dentro de ksqlDB, primero ejecuta:${NC}"
 echo -e "    ${BOLD}SET 'auto.offset.reset'='earliest';${NC}"
 echo ""
-echo -e "${YELLOW}  Abre la guía: guia/01-schema-registry.md${NC}"
+echo -e "${YELLOW}  Abre la guía: guia/01-ksqldb-fundamentos.md${NC}"
 echo ""

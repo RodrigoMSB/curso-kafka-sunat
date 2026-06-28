@@ -1,5 +1,5 @@
 # ============================================================
-# NovaTech Logistics - Lab 10: Schema Registry + ksqlDB
+# NovaTech Logistics - Lab 12: ksqlDB
 # Stack: 3 brokers cp-kafka:8.2.0 + Kafbat UI + Schema Registry + ksqlDB Server + ksqlDB CLI
 # ============================================================
 
