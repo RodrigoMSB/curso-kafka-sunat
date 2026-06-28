@@ -57,7 +57,7 @@
 
 ## Conclusiones generales
 
-Resume en 3-5 frases lo que aprendiste sobre Schema Registry y ksqlDB:
+Resume en 3-5 frases lo que aprendiste sobre Schema Registry:
 
 ```
 

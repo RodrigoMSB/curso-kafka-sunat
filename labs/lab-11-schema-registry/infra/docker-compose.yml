@@ -1,6 +1,6 @@
 # ============================================================
-# NovaTech Logistics - Lab 10: Schema Registry + ksqlDB
-# Stack: 3 brokers cp-kafka:8.2.0 + Kafbat UI + Schema Registry + ksqlDB Server + ksqlDB CLI
+# NovaTech Logistics - Lab 11: Schema Registry
+# Stack: 3 brokers cp-kafka:8.2.0 + Kafbat UI + Schema Registry
 # ============================================================
 
 services:
@@ -110,7 +110,7 @@ services:
       start_period: 30s
 
   # ═══════════════════════════════════════════════════════════
-  # KAFBAT UI con integración a Schema Registry y ksqlDB
+  # KAFBAT UI con integración a Schema Registry
   # ═══════════════════════════════════════════════════════════
   kafbat-ui:
     image: ghcr.io/kafbat/kafka-ui:latest

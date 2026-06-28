@@ -1,5 +1,5 @@
 #!/bin/bash
-# Produce un flood de pedidos Avro para tener datos en ksqlDB.
+# Produce un flood de pedidos Avro para poblar el tópico.
 
 set -euo pipefail
 source "$(dirname "$0")/../bin/common.sh"

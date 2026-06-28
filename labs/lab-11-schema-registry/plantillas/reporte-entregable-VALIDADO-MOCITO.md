@@ -59,7 +59,7 @@
 
 ## Conclusiones generales
 
-> Schema Registry y ksqlDB son las dos abstracciones que elevan Kafka de "broker de mensajes" a "plataforma de datos en streaming". SR fuerza contratos tipados con evolución controlada — elimina la clase entera de bugs "el formato cambió y no avisé". ksqlDB convierte SQL en topologies de Streams: lo que antes eran 1000 líneas de Java se vuelve un CREATE STREAM AS SELECT. La combinación SR + ksqlDB permite construir pipelines complejos (filter, join, aggregate, enrich) sin escribir código de aplicación.
+> Schema Registry es la abstracción que eleva Kafka de "broker de mensajes" a "plataforma de datos en streaming": fuerza contratos tipados con evolución controlada y elimina la clase entera de bugs "el formato cambió y no avisé". Con Avro, productores y consumidores comparten un esquema versionado que se valida en el momento de producir, de modo que ningún mensaje mal formado entra al tópico.
 
 ---
 
@@ -67,7 +67,6 @@
 
 1. **Tiempo de validación**: ~50 minutos.
 2. **Sin hallazgos pedagógicos nuevos**.
-3. **JOIN partition-count constraint**: la guía 04 lo aclara explícitamente con el workaround `PARTITION BY` — buen detalle pedagógico.
-4. **Reto 2 con ventanas**: validado estructuralmente, no observado en operación por scope (requiere varios minutos).
+3. **Reto 2 con ventanas**: validado estructuralmente, no observado en operación por scope (requiere varios minutos).
 
 *Lab 11 - Curso de Administración de Confluent Apache Kafka (SUNAT)*

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Produce un cliente Avro al tópico novatech.lab10.clientes.
 # CRÍTICO: produce CON KEY (el id del cliente como int Avro), porque
-# ksqlDB exige key para crear TABLEs sobre el tópico.
+# Se produce con key para permitir compactación y joins por clave.
 
 set -euo pipefail
 source "$(dirname "$0")/../bin/common.sh"
