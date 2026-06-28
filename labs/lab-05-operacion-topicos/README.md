@@ -1,9 +1,8 @@
-# Lab 04: Operando tópicos como un DBA
+# Lab 05: Operación de tópicos
 
-**Curso**: Administración de Apache Kafka con Confluent Platform  
-**Capítulo**: 2 - Instalación, configuración y operación básica  
-**Cubre los ítems**: 4, 5 y 6 del Capítulo 2  
-**Duración estimada**: ~110 minutos
+**Curso**: Administración de Confluent Apache Kafka (SUNAT)  
+**Unidad**: 3 - Configuración del clúster, tópicos y rendimiento  
+**Duración estimada**: ~60 minutos
 
 ---
 
@@ -81,4 +80,4 @@ Luego abre `guia/01-anatomia-topico.md`.
 
 ---
 
-*Lab 04 - Curso de Administración de Apache Kafka con Confluent Platform*
+*Lab 05 - Curso de Administración de Confluent Apache Kafka (SUNAT)*

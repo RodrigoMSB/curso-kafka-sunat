@@ -1,4 +1,4 @@
-# Reporte del Lab 04: Operando tópicos como un DBA
+# Reporte del Lab 05: Operación de tópicos
 
 ## Datos del alumno
 
@@ -93,53 +93,14 @@
 
 ---
 
-## Parte 4: Producción y consumo masivo
-
-### Producción masiva
-
-| Métrica | Valor |
-|---------|-------|
-| Tiempo para 5.000 mensajes | |
-| Tasa aproximada (msg/seg) | |
-
-### Consumo desde el principio
+## Parte 4: Retención por tiempo en vivo
 
 | Pregunta | Tu respuesta |
 |----------|-------------|
-| ¿Mensajes ordenados por clave? | |
-| ¿Mensajes ordenados globalmente por producción? | |
-
-### Consumo de partición específica
-
-| Pregunta | Tu respuesta |
-|----------|-------------|
-| ¿Las claves son consistentes en partición 3? | |
-| ¿Por qué partición 3 no tiene todas las claves? | |
-
-### Test de throughput
-
-| Métrica | `acks=all` | `acks=1` |
-|---------|-----------|----------|
-| Throughput (msg/seg) | | |
-| Throughput (MB/seg) | | |
-| Latencia p99 (ms) | | |
-
-| Pregunta | Tu respuesta |
-|----------|-------------|
-| ¿Cuánto más rápido es `acks=1`? | |
-| ¿Qué se pierde con `acks=1`? | |
-
----
-
-## Parte 5: Desafío - RF, eliminación y recuperación
-
-| Pregunta | Tu respuesta |
-|----------|-------------|
-| ¿Tópico aparece tras eliminar? | |
-| ¿RF subió de 1 a 3 con éxito? | |
-| ¿Por qué Kafka no permite cambiar RF con `--alter`? | |
-| ¿Qué es más peligroso: aumentar particiones o RF? | |
-| ¿Política de `min.insync.replicas` para tópico de pagos? | |
+| Offset más antiguo disponible tras esperar (`--time -2`) | |
+| ¿Se eliminaron mensajes viejos? ¿Por qué `segment.ms` corto importa? | |
+| Tamaño en disco de `efimero` vs `resiliente` (Kafbat UI) | |
+| ¿Por qué Kafka borra por segmentos completos y no mensaje a mensaje? | |
 
 ---
 
@@ -154,4 +115,4 @@ Resume en 3-5 frases lo que aprendiste sobre administración de tópicos:
 
 ---
 
-*Lab 04 - Curso de Administración de Apache Kafka con Confluent Platform*
+*Lab 05 - Curso de Administración de Confluent Apache Kafka (SUNAT)*

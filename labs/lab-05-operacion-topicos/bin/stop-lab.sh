@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ============================================================
-# NovaTech Logistics - Lab 01: Detener laboratorio
+# NovaTech Logistics - Lab 05: Detener laboratorio
 # Detiene los contenedores preservando los volúmenes de datos
 # ============================================================
 

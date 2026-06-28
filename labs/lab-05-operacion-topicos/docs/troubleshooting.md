@@ -1,4 +1,4 @@
-# Troubleshooting - Lab 04
+# Troubleshooting - Lab 05
 
 ## Problemas comunes
 
@@ -43,8 +43,8 @@ docker exec kafka-broker-1 kafka-broker-api-versions --bootstrap-server kafka-br
 
 ### 6. Cambiar puerto Kafbat UI
 
-Ver troubleshooting del Lab 01.
+Si el puerto 8090 está ocupado por otro proceso, libéralo o cambia `KAFBAT_UI_PORT` en `infra/.env`.
 
 ---
 
-*Troubleshooting - Lab 04*
+*Troubleshooting - Lab 05*

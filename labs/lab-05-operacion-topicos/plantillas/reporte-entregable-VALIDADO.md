@@ -1,4 +1,4 @@
-# Reporte del Lab 04 — VALIDADO POR MOCITO (referencia instructor)
+# Reporte del Lab 05 — VALIDADO POR MOCITO (referencia instructor)
 
 > Versión completada con datos reales del lab end-to-end. Para referencia del instructor.
 
@@ -97,57 +97,14 @@
 
 ---
 
-## Parte 4: Producción y consumo masivo
-
-### Producción masiva
-
-| Métrica | Valor |
-|---------|-------|
-| Tiempo para 5.000 mensajes | **1 segundo** (verificado: `5000 mensajes publicados en 1s`) |
-| Tasa aproximada (msg/seg) | **~5.000 msg/seg** |
-
-### Consumo desde el principio
+## Parte 4: Retención por tiempo en vivo
 
 | Pregunta | Tu respuesta |
 |----------|-------------|
-| ¿Mensajes ordenados por clave? | **Sí, por clave** — todos los mensajes con `NVT-12` salen juntos en orden FIFO de su partición. |
-| ¿Mensajes ordenados globalmente por producción? | **No** — al consumir desde el inicio Kafka entrega particiones en paralelo, así que el orden global se mezcla. Dentro de UNA partición sí hay orden FIFO. |
-
-### Consumo de partición específica
-
-| Pregunta | Tu respuesta |
-|----------|-------------|
-| ¿Las claves son consistentes en partición 3? | **Sí** — al consumir solo de P3 ves un subset de claves (ej. NVT-12, NVT-37, etc.). Cada clave aparece SIEMPRE en la misma partición (`hash(key) % 18`). |
-| ¿Por qué partición 3 no tiene todas las claves? | Porque las claves se reparten entre las 18 particiones por hash. P3 sólo recibe las claves cuyo hash módulo 18 da 3. |
-
-### Test de throughput
-
-> **[BUG pedagógico parcial]**: el wrapper `kafka-cli/perf-test.sh` no expone el flag `--acks`, así que el alumno no puede comparar acks=all vs acks=1 con ese script. **Workaround**: usar `kafka-producer-perf-test` directo dentro del contenedor con `--producer-props acks=N`. Resultados con esa vía:
-
-| Métrica | `acks=all` | `acks=1` |
-|---------|-----------|----------|
-| Throughput (msg/seg) | 20.920 | 20.833 |
-| Throughput (MB/seg) | 3.99 | 3.97 |
-| Latencia p99 (ms) | 36 | 32 |
-
-> **Observación**: con sólo 5.000 mensajes la diferencia es chica (~4ms en p99). Con cargas mayores la diferencia se hace más visible — el lab 06 muestra mejor el trade-off.
-
-| Pregunta | Tu respuesta |
-|----------|-------------|
-| ¿Cuánto más rápido es `acks=1`? | En este test ~0.4% más throughput y ~11% menos p99 latency. La ventaja real se ve con cargas pesadas y RTT entre brokers más alto. |
-| ¿Qué se pierde con `acks=1`? | **Durabilidad bajo fallos**: con `acks=1` el producer recibe ACK apenas el LÍDER persiste el mensaje. Si el líder muere antes de replicar a los followers, el mensaje se pierde. Con `acks=all` la pérdida solo ocurre si caen TODOS los ISR a la vez. |
-
----
-
-## Parte 5: Desafío - RF, eliminación y recuperación
-
-| Pregunta | Tu respuesta |
-|----------|-------------|
-| ¿Tópico aparece tras eliminar? | **No** — tras `delete-topic.sh novatech.test.descartable`, el `list-topics.sh` no lo muestra. La eliminación es asíncrona pero rápida (<1s en local). |
-| ¿RF subió de 1 a 3 con éxito? | **Sí** — vía `kafka-reassign-partitions --execute` con un plan JSON manual. Verificado con describe (RF: 3 en la salida). |
-| ¿Por qué Kafka no permite cambiar RF con `--alter`? | Cambiar RF implica MOVER datos físicos: con RF=1→3 hay que copiar el log de cada partición a 2 brokers nuevos. Es una operación pesada que puede tardar horas con datos grandes. `--alter` es para cambios baratos (configs, particiones); RF requiere `kafka-reassign-partitions` que controla rate de reassignment. |
-| ¿Qué es más peligroso: aumentar particiones o RF? | **Aumentar particiones** es más peligroso a largo plazo: rompe el orden por clave para keys existentes (sus mensajes nuevos pueden ir a particiones distintas). **Aumentar RF** es operacionalmente caro (mucho I/O) pero no rompe semántica. |
-| ¿Política de `min.insync.replicas` para tópico de pagos? | **`min.insync.replicas=2` con RF=3** es el sweet spot industrial: tolera caída de 1 broker sin bloquear escrituras (2/3 brokers cumplen el mínimo), y mantiene la garantía "el mensaje committeado está en al menos 2 réplicas". `MIR=3` es excesivo (cualquier caída bloquea); `MIR=1` no garantiza durabilidad. |
+| Offset más antiguo disponible tras esperar (`--time -2`) | |
+| ¿Se eliminaron mensajes viejos? ¿Por qué `segment.ms` corto importa? | |
+| Tamaño en disco de `efimero` vs `resiliente` (Kafbat UI) | |
+| ¿Por qué Kafka borra por segmentos completos y no mensaje a mensaje? | |
 
 ---
 
@@ -162,4 +119,4 @@
 1. **[BUG pedagógico no bloqueante]**: el wrapper `perf-test.sh` no expone `--acks`. La sección "Test de throughput" del reporte original pide comparar acks=all vs acks=1 con el script — el alumno tendrá que recurrir al comando directo `kafka-producer-perf-test`. **Recomendación**: agregar `--acks` al wrapper en una próxima iteración del lab, o ajustar la pregunta del reporte a "ejecuta dos perf-test consecutivos con configuraciones distintas y compara".
 2. **Tiempo de validación**: ~50 minutos.
 
-*Lab 04 - Curso de Administración de Apache Kafka con Confluent Platform*
+*Lab 05 - Curso de Administración de Confluent Apache Kafka (SUNAT)*

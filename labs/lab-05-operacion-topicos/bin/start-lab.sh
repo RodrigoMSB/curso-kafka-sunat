@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ============================================================
-# NovaTech Logistics - Lab 04: Iniciar laboratorio
+# NovaTech Logistics - Lab 05: Iniciar laboratorio
 # ============================================================
 
 # Colores
@@ -29,7 +29,7 @@ echo "║     ██║ ╚████║╚██████╔╝ ╚██�
 echo "║     ╚═╝  ╚═══╝ ╚═════╝   ╚═══╝  ╚═╝  ╚═╝                ║"
 echo "║              T E C H   L O G I S T I C S                ║"
 echo "║                                                          ║"
-echo "║     Lab 04: Operando tópicos como un DBA                ║"
+echo "║     Lab 05: Operación de tópicos                         ║"
 echo "║                                                          ║"
 echo "╚══════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
@@ -134,7 +134,7 @@ echo -e "    Broker 2:        localhost:9093"
 echo -e "    Broker 3:        localhost:9094"
 echo -e "    Kafbat UI:       http://localhost:8090"
 echo ""
-echo -e "${CYAN}  Tópicos del Lab 04 que vas a crear:${NC}"
+echo -e "${CYAN}  Tópicos del Lab 05 que vas a crear:${NC}"
 echo -e "    ${BOLD}novatech.gps.realtime${NC}   - Alta frecuencia, retención corta"
 echo -e "    ${BOLD}novatech.audit.events${NC}   - Compliance, retención larga"
 echo -e "    ${BOLD}novatech.vehicle.state${NC}  - Compactado, sin retención por tiempo"

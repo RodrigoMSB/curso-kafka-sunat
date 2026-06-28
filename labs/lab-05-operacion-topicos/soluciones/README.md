@@ -1,4 +1,4 @@
-# Soluciones del Lab 04 — Operando tópicos
+# Soluciones del Lab 05 — Operación de tópicos
 
 Esta carpeta contiene las soluciones de referencia del laboratorio.
 
@@ -7,7 +7,6 @@ Esta carpeta contiene las soluciones de referencia del laboratorio.
 | Archivo | Contenido |
 |---------|-----------|
 | `reporte-resuelto.md` | Respuestas modelo a las preguntas del reporte del lab |
-| `respuestas-desafio.md` | Solución comentada del desafío de la Parte 5 |
 
 ## Cómo usar estas soluciones
 

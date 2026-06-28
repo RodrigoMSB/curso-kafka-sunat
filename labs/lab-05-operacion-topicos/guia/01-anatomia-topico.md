@@ -37,7 +37,7 @@ kafka-cli/list-topics.sh --internal
 
 ## Actividad 2: Anatomía completa
 
-Describe el tópico GPS que viene del Lab 01:
+Describe el tópico GPS de la flota:
 
 ```bash
 kafka-cli/describe-topic.sh novatech.fleet.gps

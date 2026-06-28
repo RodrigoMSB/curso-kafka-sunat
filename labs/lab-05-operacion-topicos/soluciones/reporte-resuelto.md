@@ -1,4 +1,4 @@
-# Lab 04 — Reporte resuelto (solución de referencia)
+# Lab 05 — Reporte resuelto (solución de referencia)
 
 > **⚠ Importante**: estas son las soluciones de referencia del lab.
 > Antes de consultarlas, intenta resolver cada actividad por tu cuenta.
@@ -61,42 +61,15 @@ Después de 5 mensajes con clave NVT-1001, el alumno **probablemente verá los 5
 
 ---
 
-## Parte 4: Producción y consumo masivo
+## Parte 4: Retención por tiempo en vivo
 
-### Métricas típicas (Mac M1/M2, Docker)
-
-- 5.000 mensajes en 5-15 segundos → ~300-1000 msg/seg
-- `perf-test` con `acks=all`: 5.000-20.000 msg/seg
-- `perf-test` con `acks=1`: 10.000-40.000 msg/seg
-- Diferencia: `acks=1` es típicamente 1.5-3x más rápido
-
-### Consumo desde el principio
-
-- Los mensajes NO vienen ordenados globalmente. Vienen ordenados POR PARTICIÓN.
-- El alumno verá saltos entre claves (por ejemplo: NVT-3, NVT-3, NVT-7, NVT-7, NVT-3...) porque el consumer va leyendo round-robin entre particiones.
-
-### Consumo de partición específica
-
-- En la partición 3, el alumno verá un subconjunto consistente de claves (mismas o pocas distintas).
-- La razón es que `hash(key) % 12` envía cada clave SIEMPRE a la misma partición.
-
-### `acks=all` vs `acks=1`
-
-- `acks=1`: el productor espera solo el ACK del líder. Más rápido pero si el líder muere antes de replicar, se pierde el mensaje.
-- `acks=all`: espera ACK de todas las réplicas en ISR. Más lento pero durable.
+| Pregunta | Tu respuesta |
+|----------|-------------|
+| Offset más antiguo disponible tras esperar (`--time -2`) | |
+| ¿Se eliminaron mensajes viejos? ¿Por qué `segment.ms` corto importa? | |
+| Tamaño en disco de `efimero` vs `resiliente` (Kafbat UI) | |
+| ¿Por qué Kafka borra por segmentos completos y no mensaje a mensaje? | |
 
 ---
 
-## Parte 5: Desafío
-
-| Pregunta | Respuesta esperada |
-|----------|-------------------|
-| ¿Tópico tras eliminar? | No aparece (eliminación efectiva en segundos) |
-| ¿RF subió de 1 a 3? | Sí, después del plan de reasignación |
-| ¿Por qué no con `--alter`? | Cambiar RF mueve datos físicos entre brokers; debe ser controlado para no saturar la red |
-| ¿Más peligroso: particiones o RF? | RF es más peligroso operacionalmente porque genera tráfico masivo de replicación |
-| Política para pagos | `min.insync.replicas=2` con RF=3 es lo estándar. Permite tolerar 1 falla y aún escribir. `min.insync.replicas=3` es excesivo (no tolera ninguna falla) |
-
----
-
-*Solución - Lab 04*
+*Solución - Lab 05*
