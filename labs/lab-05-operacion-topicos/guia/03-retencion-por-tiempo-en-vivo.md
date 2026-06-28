@@ -1,4 +1,4 @@
-# Parte 4: Retención por tiempo en vivo
+# Parte 3: Retención por tiempo en vivo
 
 ## Objetivo
 
@@ -7,6 +7,22 @@ Ver con tus propios ojos cómo Kafka elimina mensajes viejos según `retention.m
 ## Contexto
 
 `retention.ms` define cuánto tiempo se conservan los mensajes después de cerrar el segmento. Combinado con `segment.ms` (cuán seguido se cierran segmentos), determina cuándo desaparecen los mensajes viejos.
+
+---
+
+## Actividad 0: Preparar los tópicos de prueba
+
+Esta guía usa dos tópicos que aún no existen en tu clúster. Créalos:
+
+```bash
+kafka-cli/create-topic.sh novatech.lab05.efimero --partitions 3 --rf 3 \
+    --config retention.ms=60000 --config segment.ms=10000
+
+kafka-cli/create-topic.sh novatech.lab05.resiliente --partitions 3 --rf 3
+```
+
+- `novatech.lab05.efimero`: retención de 60 s y segmentos de 10 s (efecto observable).
+- `novatech.lab05.resiliente`: retención por defecto (7 días), para comparar tamaño en disco.
 
 ---
 
@@ -140,6 +156,6 @@ Observa el tamaño en disco. Compáralo con `novatech.lab05.resiliente` (que tie
 
 ---
 
-## Siguiente paso
+## Cierre del laboratorio
 
-Continúa con [Parte 5: Desafío de compactación y tombstones](05-desafio-compactacion-y-tombstones.md).
+Con esto completaste la operación de tópicos de punta a punta: anatomía y creación, configuración con personalidad (retención, compresión, compactación, RF), modificación en caliente, y la observación en vivo de cómo la retención y la segmentación eliminan datos viejos. Completa el reporte entregable en `plantillas/reporte-entregable.md`.
