@@ -56,31 +56,7 @@ novatech.fleet.events:5:2   (P5: 2 mensajes)
 
 ---
 
-## Parte 3: Consumer Groups y escalado horizontal
-
-### Distribución de particiones (grupo `alertas`, topic con 6 particiones)
-
-| Cantidad de consumidores | Particiones por consumidor | Total particiones repartidas |
-|--------------------------|----------------------------|------------------------------|
-| 1 | 6 (todas) | 6 |
-| 2 | 3 + 3 | 6 |
-| 3 | 2 + 2 + 2 | 6 |
-| 5 | 2 + 1 + 1 + 1 + 1 | 6 |
-
-> **Verificado con `describe-group.sh alertas`**: con 5 consumers, uno tiene 2 particiones y los otros 4 tienen 1 cada uno (no hay ociosos porque hay 6 particiones).
-
-### Pregunta
-
-| Pregunta | Tu respuesta |
-|----------|-------------|
-| ¿Algún mensaje fue recibido por más de un consumidor del mismo grupo? | **No** — dentro del mismo grupo cada partición está asignada a UN solo consumer. Es la diferencia clave vs Parte 2 (sin grupo = broadcast). |
-| Con 5 consumidores y 6 particiones, ¿hay alguno ocioso? | **No** — los 5 reciben al menos 1 partición; uno recibe 2. |
-| ¿Qué pasaría con 7 consumidores? | **6 estarían trabajando, 1 estaría OCIOSO** sin asignación. La regla: máximo paralelismo útil = número de particiones del topic. |
-| Al cerrar bruscamente uno, ¿se redistribuyeron sus particiones? | **Sí** — Kafka detecta la desconexión vía session timeout (~45s) y dispara rebalance. Las particiones del consumer caído se reparten entre los sobrevivientes en la próxima asignación. |
-
----
-
-## Parte 4: Offsets y replay
+## Parte 3: Offsets y replay
 
 ### Estado del grupo `alertas` antes del reset
 
@@ -104,30 +80,6 @@ novatech.fleet.events:5:2   (P5: 2 mensajes)
 | ¿El reset de `reportes` afectó al grupo `alertas`? | **No** — los offsets son **por consumer group**. `alertas` mantiene sus offsets intactos en `__consumer_offsets`. |
 
 > **⚠ Nota operacional**: tras Ctrl+C en un consumer, hay que esperar ~45-60s antes de poder resetear su grupo (session timeout). De lo contrario se obtiene `Assignments can only be reset if the group is inactive, but the current state is Stable`. La guía 04 actividad 3 fue actualizada en fase 2 (B.3) para mencionar este delay.
-
----
-
-## Parte 5: Desafío - Claves y particionado
-
-### Predicción vs realidad
-
-| Vehículo | Partición predicha | Partición real (verificado vía consume --partition) |
-|----------|-------------------|---------------------------|
-| NVT-1001 | (no se puede predecir sin la fórmula murmur2) | **2** |
-| NVT-1002 | (idem) | **0** |
-| NVT-1003 | (idem) | **5** |
-| NVT-1004 | (idem) | **1** |
-| NVT-1005 | (idem) | **3** |
-
-> Kafka usa `partition = murmur2(key) % numPartitions`. Es determinístico pero pseudo-aleatorio: no hay forma de "predecir" sin computar el hash. Lo que SÍ se garantiza: **misma clave → siempre misma partición** (mientras no se cambie el número de particiones).
-
-### Reflexión
-
-| Pregunta | Tu respuesta |
-|----------|-------------|
-| ¿Los 4 eventos de NVT-1001 cayeron en la misma partición? | **Sí, los 4 eventos** con key=NVT-1001 cayeron en partición 2 (verificado consumiendo `--partition 2`). Esa es la garantía clave de orden por entidad. |
-| Con 100 vehículos y 6 particiones, ¿cuántos vehículos comparten partición en promedio? | **~17 vehículos por partición** (100 / 6). En la práctica con murmur2 la distribución es uniforme con poca varianza. |
-| ¿Eso rompe el orden por vehículo? | **No.** Aunque varios vehículos comparten partición, dentro de la partición Kafka mantiene orden FIFO. Para CADA vehículo individual, sus eventos están ordenados. Lo que NO se garantiza es orden TOTAL entre vehículos distintos (sus eventos pueden estar interleaved). |
 
 ---
 

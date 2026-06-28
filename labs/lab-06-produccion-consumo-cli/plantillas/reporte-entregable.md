@@ -1,4 +1,4 @@
-# Reporte del Lab 02: Pub/Sub y Consumer Groups
+# Reporte del Lab 06: Producción y consumo desde CLI
 
 ## Datos del alumno
 
@@ -40,29 +40,7 @@
 
 ---
 
-## Parte 3: Consumer Groups y escalado horizontal
-
-### Distribución de particiones
-
-| Cantidad de consumidores | Particiones por consumidor | Total particiones repartidas |
-|--------------------------|----------------------------|------------------------------|
-| 1 | | |
-| 2 | | |
-| 3 | | |
-| 5 | | |
-
-### Pregunta
-
-| Pregunta | Tu respuesta |
-|----------|-------------|
-| ¿Algún mensaje fue recibido por más de un consumidor del mismo grupo? | |
-| Con 5 consumidores y 6 particiones, ¿hay alguno ocioso? | |
-| ¿Qué pasaría con 7 consumidores? | |
-| Al cerrar bruscamente uno, ¿se redistribuyeron sus particiones? | |
-
----
-
-## Parte 4: Offsets y replay
+## Parte 3: Offsets y replay
 
 ### Estado del grupo `alertas` antes del reset
 
@@ -82,28 +60,6 @@
 | ¿El grupo `reportes` empezó desde el inicio o desde el final? | |
 | Después del reset, ¿qué CURRENT-OFFSET tienen las particiones? | |
 | ¿El reset de `reportes` afectó al grupo `alertas`? | |
-
----
-
-## Parte 5: Desafío - Claves y particionado
-
-### Predicción vs realidad
-
-| Vehículo | Partición predicha | Partición real (Kafbat UI) |
-|----------|-------------------|---------------------------|
-| NVT-1001 | | |
-| NVT-1002 | | |
-| NVT-1003 | | |
-| NVT-1004 | | |
-| NVT-1005 | | |
-
-### Reflexión
-
-| Pregunta | Tu respuesta |
-|----------|-------------|
-| ¿Los 4 eventos de NVT-1001 cayeron en la misma partición? | |
-| Con 100 vehículos y 6 particiones, ¿cuántos vehículos comparten partición en promedio? | |
-| ¿Eso rompe el orden por vehículo? | |
 
 ---
 

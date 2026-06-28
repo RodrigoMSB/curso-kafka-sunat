@@ -1,9 +1,8 @@
-# Lab 02: Pub/Sub y Consumer Groups en acción
+# Lab 06: Producción y consumo desde CLI
 
-**Curso**: Administración de Apache Kafka con Confluent Platform  
-**Capítulo**: 1 - Fundamentos de Apache Kafka  
-**Posición**: Post ítem 5  
-**Duración estimada**: ~100 minutos
+**Curso**: Administración de Confluent Apache Kafka (SUNAT)  
+**Unidad**: 3 - Configuración del clúster, tópicos y rendimiento  
+**Duración estimada**: ~60 minutos
 
 ---
 
@@ -15,7 +14,7 @@ NovaTech Logistics tiene su clúster GPS funcionando (Lab 01). Ahora **el negoci
 - 🚨 **Sistema de Alertas** — necesita procesar cada evento sin perderlo, escalando horizontalmente
 - 📈 **Módulo de Reportes Históricos** — necesita re-procesar datos antiguos para analítica
 
-Tu jefe pregunta: *"¿Cómo hacemos que las 3 áreas vean los mismos datos sin pisarse? ¿Y cómo escalamos cuando alertas reciba 5x más volumen?"*
+Tu jefe pregunta: *"¿Cómo hacemos que las 3 áreas vean los mismos datos sin pisarse, y cómo reprocesamos datos antiguos cuando haga falta?"*
 
 **Tu misión**: demostrar el modelo pub/sub de Kafka resolviendo este problema con experimentos en vivo.
 
@@ -25,9 +24,7 @@ Tu jefe pregunta: *"¿Cómo hacemos que las 3 áreas vean los mismos datos sin p
 
 1. **Producir y consumir mensajes manualmente** para entender el log inmutable
 2. **Lanzar múltiples consumidores independientes** (modelo broadcast)
-3. **Lanzar consumidores en consumer groups** y ver cómo se reparten las particiones
-4. **Resetear offsets** para "rebobinar el tiempo" y reprocesar mensajes
-5. **Experimentar con claves** para entender el particionado consistente
+3. **Resetear offsets** para "rebobinar el tiempo" y reprocesar mensajes
 
 ---
 
@@ -82,14 +79,11 @@ lab-02-pubsub-en-accion/
 │   ├── consume-as-group.sh    # Consume en grupo (escalable)
 │   ├── list-groups.sh         # Lista todos los grupos
 │   ├── describe-group.sh      # Detalle de un grupo (offsets, lag)
-│   ├── reset-group.sh         # Resetea offsets a --to-earliest
-│   └── show-partition-for-key.sh  # Predice partición destino
+│   └── reset-group.sh         # Resetea offsets a --to-earliest
 ├── guia/
 │   ├── 01-log-inmutable.md
 │   ├── 02-pubsub-multiples-consumidores.md
-│   ├── 03-consumer-groups.md
-│   ├── 04-offsets-y-replay.md
-│   └── 05-desafio-keys-y-particionado.md
+│   └── 03-offsets-y-replay.md
 ├── plantillas/
 │   └── reporte-entregable.md
 ├── soluciones/
