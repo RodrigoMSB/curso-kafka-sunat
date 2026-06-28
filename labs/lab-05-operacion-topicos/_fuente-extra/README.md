@@ -12,3 +12,7 @@ insumo para usos posteriores:
 - `soluciones/respuestas-desafio.md` — solución del desafío de RF.
 
 No forma parte de la secuencia evaluable del Lab 05.
+
+## Nota técnica para el Lab 07 (rendimiento)
+
+El wrapper `kafka-cli/perf-test.sh` no expone el flag `--acks`, por lo que no permite comparar `acks=all` vs `acks=1` directamente. Para esa comparación: usar `kafka-producer-perf-test` directo en el contenedor con `--producer-props acks=N`, o agregar `--acks` al wrapper al construir el Lab 07.

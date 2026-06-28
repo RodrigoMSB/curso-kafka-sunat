@@ -116,7 +116,6 @@
 
 ## Notas del validador
 
-1. **[BUG pedagógico no bloqueante]**: el wrapper `perf-test.sh` no expone `--acks`. La sección "Test de throughput" del reporte original pide comparar acks=all vs acks=1 con el script — el alumno tendrá que recurrir al comando directo `kafka-producer-perf-test`. **Recomendación**: agregar `--acks` al wrapper en una próxima iteración del lab, o ajustar la pregunta del reporte a "ejecuta dos perf-test consecutivos con configuraciones distintas y compara".
-2. **Tiempo de validación**: ~50 minutos.
+1. **Tiempo de validación**: ~50 minutos.
 
 *Lab 05 - Curso de Administración de Confluent Apache Kafka (SUNAT)*
