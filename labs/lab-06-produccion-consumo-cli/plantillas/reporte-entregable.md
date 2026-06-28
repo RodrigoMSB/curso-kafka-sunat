@@ -74,4 +74,4 @@ Resume en 3-5 frases lo que aprendiste sobre el modelo pub/sub de Kafka:
 
 ---
 
-*Lab 02 - Curso de Administración de Apache Kafka con Confluent Platform*
+*Lab 06 - Curso de Administración de Confluent Apache Kafka (SUNAT)*

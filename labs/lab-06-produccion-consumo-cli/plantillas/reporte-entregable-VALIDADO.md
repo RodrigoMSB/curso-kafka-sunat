@@ -1,4 +1,4 @@
-# Reporte del Lab 02 — VALIDADO POR MOCITO (referencia instructor)
+# Reporte del Lab 06 — VALIDADO POR MOCITO (referencia instructor)
 
 > Versión completada por el agente de validación con datos reales obtenidos al ejecutar el lab end-to-end. Para referencia del instructor.
 
@@ -79,7 +79,7 @@ novatech.fleet.events:5:2   (P5: 2 mensajes)
 | Después del reset, ¿qué CURRENT-OFFSET tienen las particiones? | **0 en todas las particiones** (`--to-earliest` posiciona en el offset más antiguo disponible, que es 0 cuando no hubo retention). |
 | ¿El reset de `reportes` afectó al grupo `alertas`? | **No** — los offsets son **por consumer group**. `alertas` mantiene sus offsets intactos en `__consumer_offsets`. |
 
-> **⚠ Nota operacional**: tras Ctrl+C en un consumer, hay que esperar ~45-60s antes de poder resetear su grupo (session timeout). De lo contrario se obtiene `Assignments can only be reset if the group is inactive, but the current state is Stable`. La guía 04 actividad 3 fue actualizada en fase 2 (B.3) para mencionar este delay.
+> **⚠ Nota operacional**: tras Ctrl+C en un consumer, hay que esperar ~45-60s antes de poder resetear su grupo (session timeout). De lo contrario se obtiene `Assignments can only be reset if the group is inactive, but the current state is Stable`. La guía 03 actividad 3 fue actualizada en fase 2 (B.3) para mencionar este delay.
 
 ---
 
@@ -92,7 +92,7 @@ novatech.fleet.events:5:2   (P5: 2 mensajes)
 ## Notas del validador
 
 1. **B.2 aplicado**: guía 02 línea 90 corregida para reflejar que los grupos efímeros sí quedan registrados.
-2. **B.3 aplicado**: guía 04 actividad 3 ahora menciona el delay de ~45-60s del session timeout.
+2. **B.3 aplicado**: guía 03 actividad 3 ahora menciona el delay de ~45-60s del session timeout.
 3. **Tiempo de validación**: ~40 minutos (Parte 3 lleva tiempo por los rebalances).
 
-*Lab 02 - Curso de Administración de Apache Kafka con Confluent Platform*
+*Lab 06 - Curso de Administración de Confluent Apache Kafka (SUNAT)*

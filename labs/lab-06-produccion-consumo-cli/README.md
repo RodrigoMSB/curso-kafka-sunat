@@ -8,7 +8,7 @@
 
 ## Contexto narrativo
 
-NovaTech Logistics tiene su clúster GPS funcionando (Lab 01). Ahora **el negocio creció** y tres áreas distintas necesitan consumir los datos de la flota:
+NovaTech Logistics tiene su clúster GPS funcionando. Ahora **el negocio creció** y tres áreas distintas necesitan consumir los datos de la flota:
 
 - 📊 **Dashboard de Operaciones** — necesita ver TODO en tiempo real
 - 🚨 **Sistema de Alertas** — necesita procesar cada evento sin perderlo, escalando horizontalmente
@@ -36,15 +36,15 @@ Tu jefe pregunta: *"¿Cómo hacemos que las 3 áreas vean los mismos datos sin p
 | Docker Compose | v2.x |
 | RAM asignada a Docker | 6 GB |
 | Puertos libres | 9092, 9093, 9094, 8090 |
-| Lab 01 detenido (los puertos chocan) | Sí |
+| Otro clúster Kafka detenido (los puertos chocan) | Sí |
 
 ---
 
 ## Inicio rápido
 
 ```bash
-# 1. Asegurar que el Lab 01 esté detenido
-# (desde la carpeta del Lab 01: bin/stop-lab.sh)
+# 1. Asegurar que no haya otro clúster Kafka corriendo en los mismos puertos
+# (si tienes otro lab levantado, detenlo con su bin/stop-lab.sh)
 
 # 2. Dar permisos de ejecución
 chmod +x bin/*.sh kafka-cli/*.sh infra/scripts/*.sh
@@ -61,7 +61,7 @@ bin/start-lab.sh
 ## Estructura del laboratorio
 
 ```
-lab-02-pubsub-en-accion/
+lab-06-produccion-consumo-cli/
 ├── README.md                  # Este archivo
 ├── infra/
 │   ├── docker-compose.yml     # Mismo clúster del Lab 01
@@ -116,7 +116,6 @@ lab-02-pubsub-en-accion/
 ## Entregables
 
 1. **Reporte completado**: `plantillas/reporte-entregable.md` con todas las secciones llenas
-2. **(Opcional)** Sección del desafío con las observaciones del particionado por clave
 
 ---
 

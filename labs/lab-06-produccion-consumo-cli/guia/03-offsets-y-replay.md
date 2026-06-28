@@ -1,4 +1,4 @@
-# Parte 4: Offsets y replay (viajar en el tiempo)
+# Parte 3: Offsets y replay (viajar en el tiempo)
 
 ## Objetivo
 
