@@ -73,16 +73,16 @@ kafka-cli/produce-event.sh "test"
 
 ---
 
-### 6. Conflicto con el Lab 01
+### 6. Conflicto con otro clúster Kafka
 
 **Síntoma**: Al ejecutar `bin/start-lab.sh` aparece `port is already allocated`.
 
-**Causa**: El Lab 01 todavía está corriendo.
+**Causa**: Otro clúster Kafka todavía está corriendo en los mismos puertos.
 
 **Solución**:
 ```bash
-# Detener el Lab 01 desde su carpeta
-cd ../lab-01-radiografia-cluster
+# Detener el otro clúster: ve a la carpeta del lab que tengas levantado
+# y ejecuta su bin/stop-lab.sh
 bin/stop-lab.sh
 
 # Volver y reiniciar el Lab 06
@@ -94,7 +94,7 @@ bin/start-lab.sh
 
 ### 7. Cambiar el puerto de Kafbat UI
 
-Si el puerto 8090 está ocupado por otro proceso, ver la solución en el `troubleshooting.md` del Lab 01.
+Si el puerto 8090 está ocupado por otro proceso, libéralo o cambia `KAFBAT_UI_PORT` en `infra/.env`.
 
 ---
 

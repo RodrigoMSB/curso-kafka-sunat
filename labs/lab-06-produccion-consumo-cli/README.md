@@ -64,7 +64,7 @@ bin/start-lab.sh
 lab-06-produccion-consumo-cli/
 ├── README.md                  # Este archivo
 ├── infra/
-│   ├── docker-compose.yml     # Mismo clúster del Lab 01
+│   ├── docker-compose.yml     # Clúster KRaft de 3 brokers
 │   ├── .env
 │   └── scripts/
 │       └── init-events-topic.sh
