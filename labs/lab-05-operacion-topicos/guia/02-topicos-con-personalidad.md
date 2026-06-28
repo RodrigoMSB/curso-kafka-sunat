@@ -149,18 +149,96 @@ Y verifica cada uno en Kafbat UI > Topics. Compara las 4 configuraciones distint
 
 ---
 
+---
+
+## Modificación en caliente
+
+Ya creaste los tópicos con su configuración. En operación real esas configuraciones cambian sin reiniciar nada: una regulación exige más retención, o la flota crece y necesitas más paralelismo.
+
+### Actividad 6: Cambiar retención sin downtime (caso CFO)
+
+Verifica el valor actual:
+
+```bash
+kafka-cli/describe-topic.sh novatech.audit.events | grep retention.ms
+```
+
+Aplica el cambio (365 días):
+
+```bash
+kafka-cli/alter-topic-config.sh novatech.audit.events \
+    --add retention.ms=31536000000
+```
+
+Verifica:
+
+```bash
+kafka-cli/describe-topic.sh novatech.audit.events | grep retention.ms
+```
+
+| Pregunta | Tu respuesta |
+|----------|-------------|
+| ¿Cambió el valor? | |
+| ¿El `ConfigSource` ahora es `DYNAMIC_TOPIC_CONFIG`? | |
+| ¿El cambio requiere reiniciar el clúster? | |
+
+### Actividad 7: Aumentar particiones (caso ops GPS)
+
+Verifica las particiones actuales y auméntalas a 18:
+
+```bash
+kafka-cli/describe-topic.sh novatech.gps.realtime | head -3
+kafka-cli/alter-topic-partitions.sh novatech.gps.realtime 18
+kafka-cli/describe-topic.sh novatech.gps.realtime | head -25
+```
+
+| Pregunta | Tu respuesta |
+|----------|-------------|
+| ¿Ahora cuántas particiones? | |
+| ¿Las nuevas particiones tienen mensajes? | |
+
+### Actividad 8: Lo que NO se puede hacer
+
+Intenta **disminuir** las particiones:
+
+```bash
+kafka-cli/alter-topic-partitions.sh novatech.gps.realtime 6
+```
+
+| Pregunta | Tu respuesta |
+|----------|-------------|
+| ¿Qué error apareció? | |
+| ¿Por qué Kafka no permite disminuir particiones? | |
+
+> **Pista**: si una clave estaba en la partición 14 y disminuyeras a 6, ¿dónde irían sus mensajes futuros y dónde quedaron los pasados? El orden por clave se rompería.
+
+### Actividad 9: Eliminar overrides (volver al default)
+
+```bash
+kafka-cli/alter-topic-config.sh novatech.audit.events --delete retention.ms
+kafka-cli/describe-topic.sh novatech.audit.events | grep retention.ms
+```
+
+> El default del broker es `604800000` ms (7 días). Reaplica los 90 días para dejar el lab consistente:
+> ```bash
+> kafka-cli/alter-topic-config.sh novatech.audit.events --add retention.ms=7776000000
+> ```
+
+---
+
 ## Conclusiones
 
 | Concepto | Lo aprendiste haciendo... |
 |----------|---------------------------|
-| `retention.ms` | Configuraste 1h, 90 días e ilimitado |
+| `retention.ms` | Configuraste 1h, 90 días e ilimitado, y lo modificaste en caliente |
 | `cleanup.policy=compact` | Probaste con el tópico de estado |
 | `min.insync.replicas` | Lo subiste a 3 para alertas críticas |
 | `compression.type` | Comparaste `lz4` (rápido) vs `gzip` (denso) |
-| Particionado | Diferenciaste 3, 6 y 12 particiones según el caso |
+| Particionado | Diferenciaste configuraciones y aumentaste particiones en caliente |
+| Modificar en caliente | Cambiaste configs y particiones sin downtime |
 
 ---
 
 ## Siguiente paso
 
-Continúa con [Parte 3: Modificar tópicos en caliente](03-modificar-topicos-en-caliente.md).
+Continúa con [Parte 3: Retención por tiempo en vivo](03-retencion-por-tiempo-en-vivo.md).
