@@ -25,8 +25,6 @@ Tu misión: crear cada tópico con la configuración exacta, modificarlos cuando
 - Crear tópicos con `--config` (retención, compactación, replicación)
 - Modificar tópicos en caliente sin downtime
 - Aumentar particiones (y entender por qué no se pueden disminuir)
-- Producción masiva y medición de throughput
-- Plan de reasignación para cambiar RF (avanzado)
 
 ---
 
@@ -67,7 +65,6 @@ Luego abre `guia/01-anatomia-topico.md`.
 | Modificar particiones | `kafka-cli/alter-topic-partitions.sh <NOMBRE> N` |
 | Eliminar tópico | `kafka-cli/delete-topic.sh <NOMBRE>` |
 | Producir N mensajes | `kafka-cli/produce-bulk.sh <NOMBRE> N [--key-pattern P]` |
-| Test de throughput | `kafka-cli/perf-test.sh <NOMBRE> N [TAMAÑO]` |
 | Kafbat UI | http://localhost:8090 |
 
 ---

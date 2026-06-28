@@ -16,3 +16,7 @@ No forma parte de la secuencia evaluable del Lab 05.
 ## Nota técnica para el Lab 07 (rendimiento)
 
 El wrapper `kafka-cli/perf-test.sh` no expone el flag `--acks`, por lo que no permite comparar `acks=all` vs `acks=1` directamente. Para esa comparación: usar `kafka-producer-perf-test` directo en el contenedor con `--producer-props acks=N`, o agregar `--acks` al wrapper al construir el Lab 07.
+
+## Nota técnica para el desafío de RF
+
+El desafío de RF usa `kafka-reassign-partitions` (plan de reasignación en JSON). Si falla con `Reassignment of partition X failed`, la causa típica es que los brokers especificados en el JSON no existen o no están vivos. Verificar IDs de brokers vivos con `kafka-broker-api-versions`.

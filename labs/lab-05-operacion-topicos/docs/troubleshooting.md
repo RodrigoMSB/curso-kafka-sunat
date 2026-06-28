@@ -25,23 +25,7 @@ kafka-cli/alter-topic-config.sh <TOPIC> --add segment.ms=10000 --add min.cleanab
 ```
 Esto fuerza segments cortos y umbral bajo, acelerando la compactación.
 
-### 4. `perf-test` muy lento (<1000 msg/seg)
-
-Causas posibles:
-- Docker Desktop con poca RAM (subir a 8 GB)
-- Otro proceso consumiendo CPU
-- `acks=all` con red sobrecargada
-
-### 5. `Reassignment of partition X failed`
-
-Causa: brokers especificados en el JSON no existen o no están vivos.
-
-Solución: verificar IDs de brokers vivos:
-```bash
-docker exec kafka-broker-1 kafka-broker-api-versions --bootstrap-server kafka-broker-1:29092
-```
-
-### 6. Cambiar puerto Kafbat UI
+### 4. Cambiar puerto Kafbat UI
 
 Si el puerto 8090 está ocupado por otro proceso, libéralo o cambia `KAFBAT_UI_PORT` en `infra/.env`.
 
