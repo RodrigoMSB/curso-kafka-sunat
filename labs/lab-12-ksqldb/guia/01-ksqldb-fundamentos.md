@@ -19,6 +19,24 @@ Entender la diferencia entre STREAM y TABLE en ksqlDB. Crear los primeros stream
 
 ---
 
+## Actividad 0: Preparar datos Avro
+
+ksqlDB consulta tópicos en formato Avro. Antes de empezar, registra los schemas y produce datos de prueba (esto se cubrió en el Lab 11; aquí solo lo ejecutas como preparación):
+
+```bash
+# Registrar los schemas en Schema Registry
+schema-cli/register-schema.sh novatech.lab10.pedidos-value infra/schemas/pedido.avsc
+schema-cli/register-schema.sh novatech.lab10.clientes-value infra/schemas/cliente.avsc
+
+# Producir datos de prueba en formato Avro
+kafka-cli/produce-flood-pedidos.sh 30
+kafka-cli/produce-clientes-seed.sh
+```
+
+Con esto tienes ~30 pedidos y los clientes seed en Avro, listos para consultarse desde ksqlDB.
+
+---
+
 ## Actividad 1: Abrir el CLI de ksqlDB
 
 ```bash
@@ -206,4 +224,4 @@ Sal del ksqlDB shell con `exit` o Ctrl+D.
 
 ## Siguiente paso
 
-Continúa con [Desafío 4: Streaming SQL completo](04-desafio-streaming-sql.md).
+Continúa con [Desafío 2: Streaming SQL completo](02-desafio-streaming-sql.md).
