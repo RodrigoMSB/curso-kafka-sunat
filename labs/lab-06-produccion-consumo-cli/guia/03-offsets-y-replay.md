@@ -134,6 +134,6 @@ kafka-cli/consume-as-group.sh --group reportes
 
 ---
 
-## Siguiente paso
+## Cierre del laboratorio
 
-Continúa con la [Parte 5: Desafío de claves y particionado](05-desafio-keys-y-particionado.md).
+Con esto completaste el ciclo de producción y consumo desde CLI: el log inmutable, el modelo pub/sub con múltiples consumidores y el manejo de offsets con replay de mensajes. Completa el reporte entregable en `plantillas/reporte-entregable.md` para cerrar el laboratorio.

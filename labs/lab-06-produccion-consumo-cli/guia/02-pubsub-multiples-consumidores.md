@@ -107,10 +107,10 @@ Ahora puedes responderle al jefe:
 
 > *"Las 3 áreas (Dashboard, Alertas, Reportes) pueden conectarse al mismo tópico y cada una recibirá TODOS los mensajes. Kafka no las hace competir por mensajes, las trata como suscriptores independientes."*
 
-Pero falta una pieza: **¿qué pasa si el área de Alertas recibe tanto volumen que un solo consumidor no da abasto?** Eso lo resolvemos en la siguiente parte.
+Ya viste cómo varios consumidores independientes leen el mismo log sin interferir entre sí. Queda una pregunta clave: **¿qué pasa si un consumidor necesita volver atrás y reprocesar mensajes que ya leyó?** Eso se resuelve gestionando offsets, y es lo que abordamos en la siguiente parte.
 
 ---
 
 ## Siguiente paso
 
-Continúa con la [Parte 3: Consumer Groups y escalado horizontal](03-consumer-groups.md).
+Continúa con la [Parte 3: Offsets y replay](03-offsets-y-replay.md).
