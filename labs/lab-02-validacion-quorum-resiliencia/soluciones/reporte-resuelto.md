@@ -1,4 +1,4 @@
-# Lab 03 — Reporte resuelto (solución de referencia)
+# Lab 02 — Reporte resuelto (solución de referencia)
 
 > **⚠ Importante**: estas son las soluciones de referencia del lab.
 > Antes de consultarlas, intenta resolver cada actividad por tu cuenta.
@@ -72,4 +72,4 @@
 
 ---
 
-*Solución - Lab 03*
+*Solución - Lab 02*

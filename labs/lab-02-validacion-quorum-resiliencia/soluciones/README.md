@@ -1,4 +1,4 @@
-# Soluciones del Lab 03 — Construye tu propio clúster KRaft
+# Soluciones del Lab 02 — Validación de quórum y prueba de resiliencia
 
 Esta carpeta contiene las soluciones de referencia del laboratorio.
 

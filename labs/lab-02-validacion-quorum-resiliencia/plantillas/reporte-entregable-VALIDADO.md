@@ -1,4 +1,4 @@
-# Reporte del Lab 03 — VALIDADO POR MOCITO (referencia instructor)
+# Reporte del Lab 02 — VALIDADO POR MOCITO (referencia instructor)
 
 > Versión completada por el agente de validación con datos reales obtenidos al ejecutar el lab end-to-end. Para referencia del instructor.
 
@@ -115,4 +115,4 @@ NodeId  LogEndOffset  Lag  Status
 2. **BUG pedagógico identificado**: la pregunta de Parte 1 sobre `kraft.properties` queda con `[BUG]` porque ese archivo no existe en CP 8.2. La instrucción del usuario fue NO modificar el reporte original, así que el alumno se encontrará con el problema. Recomendación: en una v2 del template, cambiar la pregunta a "¿Cuál es el contenido aproximado de `server.properties`?".
 3. **Tiempo de validación**: ~50 minutos (start de 1-broker, down, start de 3-brokers, esperas).
 
-*Lab 03 - Curso de Administración de Apache Kafka con Confluent Platform*
+*Lab 02 - Curso de Administración de Confluent Apache Kafka (SUNAT)*

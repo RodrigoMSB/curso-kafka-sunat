@@ -1,4 +1,4 @@
-# Reporte del Lab 03: Construye tu propio clúster KRaft
+# Reporte del Lab 02: Validación de quórum y prueba de resiliencia
 
 ## Datos del alumno
 
@@ -94,4 +94,4 @@ Resume en 3-5 frases lo que aprendiste construyendo tu propio clúster KRaft:
 
 ---
 
-*Lab 03 - Curso de Administración de Apache Kafka con Confluent Platform*
+*Lab 02 - Curso de Administración de Confluent Apache Kafka (SUNAT)*

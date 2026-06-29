@@ -1,4 +1,4 @@
-# NovaTech Logistics - Lab 03 / Etapa 2: Tres brokers con quorum KRaft - SOLUCIÓN
+# NovaTech Logistics - Lab 02 / Etapa 2: Tres brokers con quorum KRaft - SOLUCIÓN
 
 services:
   kafka-broker-1:
