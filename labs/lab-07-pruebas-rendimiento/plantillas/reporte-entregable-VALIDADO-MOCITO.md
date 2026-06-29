@@ -1,4 +1,4 @@
-# Reporte del Lab 06 — VALIDADO POR MOCITO (referencia instructor)
+# Reporte del Lab 07 — VALIDADO POR MOCITO (referencia instructor)
 
 > Versión completada con datos reales del lab end-to-end.
 
@@ -87,39 +87,31 @@
 
 ---
 
-## Parte 3: Idempotencia y duplicados
+## Parte 3: Pruebas de rendimiento de productor y consumidor
 
-| Métrica | Naive | Idempotente |
-|---------|-------|-------------|
-| Mensajes producidos | 100 | 100 |
-| Total en el tópico (acumulado) | **100** (29+31+40 = 100, exactos) | **200** (68+64+68 = 200, exactos +100) |
-| ¿Hay duplicados? | **No en este test** — el cluster local sin congestión no triggereó retries con éxito. La guía aclara este caso: en local pueden no aparecer. | **No** — incluso si hubiera retries, el Producer ID + Sequence Number deduplica en el broker. |
+### Producción (`kafka-producer-perf-test`)
 
-| Pregunta | Tu respuesta |
-|----------|-------------|
-| Error con `enable.idempotence=true` y `acks=1` | `org.apache.kafka.common.config.ConfigException: Must set acks to all in order to use the idempotent producer.` (en versiones más viejas) o auto-promoción a acks=all con warning en Kafka 3.x+. La idempotencia REQUIERE acks=all. |
-| ¿Por qué exige acks=all? | Porque la deduplicación se basa en el broker líder + replicación. Sin acks=all el ProducerId+SequenceNumber pueden no replicarse antes del fallo, lo que rompe la garantía. |
-| ¿Qué garantiza la idempotencia? | "Exactly-once por partición": cada mensaje aparece exactamente UNA vez en su partición destino, incluso bajo retries. Aplica POR PARTICIÓN, no global. |
-| ¿Qué NO garantiza? | (1) Exactly-once entre PARTICIONES (eso requiere transacciones). (2) Que el cliente no produzca el "mismo" mensaje desde dos llamadas distintas — la idempotencia es a nivel de retry de un mismo `send()`, no a nivel semántico. (3) Orden global. |
-| ¿Idempotente + 1 partición = exactly-once? | **Sí, técnicamente**: si todo el flujo va a una sola partición, idempotencia + acks=all = exactly-once. Pero te perdés escalado horizontal. |
-| ¿Idempotente + N particiones = exactly-once? | **NO** — idempotencia es per-partition. Para EOS multi-partition se necesitan transacciones (`transactional.id`). |
+| Configuración | records/sec | MB/sec | p99 latencia (ms) |
+|---------------|-------------|--------|-------------------|
+| Baseline (100K msg) | | | |
+| batch 64KB + linger 10 | | | |
+| compresión lz4 | | | |
 
----
+### Consumo (`kafka-consumer-perf-test`)
 
-## Parte 4: Transacciones exactly-once
+| Configuración | nMsg.sec | MB.sec |
+|---------------|----------|--------|
+| Baseline (100K msg) | | |
+| fetch 5 MB | | |
 
-| Pregunta | Tu respuesta |
-|----------|-------------|
-| Mensajes vistos con read_committed (commit) | **5** (5 mensajes en `confirmed`, valores 0,1,2,3,4 en orden). |
-| Mensajes vistos con read_uncommitted (commit) | **5** también (cuando la transacción ya fue committed, ambos isolation levels ven lo mismo). |
-| Mensajes vistos con read_committed (post abort) | **5** (los del commit anterior, NO los del abort). El abort se "salta" para read_committed. |
-| Mensajes vistos con read_uncommitted (post abort) | **10** = 5 (commit) + 5 (abort) — `read_uncommitted` ve TODOS los mensajes incluyendo los abortados (sirve sólo para debugging/inspection). |
-| ¿Cuántas transacciones lista `kafka-transactions list`? | **0 visibles** en el momento del query (la tabla salió vacía con solo el header `TransactionalId Coordinator ProducerId TransactionState`). Eso es esperado — las transacciones cerradas (committed/aborted) ya no son "active". Para verlas activas hay que consultar inmediatamente durante una transacción en curso. |
-| Estado de las transacciones | **Cerradas (committed)** — la transacción de prueba committeó OK, ya no aparece como activa. |
+### Análisis
+
+1. ¿Cuál throughput fue mayor, producción o consumo? ¿Por qué?
+2. ¿Qué parámetro tuvo más impacto en cada lado?
 
 ---
 
-## Parte 5: Desafío - Particionado y throughput
+## Parte 4: Desafío - Particionado y throughput
 
 > Esta sección requiere experimentos con `--partitioner-class` que no se completaron en esta validación por scope (el wrapper `perf-test.sh` no expone esa opción y ejecutar `kafka-producer-perf-test` directo es complejo). Las respuestas son las esperadas según el modelo conceptual:
 
@@ -153,4 +145,4 @@
 2. **Parte 5 parcialmente validada estructuralmente**: los experimentos con `--partitioner-class` requieren invocaciones directas de `kafka-producer-perf-test`. Las respuestas conceptuales son correctas pero los números específicos no se midieron.
 3. Sin hallazgos pedagógicos nuevos.
 
-*Lab 06 - Curso de Administración de Apache Kafka con Confluent Platform*
+*Lab 07 - Curso de Administración de Confluent Apache Kafka (SUNAT)*

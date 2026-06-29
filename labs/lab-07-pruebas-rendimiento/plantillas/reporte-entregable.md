@@ -1,4 +1,4 @@
-# Reporte del Lab 06: Productores afilados al milímetro
+# Reporte del Lab 07: Pruebas de rendimiento
 
 ## Datos del alumno
 
@@ -83,39 +83,31 @@
 
 ---
 
-## Parte 3: Idempotencia y duplicados
+## Parte 3: Pruebas de rendimiento de productor y consumidor
 
-| Métrica | Naive | Idempotente |
-|---------|-------|-------------|
-| Mensajes producidos | 100 | 100 |
-| Total en el tópico | | |
-| ¿Hay duplicados? | | |
+### Producción (`kafka-producer-perf-test`)
 
-| Pregunta | Tu respuesta |
-|----------|-------------|
-| Error con `enable.idempotence=true` y `acks=1` | |
-| ¿Por qué exige acks=all? | |
-| ¿Qué garantiza la idempotencia? | |
-| ¿Qué NO garantiza? | |
-| ¿Idempotente + 1 partición = exactly-once? | |
-| ¿Idempotente + N particiones = exactly-once? | |
+| Configuración | records/sec | MB/sec | p99 latencia (ms) |
+|---------------|-------------|--------|-------------------|
+| Baseline (100K msg) | | | |
+| batch 64KB + linger 10 | | | |
+| compresión lz4 | | | |
 
----
+### Consumo (`kafka-consumer-perf-test`)
 
-## Parte 4: Transacciones exactly-once
+| Configuración | nMsg.sec | MB.sec |
+|---------------|----------|--------|
+| Baseline (100K msg) | | |
+| fetch 5 MB | | |
 
-| Pregunta | Tu respuesta |
-|----------|-------------|
-| Mensajes vistos con read_committed (commit) | |
-| Mensajes vistos con read_uncommitted (commit) | |
-| Mensajes vistos con read_committed (post abort) | |
-| Mensajes vistos con read_uncommitted (post abort) | |
-| ¿Cuántas transacciones lista `kafka-transactions list`? | |
-| Estado de las transacciones | |
+### Análisis
+
+1. ¿Cuál throughput fue mayor, producción o consumo? ¿Por qué?
+2. ¿Qué parámetro tuvo más impacto en cada lado?
 
 ---
 
-## Parte 5: Desafío - Particionado y throughput
+## Parte 4: Desafío - Particionado y throughput
 
 | Pregunta | Tu respuesta |
 |----------|-------------|
@@ -146,4 +138,4 @@ Resume en 3-5 frases lo que aprendiste sobre tuning de productores:
 
 ---
 
-*Lab 06 - Curso de Administración de Apache Kafka con Confluent Platform*
+*Lab 07 - Curso de Administración de Confluent Apache Kafka (SUNAT)*

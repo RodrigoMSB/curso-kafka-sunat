@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ============================================================
-# NovaTech Logistics - Lab 06: Iniciar laboratorio
+# NovaTech Logistics - Lab 07: Iniciar laboratorio
 # ============================================================
 
 # Colores
@@ -29,7 +29,7 @@ echo "║     ██║ ╚████║╚██████╔╝ ╚██�
 echo "║     ╚═╝  ╚═══╝ ╚═════╝   ╚═══╝  ╚═╝  ╚═╝                ║"
 echo "║              T E C H   L O G I S T I C S                ║"
 echo "║                                                          ║"
-echo "║     Lab 06: Productores afilados al milímetro            ║"
+echo "║     Lab 07: Pruebas de rendimiento                       ║"
 echo "║                                                          ║"
 echo "╚══════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
@@ -124,7 +124,7 @@ else
 fi
 
 echo ""
-echo -e "${YELLOW}[5/5] Inicializando tópicos del Lab 06...${NC}"
+echo -e "${YELLOW}[5/5] Inicializando tópicos del Lab 07...${NC}"
 bash "$(dirname "$0")/../infra/scripts/init-lab06-topics.sh"
 
 echo ""
@@ -138,7 +138,7 @@ echo -e "    Broker 2:        localhost:9093"
 echo -e "    Broker 3:        localhost:9094"
 echo -e "    Kafbat UI:       http://localhost:8090"
 echo ""
-echo -e "${CYAN}  Tópicos del Lab 06:${NC}"
+echo -e "${CYAN}  Tópicos del Lab 07:${NC}"
 echo -e "    ${BOLD}novatech.payments.attempts${NC}    - Para experimentos de duplicados"
 echo -e "    ${BOLD}novatech.payments.confirmed${NC}   - Para experimentos transaccionales"
 echo -e "    ${BOLD}novatech.tuning.bench${NC}         - Para benchmarks de tuning"

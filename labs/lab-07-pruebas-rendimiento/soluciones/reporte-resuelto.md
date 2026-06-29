@@ -1,4 +1,4 @@
-# Lab 06 — Reporte resuelto (solución de referencia)
+# Lab 07 — Reporte resuelto (solución de referencia)
 
 > **⚠ Importante**: estas son las soluciones de referencia del lab.
 > Antes de consultarlas, intenta resolver cada actividad por tu cuenta.
@@ -50,44 +50,31 @@
 
 ---
 
-## Parte 3: Idempotencia
+## Parte 3: Pruebas de rendimiento de productor y consumidor
 
-### Comportamiento esperado
+### Producción (`kafka-producer-perf-test`)
 
-- **Naive**: en local sin congestión, lo más probable es que el alumno NO vea duplicados con timeout=100ms y red local. Para forzarlos, bajar a 50ms o agregar latencia con `tc`.
-- **Idempotente**: SIEMPRE produce exactamente N mensajes nuevos.
+| Configuración | records/sec | MB/sec | p99 latencia (ms) |
+|---------------|-------------|--------|-------------------|
+| Baseline (100K msg) | | | |
+| batch 64KB + linger 10 | | | |
+| compresión lz4 | | | |
 
-### Configs forzadas
+### Consumo (`kafka-consumer-perf-test`)
 
-`enable.idempotence=true` requiere:
-- `acks=all`
-- `retries=Integer.MAX_VALUE`
-- `max.in.flight.requests.per.connection<=5`
+| Configuración | nMsg.sec | MB.sec |
+|---------------|----------|--------|
+| Baseline (100K msg) | | |
+| fetch 5 MB | | |
 
-Si forzas `acks=1` con idempotencia, el productor **falla al iniciar** con: `ConfigException: Must set acks to all in order to use the idempotent producer`.
+### Análisis
 
-### Garantías
-
-- **Idempotencia garantiza**: no-duplicados dentro de UN productor + UNA partición + UNA sesión.
-- **NO garantiza**: no-duplicados a través de sesiones (productor reiniciado), ni a través de múltiples particiones.
-- **Para exactly-once cross-partition**: necesitas transacciones.
-
----
-
-## Parte 4: Transacciones
-
-### Comportamiento esperado
-
-- Con COMMIT: ambos `read_committed` y `read_uncommitted` ven los mensajes.
-- Con ABORT (en la implementación pedagógica de este lab): el comportamiento puede no ser perfecto desde CLI; los alumnos verían diferencia entre los dos isolation levels si usaran código de aplicación con `producer.abortTransaction()`.
-
-### Limitación reconocida
-
-`kafka-console-producer` no soporta control completo de transacciones. `kafka-verifiable-producer` tampoco maneja abort directamente. Esta parte del lab es **conceptual**: el alumno aprende QUÉ son las transacciones y cómo se inspeccionan, no necesariamente cómo programarlas.
+1. ¿Cuál throughput fue mayor, producción o consumo? ¿Por qué?
+2. ¿Qué parámetro tuvo más impacto en cada lado?
 
 ---
 
-## Parte 5: Desafío
+## Parte 4: Desafío
 
 ### Particionado por clave fija
 
@@ -111,4 +98,4 @@ Si forzas `acks=1` con idempotencia, el productor **falla al iniciar** con: `Con
 
 ---
 
-*Solución - Lab 06*
+*Solución - Lab 07*

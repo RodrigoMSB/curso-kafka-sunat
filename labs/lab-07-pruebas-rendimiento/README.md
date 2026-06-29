@@ -1,19 +1,18 @@
-# Lab 06: Productores afilados al milímetro
+# Lab 07: Pruebas de rendimiento
 
-**Curso**: Administración de Apache Kafka con Confluent Platform  
-**Capítulo**: 3 - Administración avanzada  
-**Cubre el ítem**: 3 del Capítulo 3  
-**Duración estimada**: ~120 minutos
+**Curso**: Administración de Confluent Apache Kafka (SUNAT)  
+**Unidad**: 3 - Configuración del clúster, tópicos y rendimiento  
+**Duración estimada**: ~60 minutos
 
 ---
 
 ## Contexto narrativo
 
-El equipo de pagos de NovaTech (cobros por kilometraje, peajes y mantenimientos) escala a tu mesa con un problema crítico:
+El equipo de infraestructura de NovaTech necesita dimensionar el clúster antes de la temporada alta:
 
-*"A veces los pagos se duplican. A veces se pierden. Necesito que las escrituras a Kafka sean exactly-once. Y mientras estás en eso, también necesito que el throughput suba."*
+*"Necesito saber cuánto throughput aguanta el clúster produciendo y consumiendo, cuál es la latencia, y qué parámetros mover para exprimirlo. Mídelo en serio, con números."*
 
-Tu misión: configurar productores idempotentes y transaccionales, demostrar empíricamente la diferencia con un productor naive, y tunear los parámetros de batching para subir el throughput.
+Tu misión: medir empíricamente el rendimiento de producción y consumo con las herramientas de perf-test, y tunear los parámetros del cliente (batch, linger, acks, compresión, fetch) para encontrar el punto óptimo.
 
 ---
 
@@ -21,11 +20,10 @@ Tu misión: configurar productores idempotentes y transaccionales, demostrar emp
 
 - Cómo `batch.size` y `linger.ms` afectan el throughput
 - Diferencia entre `acks=0`, `acks=1` y `acks=all` (medida en vivo)
-- Por qué un productor "naive" puede generar duplicados
-- Cómo `enable.idempotence=true` los elimina
-- Transacciones exactly-once a través de múltiples tópicos
-- `isolation.level` desde el lado del consumer
-- Particionadores: sticky, round-robin, custom
+- Medir throughput y latencia de producción con `kafka-producer-perf-test`
+- Medir throughput de consumo con `kafka-consumer-perf-test`
+- Cómo el `fetch.size` y la compresión afectan el rendimiento
+- Particionadores y su impacto en el throughput
 
 ---
 
@@ -37,7 +35,7 @@ Tu misión: configurar productores idempotentes y transaccionales, demostrar emp
 | Docker Compose | v2.x |
 | RAM Docker | 6 GB |
 | Puertos libres | 9092, 9093, 9094, 8090 |
-| Labs 01-05 detenidos | Sí |
+| Otro clúster Kafka detenido | Sí |
 
 ---
 
@@ -58,12 +56,8 @@ Luego abre `guia/01-tuning-batch-y-linger.md`.
 |--------|---------|
 | Iniciar lab | `bin/start-lab.sh` |
 | Detener lab | `bin/stop-lab.sh` |
-| Test de throughput | `kafka-cli/perf-test.sh <TOPIC> N [opciones]` |
-| Producción naive | `kafka-cli/produce-naive.sh <TOPIC> N` |
-| Producción idempotente | `kafka-cli/produce-idempotent.sh <TOPIC> N` |
-| Producción transaccional | `kafka-cli/produce-transactional.sh N [--abort]` |
-| Consumir aislado | `kafka-cli/consume-isolated.sh <TOPIC> <ISOLATION>` |
-| Listar transacciones | `kafka-cli/list-transactions.sh` |
+| Test de rendimiento de producción | `kafka-cli/perf-test.sh <TOPIC> N [opciones]` |
+| Test de rendimiento de consumo | `kafka-cli/consumer-perf-test.sh <TOPIC> N [opciones]` |
 | Kafbat UI | http://localhost:8090 |
 
 ---
@@ -88,4 +82,4 @@ Luego abre `guia/01-tuning-batch-y-linger.md`.
 
 ---
 
-*Lab 06 - Curso de Administración de Apache Kafka con Confluent Platform*
+*Lab 07 - Curso de Administración de Confluent Apache Kafka (SUNAT)*
