@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ============================================================
-# NovaTech Logistics - Lab 01: Reiniciar laboratorio
+# NovaTech Logistics - Lab 07: Reiniciar laboratorio
 # Elimina todos los contenedores, volúmenes y redes
 # ============================================================
 

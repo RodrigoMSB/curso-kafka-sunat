@@ -66,9 +66,7 @@ Luego abre `guia/01-tuning-batch-y-linger.md`.
 
 | Tópico | Particiones | RF | MIR | Propósito |
 |--------|-------------|----|----|-----------|
-| `novatech.payments.attempts` | 3 | 3 | 2 | Experimentos de duplicados |
-| `novatech.payments.confirmed` | 3 | 3 | 2 | Experimentos transaccionales |
-| `novatech.tuning.bench` | 6 | 3 | 2 | Benchmarks de tuning |
+| `novatech.tuning.bench` | 6 | 3 | 2 | Benchmarks de rendimiento |
 
 ---
 
