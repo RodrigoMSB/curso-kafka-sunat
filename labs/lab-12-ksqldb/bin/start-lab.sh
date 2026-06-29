@@ -136,7 +136,7 @@ else
 fi
 
 echo ""
-echo -e "${YELLOW}[7/7] Inicializando tópicos del Lab 10...${NC}"
+echo -e "${YELLOW}[7/7] Inicializando tópicos del Lab 12...${NC}"
 bash "$(dirname "$0")/../infra/scripts/init-lab10-topics.sh"
 
 echo ""

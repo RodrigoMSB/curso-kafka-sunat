@@ -45,7 +45,7 @@ bin/start-lab.sh
 
 ⏰ La primera vez tarda 3-5 minutos (descarga de imágenes + arranque de ksqlDB).
 
-Luego abre `guia/01-schema-registry.md`.
+Luego abre `guia/01-ksqldb-fundamentos.md`.
 
 ---
 

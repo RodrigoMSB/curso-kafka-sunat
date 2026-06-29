@@ -1,4 +1,4 @@
-# Parte 3: ksqlDB fundamentos
+# Parte 1: ksqlDB fundamentos
 
 ## Objetivo
 

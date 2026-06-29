@@ -7,7 +7,7 @@ Esta carpeta contiene las soluciones de referencia del laboratorio.
 | Archivo | Contenido |
 |---------|-----------|
 | `reporte-resuelto.md` | Respuestas modelo a las preguntas del reporte del lab |
-| `respuestas-desafio.md` | Solución comentada del desafío de la Parte 5 |
+| `respuestas-desafio.md` | Solución comentada del desafío de Streaming SQL |
 
 ## Cómo usar estas soluciones
 

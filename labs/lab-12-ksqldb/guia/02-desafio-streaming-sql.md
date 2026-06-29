@@ -1,4 +1,4 @@
-# Guía 04 — Desafío Streaming SQL
+# Guía 02 — Desafío Streaming SQL
 
 ## Contexto
 
