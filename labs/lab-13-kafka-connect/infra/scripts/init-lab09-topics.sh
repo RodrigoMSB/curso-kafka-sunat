@@ -32,5 +32,5 @@ echo -e "${CYAN}[init-lab09-topics] Creando tópico para Sink connector...${NC}"
 
 create_topic_if_not_exists "novatech.lab09.pedidos.procesados" 3 3
 
-echo -e "${GREEN}✓ Tópico del Lab 09 inicializado${NC}"
+echo -e "${GREEN}✓ Tópico del Lab 13 inicializado${NC}"
 echo -e "${YELLOW}  El tópico 'novatech.lab09.pedidos' lo creará el Source connector al arrancar.${NC}"

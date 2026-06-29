@@ -1,4 +1,4 @@
-# Soluciones del Lab 09 — Kafka Connect
+# Soluciones del Lab 13 — Kafka Connect
 
 Esta carpeta contiene las soluciones de referencia del laboratorio.
 

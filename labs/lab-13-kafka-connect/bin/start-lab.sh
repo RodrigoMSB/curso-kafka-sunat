@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ============================================================
-# NovaTech Logistics - Lab 09: Iniciar laboratorio
+# NovaTech Logistics - Lab 13: Iniciar laboratorio
 # ============================================================
 
 # Colores
@@ -30,7 +30,7 @@ echo "║     ██║ ╚████║╚██████╔╝ ╚██�
 echo "║     ╚═╝  ╚═══╝ ╚═════╝   ╚═══╝  ╚═╝  ╚═╝                ║"
 echo "║              T E C H   L O G I S T I C S                ║"
 echo "║                                                          ║"
-echo "║     Lab 09: Kafka Connect con PostgreSQL                 ║"
+echo "║     Lab 13: Kafka Connect                                ║"
 echo "║                                                          ║"
 echo "╚══════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
@@ -48,7 +48,7 @@ if [ "$DOCKER_MEM_GB" -lt 5 ]; then
     echo -e "${YELLOW}  Se recomiendan al menos 6 GB para este laboratorio.${NC}"
 fi
 
-echo -e "${YELLOW}[1/6] Levantando contenedores del clúster NovaTech Lab 09...${NC}"
+echo -e "${YELLOW}[1/6] Levantando contenedores del clúster NovaTech Lab 13...${NC}"
 # Cleanup defensivo:
 # (1) Force-remove contenedores con nombres canónicos compartidos (cross-lab):
 #     compose down -v sólo limpia los del proyecto actual; cuando el alumno
@@ -169,7 +169,7 @@ bash "$(dirname "$0")/../infra/scripts/init-lab09-topics.sh"
 
 echo ""
 echo -e "${GREEN}${BOLD}════════════════════════════════════════════════════════════${NC}"
-echo -e "${GREEN}${BOLD}  CLÚSTER NOVATECH LAB 09 OPERATIVO${NC}"
+echo -e "${GREEN}${BOLD}  CLÚSTER NOVATECH LAB 13 OPERATIVO${NC}"
 echo -e "${GREEN}${BOLD}════════════════════════════════════════════════════════════${NC}"
 echo ""
 echo -e "${CYAN}  Componentes:${NC}"

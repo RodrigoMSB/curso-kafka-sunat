@@ -1,4 +1,4 @@
-# Lab 09 — Reporte resuelto (solución de referencia)
+# Lab 13 — Reporte resuelto (solución de referencia)
 
 > **⚠ Importante**: estas son las soluciones de referencia del lab.
 > Antes de consultarlas, intenta resolver cada actividad por tu cuenta.
@@ -91,4 +91,4 @@
 
 ---
 
-*Solución - Lab 09*
+*Solución - Lab 13*

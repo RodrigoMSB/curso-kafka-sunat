@@ -1,4 +1,4 @@
-# Reporte del Lab 09: Kafka Connect con PostgreSQL
+# Reporte del Lab 13: Kafka Connect
 
 ## Datos del alumno
 
@@ -123,4 +123,4 @@ Resume en 3-5 frases lo que aprendiste sobre integración con Kafka Connect:
 
 ---
 
-*Lab 09 - Curso de Administración de Apache Kafka con Confluent Platform*
+*Lab 13 - Curso de Administración de Confluent Apache Kafka (SUNAT)*

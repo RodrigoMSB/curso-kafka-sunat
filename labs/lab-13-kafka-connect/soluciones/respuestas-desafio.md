@@ -1,4 +1,4 @@
-# Lab 09 — Respuestas del desafío (solución de referencia)
+# Lab 13 — Respuestas del desafío (solución de referencia)
 
 > **⚠ Importante**: estas son las soluciones de referencia del lab.
 > Antes de consultarlas, intenta resolver cada actividad por tu cuenta.
@@ -101,4 +101,4 @@ Kafbat UI > Connect muestra:
 
 ---
 
-*Soluciones del desafío - Lab 09*
+*Soluciones del desafío - Lab 13*

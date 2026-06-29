@@ -1,4 +1,4 @@
-# Reporte del Lab 09 — VALIDADO POR MOCITO (referencia instructor)
+# Reporte del Lab 13 — VALIDADO POR MOCITO (referencia instructor)
 
 > Versión completada con datos reales del lab end-to-end.
 
@@ -125,4 +125,4 @@
 2. **Sin hallazgos pedagógicos nuevos** — el lab funciona end-to-end limpio.
 3. **Observación**: el campo `monto` en el JSON aparece base64-encoded (`"monto":"ExLQ"`) porque el `JsonConverter` con `schemas.enable=false` serializa Decimal como bytes. Esto se "arregla" naturalmente en Lab 10 al introducir Schema Registry + Avro (`monto` queda como DOUBLE tipado). Es un buen anticlimax pedagógico.
 
-*Lab 09 - Curso de Administración de Apache Kafka con Confluent Platform*
+*Lab 13 - Curso de Administración de Confluent Apache Kafka (SUNAT)*

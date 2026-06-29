@@ -1,9 +1,8 @@
-# Lab 09: Kafka Connect con PostgreSQL
+# Lab 13: Kafka Connect
 
-**Curso**: Administración de Apache Kafka con Confluent Platform  
-**Capítulo**: 4 - Integración con sistemas externos  
-**Cubre los ítems**: 1, 2 y 3 del Capítulo 4  
-**Duración estimada**: ~120 minutos
+**Curso**: Administración de Confluent Apache Kafka (SUNAT)  
+**Unidad**: 4 - Avanzado, ecosistema, HA/DR y seguridad  
+**Duración estimada**: ~60 minutos
 
 ---
 
@@ -37,7 +36,7 @@ Tu misión: levantar Kafka Connect en modo distributed, configurar un JDBC Sourc
 | RAM Docker | 6 GB |
 | Disco libre | 10 GB |
 | Puertos libres | 9092, 9093, 9094, 8090, 5432, 8083 |
-| Labs 01-08 detenidos | Sí |
+| Otro clúster Kafka detenido | Sí |
 | Acceso a internet | Sí (descarga plugin JDBC al primer arranque) |
 
 ---
@@ -107,13 +106,13 @@ Luego abre `guia/01-arquitectura-connect.md`.
 
 ---
 
-## Diferencias con Labs 01-08
+## Diferencias con los labs anteriores
 
-| Aspecto | Lab 09 |
+| Aspecto | Lab 13 |
 |---|---|
-| Stack | CP 8.2.0 (vuelve después del Lab 08 con 7.9.0) |
+| Stack | CP 8.2.0 (Kafka 4.2) |
 | Servicios nuevos | PostgreSQL, Kafka Connect |
-| RAM Docker | 6 GB (igual que labs 01-07) |
+| RAM Docker | 6 GB |
 | Plugin JDBC | Se instala al arrancar (~90s extra primera vez) |
 
 ---
@@ -126,4 +125,4 @@ Luego abre `guia/01-arquitectura-connect.md`.
 
 ---
 
-*Lab 09 - Curso de Administración de Apache Kafka con Confluent Platform*
+*Lab 13 - Curso de Administración de Confluent Apache Kafka (SUNAT)*

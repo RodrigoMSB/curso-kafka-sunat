@@ -1,7 +1,7 @@
 # ============================================================
-# NovaTech Logistics - Lab 09: Kafka Connect con PostgreSQL
+# NovaTech Logistics - Lab 13: Kafka Connect
 # Stack: 3 brokers cp-kafka:8.2.0 + Kafbat UI + PostgreSQL 16 + Kafka Connect 8.2.0
-# Volvemos a CP 8.2.0 (Kafka 4.2) desde el Lab 08 que usaba 7.9.0 por requisito de CC Legacy.
+# Stack CP 8.2.0 (Kafka 4.2), modo KRaft.
 # ============================================================
 
 services:

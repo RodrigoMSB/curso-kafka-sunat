@@ -1,4 +1,4 @@
-# Troubleshooting - Lab 09
+# Troubleshooting - Lab 13 (SUNAT)
 
 ## Síntoma 1: Connect tarda mucho en arrancar (>2 minutos)
 
@@ -125,7 +125,7 @@ curl -v http://localhost:8083/
 
 ## Síntoma 8: Cambiar puerto Kafbat UI
 
-Ver troubleshooting del Lab 01.
+Libera el puerto 8090 o cambia `KAFBAT_UI_PORT` en `infra/.env`.
 
 ---
 
@@ -186,4 +186,4 @@ docker exec kafka-broker-1 kafka-consumer-groups \
 
 ---
 
-*Troubleshooting - Lab 09*
+*Troubleshooting - Lab 13 (SUNAT)*
