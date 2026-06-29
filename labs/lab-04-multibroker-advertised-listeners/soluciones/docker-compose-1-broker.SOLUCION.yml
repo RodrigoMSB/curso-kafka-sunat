@@ -1,4 +1,4 @@
-# NovaTech Logistics - Lab 03 / Etapa 1: Un solo broker - SOLUCIÓN
+# NovaTech Logistics - Lab 04 / Etapa 1: Un solo broker - SOLUCIÓN
 
 services:
   kafka-broker:

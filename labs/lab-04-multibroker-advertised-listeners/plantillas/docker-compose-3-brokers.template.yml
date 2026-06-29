@@ -10,7 +10,7 @@
 #   4. Asignar puertos CONTROLLER internos únicos (39092, 39093, 39094)
 # ────────────────────────────────────────────────────────────────────
 
-# NovaTech Logistics - Lab 03 / Etapa 2: Tres brokers con quorum KRaft
+# NovaTech Logistics - Lab 04 / Etapa 2: Tres brokers con quorum KRaft
 
 services:
   kafka-broker-1:

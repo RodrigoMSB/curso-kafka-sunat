@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-# NovaTech Logistics - Lab 03 - Biblioteca compartida
+# NovaTech Logistics - Lab 04 - Biblioteca compartida
 # ============================================================
 
 # ── Colores ──

@@ -1,15 +1,14 @@
-# Lab 03: Construye tu propio clúster KRaft desde cero
+# Lab 04: Clúster multi-broker y advertised.listeners
 
-**Curso**: Administración de Apache Kafka con Confluent Platform  
-**Capítulo**: 2 - Instalación, configuración y operación básica  
-**Cubre los ítems**: 1, 2 y 3 del Capítulo 2  
-**Duración estimada**: ~90 minutos
+**Curso**: Administración de Confluent Apache Kafka (SUNAT)  
+**Unidad**: 3 - Configuración del clúster, tópicos y rendimiento  
+**Duración estimada**: ~60 minutos
 
 ---
 
 ## Contexto narrativo
 
-Después de los experimentos pub/sub del Lab 02, NovaTech necesita expandirse a nuevos data centers. El equipo de infraestructura te pide que documentes el procedimiento exacto para levantar un clúster Kafka desde cero, paso por paso, **sin usar un docker-compose pre-hecho**.
+NovaTech necesita expandir su clúster a múltiples brokers y exponerlo correctamente a clientes en distintas redes. El equipo de infraestructura te pide levantar un clúster multi-broker y configurar `advertised.listeners` —una de las opciones más críticas y peor entendidas de Kafka— para que productores y consumidores se conecten sin errores, paso por paso, **sin usar un docker-compose pre-hecho**.
 
 Tu misión:
 1. Empezar con un broker mínimo
@@ -25,7 +24,7 @@ Tu misión:
 - Cómo se inicializa el almacenamiento con `kafka-storage format`
 - Cómo se configura el quorum de controladores con `controller.quorum.voters`
 - Cómo se valida el estado del clúster con `kafka-metadata-quorum`
-- Cómo separar listeners internos de externos (desafío)
+- Cómo configurar `advertised.listeners` y separar listeners internos de externos
 
 ---
 
@@ -37,7 +36,7 @@ Tu misión:
 | Docker Compose | v2.x |
 | RAM asignada a Docker | 6 GB |
 | Puertos libres | 9092, 9093, 9094 |
-| Labs 01 y 02 detenidos | Sí |
+| Otro clúster Kafka detenido | Sí |
 | Imagen Docker | `confluentinc/cp-kafka:8.2.0` |
 
 ---
@@ -45,7 +44,7 @@ Tu misión:
 ## Inicio rápido
 
 ```bash
-# 1. Asegurar que Lab 01 y Lab 02 estén detenidos
+# 1. Asegurar que no haya otro clúster Kafka corriendo en los mismos puertos
 # (desde sus carpetas: bin/stop-lab.sh)
 
 # 2. Dar permisos de ejecución a los scripts del lab
@@ -62,7 +61,7 @@ A diferencia de los Labs anteriores, **este lab NO tiene un `start-lab.sh` únic
 ## Estructura del laboratorio
 
 ```
-lab-03-construye-tu-cluster/
+lab-04-multibroker-advertised-listeners/
 ├── README.md                  # Este archivo
 ├── mi-cluster/                # ← AQUÍ CONSTRUIRÁS TUS ARCHIVOS
 ├── plantillas/                # Esqueletos comentados con TODOs
@@ -106,4 +105,4 @@ lab-03-construye-tu-cluster/
 
 ---
 
-*Lab 03 - Curso de Administración de Apache Kafka con Confluent Platform*
+*Lab 04 - Curso de Administración de Confluent Apache Kafka (SUNAT)*

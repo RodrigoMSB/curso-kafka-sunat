@@ -1,4 +1,4 @@
-# Troubleshooting - Lab 03
+# Troubleshooting - Lab 04 (SUNAT)
 
 ## Problemas comunes y soluciones
 
@@ -8,22 +8,15 @@
 
 **Síntoma**: error sobre puertos 9092, 9093 o 9094.
 
-**Causa**: los Labs 01 o 02 están corriendo.
+**Causa**: otro clúster Kafka está corriendo en los mismos puertos.
 
 **Solución**:
 ```bash
 # Verificar qué está usando los puertos
 docker ps | grep -E '9092|9093|9094'
 
-# Detener los otros labs
-cd ../lab-01-radiografia-cluster
-bin/stop-lab.sh
-
-cd ../lab-02-pubsub-en-accion
-bin/stop-lab.sh
-
-# Volver a tu lab
-cd ../lab-03-construye-tu-cluster
+# Detener el otro clúster: ve a la carpeta del lab que tengas levantado
+# y ejecuta su bin/stop-lab.sh
 ```
 
 ---
@@ -127,4 +120,4 @@ cd mi-cluster && docker compose up -d
 
 ---
 
-*Troubleshooting - Lab 03*
+*Troubleshooting - Lab 04 (SUNAT)*

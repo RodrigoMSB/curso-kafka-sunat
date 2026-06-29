@@ -1,4 +1,4 @@
-# Lab 03 — Respuestas del desafío (solución de referencia)
+# Lab 04 — Respuestas del desafío (solución de referencia)
 
 > **⚠ Importante**: estas son las soluciones de referencia del lab.
 > Antes de consultarlas, intenta resolver cada actividad por tu cuenta.
@@ -55,4 +55,4 @@ Por eso usamos dos listeners distintos:
 
 ---
 
-*Soluciones del desafío - Lab 03*
+*Soluciones del desafío - Lab 04*
