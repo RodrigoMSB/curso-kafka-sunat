@@ -1,5 +1,5 @@
 #!/bin/bash
-# Crea los 3 tópicos del Lab 06 de manera idempotente.
+# Crea el tópico de benchmark del Lab 07 de manera idempotente.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")/../../bin" && pwd)"
@@ -36,15 +36,9 @@ create_topic_if_not_exists() {
     echo -e "${GREEN}  ✓ Tópico ${TOPIC} creado (${PARTITIONS} particiones, RF=${RF})${NC}"
 }
 
-echo -e "${CYAN}[init-lab06-topics] Creando tópicos del Lab 06...${NC}"
-
-create_topic_if_not_exists "novatech.payments.attempts" 3 3 \
-    "min.insync.replicas=2"
-
-create_topic_if_not_exists "novatech.payments.confirmed" 3 3 \
-    "min.insync.replicas=2"
+echo -e "${CYAN}[init-lab06-topics] Creando tópicos del Lab 07...${NC}"
 
 create_topic_if_not_exists "novatech.tuning.bench" 6 3 \
     "min.insync.replicas=2"
 
-echo -e "${GREEN}✓ Tópicos del Lab 06 inicializados${NC}"
+echo -e "${GREEN}✓ Tópicos del Lab 07 inicializados${NC}"
