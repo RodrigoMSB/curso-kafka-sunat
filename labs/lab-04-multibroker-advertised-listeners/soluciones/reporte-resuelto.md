@@ -62,7 +62,7 @@
 
 ---
 
-## Parte 5: Desafío - Listeners separados
+## Parte 5: Listeners separados y advertised.listeners
 
 | Pregunta | Respuesta esperada |
 |----------|-------------------|
