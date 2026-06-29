@@ -18,7 +18,7 @@ Al final del laboratorio, esta carpeta deberá contener:
 ## ¿Cómo trabajo aquí?
 
 ```bash
-# Estás en lab-03-construye-tu-cluster/
+# Estás en lab-01-inicializacion-kraft/
 cd mi-cluster
 
 # Crear o editar tus archivos:

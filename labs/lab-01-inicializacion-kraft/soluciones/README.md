@@ -1,4 +1,4 @@
-# Soluciones del Lab 03 — Construye tu propio clúster KRaft
+# Soluciones del Lab 01 — Inicialización KRaft
 
 Esta carpeta contiene las soluciones de referencia del laboratorio.
 
