@@ -86,4 +86,4 @@ kafka-cli/perf-test.sh novatech.tuning.bench 50000 --acks all
 
 ## Siguiente paso
 
-Continúa con [Parte 3: Idempotencia y duplicados](03-idempotencia-y-duplicados.md).
+Continúa con [Parte 3: Pruebas de rendimiento de productor y consumidor](03-rendimiento-productor-consumidor.md).
