@@ -130,4 +130,4 @@ bin/check-quorum.sh
 
 ## Siguiente paso
 
-Continúa con el [Desafío 5: Listeners separados](05-desafio-listeners-separados.md) (opcional).
+Continúa con la [Parte 5: Listeners separados y advertised.listeners](05-desafio-listeners-separados.md).

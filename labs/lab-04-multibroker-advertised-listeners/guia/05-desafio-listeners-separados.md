@@ -98,4 +98,4 @@ Responde con tus palabras:
 
 ## Entrega
 
-Documenta tus respuestas en `plantillas/reporte-entregable.md` en la sección del desafío.
+Documenta tus respuestas en `plantillas/reporte-entregable.md` en la sección de listeners.

@@ -73,7 +73,7 @@ Pega aquí (resumido):
 
 ---
 
-## Parte 5: Desafío - Listeners separados (opcional)
+## Parte 5: Listeners separados y advertised.listeners
 
 | Pregunta | Tu respuesta |
 |----------|-------------|
