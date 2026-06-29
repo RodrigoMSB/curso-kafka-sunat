@@ -1,4 +1,4 @@
-# Lab 06 — Respuestas del desafío (solución de referencia)
+# Lab 07 — Respuestas del desafío (solución de referencia)
 
 > **⚠ Importante**: estas son las soluciones de referencia del lab.
 > Antes de consultarlas, intenta resolver cada actividad por tu cuenta.
@@ -75,4 +75,4 @@ Si tienes 5000 vehículos con tráfico parejo, el hash distribuye uniformemente 
 
 ---
 
-*Soluciones del desafío - Lab 06*
+*Soluciones del desafío - Lab 07*

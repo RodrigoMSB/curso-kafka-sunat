@@ -1,4 +1,4 @@
-# Soluciones del Lab 06 — Productores afilados
+# Soluciones del Lab 07 — Pruebas de rendimiento
 
 Esta carpeta contiene las soluciones de referencia del laboratorio.
 
