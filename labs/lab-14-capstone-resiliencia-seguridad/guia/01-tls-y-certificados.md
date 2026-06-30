@@ -25,7 +25,7 @@ Sin TLS, **cualquiera con acceso a la red puede leer los mensajes** (incluyendo 
 
 ---
 
-## Arquitectura del Lab 12
+## Arquitectura del Lab 14
 
 ```
 [Cliente CLI]                                       [Broker]

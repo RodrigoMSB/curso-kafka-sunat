@@ -23,7 +23,7 @@ source "$(dirname "$0")/common.sh"
 CERTS_DIR="$(cd "$(dirname "$0")/../infra/certs" && pwd)"
 PASS="${TLS_KEYSTORE_PASSWORD:-changeit}"
 DAYS=3650
-CN_CA="NovaTech-CA-Lab12"
+CN_CA="NovaTech-CA-Lab14"
 KEYTOOL_IMAGE="eclipse-temurin:21-jdk"
 
 # Directorio temporal para archivos auxiliares (ej: extensiones de openssl).
@@ -124,7 +124,7 @@ fi
 # Pre-pull explícito de la imagen con feedback claro al usuario.
 # Sin docker pull -q: si la red es lenta, el alumno necesita ver el progreso
 # y NO debe haber timeouts que aborten la descarga.
-echo -e "${CYAN}[generate-certs] Generando PKI para el Lab 12...${NC}"
+echo -e "${CYAN}[generate-certs] Generando PKI para el Lab 14...${NC}"
 echo "  [0/5] Verificando imagen $KEYTOOL_IMAGE..."
 if docker image inspect "$KEYTOOL_IMAGE" > /dev/null 2>&1; then
     echo -e "${GREEN}    ✓ Imagen ya disponible localmente${NC}"
@@ -144,12 +144,12 @@ if [[ "$IS_MSYS" -eq 1 ]]; then
     MSYS_NO_PATHCONV=1 openssl req -new -x509 \
         -keyout "$CA_KEY" -out "$CA_CRT" \
         -days $DAYS -passout pass:$PASS \
-        -subj "/CN=$CN_CA/OU=Lab12/O=NovaTech/L=Santiago/C=CL"
+        -subj "/CN=$CN_CA/OU=Lab14/O=NovaTech/L=Santiago/C=CL"
 else
     openssl req -new -x509 \
         -keyout "$CA_KEY" -out "$CA_CRT" \
         -days $DAYS -passout pass:$PASS \
-        -subj "/CN=$CN_CA/OU=Lab12/O=NovaTech/L=Santiago/C=CL"
+        -subj "/CN=$CN_CA/OU=Lab14/O=NovaTech/L=Santiago/C=CL"
 fi
 
 # 2. Truststore: contiene la CA root, lo usan tanto brokers como clients
@@ -166,7 +166,7 @@ for i in 1 2 3; do
     # 3a. Generar keypair (keytool en container)
     run_keytool -keystore /certs/$BROKER.keystore.jks -alias $BROKER \
         -genkey -keyalg RSA -storepass $PASS -keypass $PASS -validity $DAYS \
-        -dname "CN=$BROKER, OU=Lab12, O=NovaTech, L=Santiago, C=CL" \
+        -dname "CN=$BROKER, OU=Lab14, O=NovaTech, L=Santiago, C=CL" \
         -ext "SAN=DNS:$BROKER,DNS:localhost"
 
     # 3b. Crear CSR (keytool en container)

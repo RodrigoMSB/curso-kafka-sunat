@@ -1,4 +1,4 @@
-# Troubleshooting — Lab 12
+# Troubleshooting — Lab 14
 
 ## Síntoma 1: `bin/start-lab.sh` falla en el paso `[1/6] generando certificados`
 
@@ -211,4 +211,4 @@ bin/start-lab.sh
 
 ---
 
-*Troubleshooting — Lab 12*
+*Troubleshooting — Lab 14*

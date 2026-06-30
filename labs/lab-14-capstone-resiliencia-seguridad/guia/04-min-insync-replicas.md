@@ -197,4 +197,4 @@ kafka-cli/produce-publico.sh "Cluster recuperado"
 
 ## Siguiente paso
 
-Continúa con [Parte 5: RBAC como concepto (Confluent Enterprise)](05-rbac-concepto.md).
+Continúa con [Parte 5: Simulación de fallo y recuperación](05-simulacion-fallo-recuperacion.md).

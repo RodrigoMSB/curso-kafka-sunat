@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ============================================================
-# NovaTech Logistics - Lab 12: Iniciar laboratorio (con seguridad)
+# NovaTech Logistics - Lab 14: Iniciar laboratorio (con seguridad)
 # ============================================================
 
 GREEN='\033[0;32m'
@@ -27,7 +27,7 @@ echo "║     ██║ ╚████║╚██████╔╝ ╚██�
 echo "║     ╚═╝  ╚═══╝ ╚═════╝   ╚═══╝  ╚═╝  ╚═╝                ║"
 echo "║              T E C H   L O G I S T I C S                ║"
 echo "║                                                          ║"
-echo "║     Lab 12: Seguridad y evaluación final                 ║"
+echo "║     Lab 14: Capstone resiliencia y seguridad             ║"
 echo "║                                                          ║"
 echo "╚══════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
@@ -47,7 +47,7 @@ echo -e "${YELLOW}[1/6] Generando certificados TLS (si no existen)...${NC}"
 bash "$(dirname "$0")/generate-certs.sh"
 
 echo ""
-echo -e "${YELLOW}[2/6] Levantando contenedores del clúster NovaTech Lab 12...${NC}"
+echo -e "${YELLOW}[2/6] Levantando contenedores del clúster NovaTech Lab 14...${NC}"
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d
 
 echo ""
@@ -88,11 +88,11 @@ else
 fi
 
 echo ""
-echo -e "${YELLOW}[5/6] Inicializando tópicos del Lab 12...${NC}"
+echo -e "${YELLOW}[5/6] Inicializando tópicos del Lab 14...${NC}"
 bash "$(dirname "$0")/../infra/scripts/init-lab12-topics.sh"
 
 echo ""
-echo -e "${YELLOW}[6/6] Inicializando ACLs del Lab 12...${NC}"
+echo -e "${YELLOW}[6/6] Inicializando ACLs del Lab 14...${NC}"
 bash "$(dirname "$0")/../infra/scripts/init-lab12-acls.sh"
 
 echo ""
@@ -106,7 +106,7 @@ echo -e "    Broker 2 SASL_SSL:  localhost:9093"
 echo -e "    Broker 3 SASL_SSL:  localhost:9094"
 echo -e "    Kafbat UI:          http://localhost:8090"
 echo ""
-echo -e "${CYAN}  Tópicos del Lab 12:${NC}"
+echo -e "${CYAN}  Tópicos del Lab 14:${NC}"
 echo -e "    ${BOLD}novatech.lab12.publico${NC}       - 3 part, RF=3 (autenticados con ACL)"
 echo -e "    ${BOLD}novatech.lab12.confidencial${NC}  - 3 part, RF=3 (solo admin + app1)"
 echo ""

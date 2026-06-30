@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "[init-lab12-acls] Creando ACLs del Lab 12..."
+echo "[init-lab12-acls] Creando ACLs del Lab 14..."
 
 # app1: producer+consumer sobre publico
 MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= cli-client kafka-acls \

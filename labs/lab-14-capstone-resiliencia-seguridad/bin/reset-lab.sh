@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# Lab 12 reset: detiene todo, borra volúmenes Y certificados.
+# Lab 14 reset: detiene todo, borra volúmenes Y certificados.
 
 GREEN='\033[0;32m'
 RED='\033[0;31m'
