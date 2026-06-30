@@ -62,7 +62,7 @@ NovaTech quiere una prueba de fuego. Con productores corriendo en segundo plano 
 
 1. Agrega el broker 4.
 2. Reasigna a los 4 brokers.
-3. Cambia `num.replica.fetchers=8` en caliente en el broker 4.
+3. Cambia `num.replica.fetchers=2` en caliente en el broker 4.
 4. Drena el broker 4 y apágalo.
 
 Documenta en el reporte: ¿hubo alguna pérdida de mensajes o error de producción en todo el ciclo? ¿Cuál fue el paso más lento?

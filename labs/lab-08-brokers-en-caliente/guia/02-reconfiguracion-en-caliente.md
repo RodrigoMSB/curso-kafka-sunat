@@ -15,7 +15,7 @@ NovaTech necesita subir la paralelización de réplica en un broker que va lento
 Sube los hilos de fetch de réplica solo en el broker 1:
 
 ```bash
-kafka-cli/alter-broker-config.sh 1 num.replica.fetchers=4
+kafka-cli/alter-broker-config.sh 1 num.replica.fetchers=2
 ```
 
 Verifica que se aplicó (sin reinicio):
@@ -24,7 +24,7 @@ Verifica que se aplicó (sin reinicio):
 kafka-cli/describe-broker-config.sh 1
 ```
 
-Busca `num.replica.fetchers=4` con origen `DYNAMIC_BROKER_CONFIG`.
+Busca `num.replica.fetchers=2` con origen `DYNAMIC_BROKER_CONFIG`.
 
 ### Anota
 

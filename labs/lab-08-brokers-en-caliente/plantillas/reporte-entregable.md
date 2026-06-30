@@ -18,7 +18,7 @@
 
 | Cambio | ¿Reinició el broker? | Origen tras el cambio |
 |--------|----------------------|------------------------|
-| `num.replica.fetchers=4` (broker 1) | | |
+| `num.replica.fetchers=2` (broker 1) | | |
 | `log.retention.ms=3600000` (default) | | |
 
 | Pregunta | Respuesta |

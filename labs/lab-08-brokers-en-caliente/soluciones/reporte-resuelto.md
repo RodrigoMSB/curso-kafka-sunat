@@ -7,7 +7,7 @@
 - La config `default` está vacía al inicio porque **no se ha fijado ningún default dinámico cluster-wide**; solo aparecen overrides explícitos.
 
 ## Parte 2
-- `num.replica.fetchers=4`: el broker **NO** se reinicia (uptime intacto). Origen pasa a `DYNAMIC_BROKER_CONFIG`.
+- `num.replica.fetchers=2`: el broker **NO** se reinicia (uptime intacto). Origen pasa a `DYNAMIC_BROKER_CONFIG`.
 - `log.retention.ms=3600000`: aparece en la config `default`, afecta a **todos** los brokers que no tengan override propio.
 - `process.roles`: Kafka rechaza el cambio — es **read-only**, fijada al arranque. Tiene sentido porque cambiar el rol de un nodo (broker↔controller) en caliente rompería el quórum y la identidad del nodo.
 
