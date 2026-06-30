@@ -43,8 +43,8 @@ echo -e "${GREEN}  ✓ kafka-broker-3 reintegrándose${NC}"; sleep 12
 
 paso "7/8 · Verificación sin pérdida (deben ser 20 mensajes)"
 TOTAL=$(MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= cli-client bash -c "kafka-console-consumer \
-    --bootstrap-server $BOOT_ALL --consumer.config $ADMIN \
-    --topic $TOPIC --from-beginning --timeout-ms 8000 2>/dev/null | wc -l")
+    --bootstrap-server $BOOT_ALL --command-config $ADMIN \
+    --topic $TOPIC --from-beginning --timeout-ms 8000 2>/dev/null | grep -c '^pedido-capstone'")
 echo -e "${BOLD}  Mensajes totales: ${TOTAL} (esperado: 20)${NC}"
 
 paso "8/8 · Estado recuperado (ISR vuelve a 3)"
