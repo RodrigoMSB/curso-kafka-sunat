@@ -1,22 +1,7 @@
-# Soluciones del Lab 12 — Seguridad y capstone final
-
-Esta carpeta contiene las soluciones de referencia del laboratorio.
-
-## Archivos
+# Soluciones del Lab 14 — Capstone: Resiliencia y seguridad
 
 | Archivo | Contenido |
 |---------|-----------|
-| `reporte-resuelto.md` | Respuestas modelo a las preguntas del reporte del lab |
-| `respuestas-desafio.md` | Solución comentada del desafío de la Parte 5 |
+| `reporte-resuelto.md` | Respuestas de referencia del reporte de evaluación final |
 
-## Cómo usar estas soluciones
-
-1. Intenta primero resolver el lab por tu cuenta siguiendo la guía
-   en `../guia/`.
-2. Si te trabas en una actividad puntual, consulta solo esa sección
-   de la solución correspondiente.
-3. Al terminar, contrasta tu reporte con `reporte-resuelto.md` para
-   verificar tu comprensión.
-
-> El aprendizaje real está en el proceso de resolver. Las soluciones
-> son una herramienta de validación, no un atajo.
+> Líderes, ISR y offsets exactos dependen de la corrida. Las soluciones dan conceptos y resultados esperados.
