@@ -1,5 +1,5 @@
 # ============================================================
-# NovaTech Logistics - Lab 14: Seguridad y evaluación final
+# NovaTech Logistics - Lab 14: Capstone resiliencia y seguridad
 # Stack: 3 brokers cp-kafka:8.2.0 con SASL_SSL + Kafbat UI + cliente CLI
 #
 # NOTA: este lab es el primero del curso con seguridad real (TLS + SASL + ACL).

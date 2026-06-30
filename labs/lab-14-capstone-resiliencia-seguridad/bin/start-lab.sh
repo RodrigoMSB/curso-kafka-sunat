@@ -120,6 +120,8 @@ echo -e "    1. Producir como app1:                ${BOLD}kafka-cli/produce-conf
 echo -e "    2. Intentar consumir confidencial app2 (DEBE FALLAR): ${BOLD}kafka-cli/consume-confidencial-app2.sh${NC}"
 echo -e "    3. Listar ACLs:                       ${BOLD}kafka-cli/list-acls.sh${NC}"
 echo -e "    4. Intentar conectar SIN auth:        ${BOLD}kafka-cli/attempt-no-auth.sh${NC}"
+echo -e "    5. Drill de failover:                  ${BOLD}kafka-cli/simulate-failure.sh${NC}"
+echo -e "    6. Capstone automatizado completo:     ${BOLD}bin/run-capstone.sh${NC}"
 echo ""
 echo -e "${YELLOW}  Abre la guía: guia/01-tls-y-certificados.md${NC}"
 echo ""
