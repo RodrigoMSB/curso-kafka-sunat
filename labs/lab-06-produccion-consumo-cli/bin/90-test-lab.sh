@@ -40,7 +40,7 @@ if [ "$VIVOS" -eq 3 ]; then
     MARK="chk-$(date +%s)-${RANDOM}"
     for i in 1 2 3; do echo "${MARK}-${i}"; done | \
         docker exec -i kafka-broker-1 kafka-console-producer \
-        --bootstrap-server kafka-broker-1:29092 --producer-property acks=all --topic "$TOPIC" 2>/dev/null
+        --bootstrap-server kafka-broker-1:29092 --command-property acks=all --topic "$TOPIC" 2>/dev/null
     GOT=$(docker exec kafka-broker-1 bash -c \
         "kafka-console-consumer --bootstrap-server kafka-broker-1:29092 --topic $TOPIC --from-beginning --timeout-ms 8000 2>/dev/null | grep -c '^${MARK}-'")
     if [ "$GOT" = "3" ]; then ok "produce/consume funciona (3/3 mensajes de prueba)"

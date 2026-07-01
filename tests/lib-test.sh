@@ -81,7 +81,7 @@ produce_marked() {  # <container> <bootstrap> <topic> <mark> <count> [config_fil
     for i in $(seq 1 "$count"); do echo "${mark}-${i}"; done | \
         MSYS_NO_PATHCONV=1 docker exec -i -e KAFKA_OPTS= "$ctr" \
         kafka-console-producer --bootstrap-server "$boot" $extra \
-        --producer-property acks=all --topic "$topic" 2>/dev/null
+        --command-property acks=all --topic "$topic" 2>/dev/null
 }
 
 # Cuenta cuántas de MIS marcas llegaron (ground truth). Imprime el número.
