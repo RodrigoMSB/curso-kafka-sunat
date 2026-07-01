@@ -33,3 +33,6 @@ scripts/diagnostico/logs/
 
 # Reporte generado por el harness E2E (tests/run-all.sh)
 tests/VALIDACION-REPORT.md
+
+# Artefactos de compilación Maven (labs Java/Spring)
+**/target/
