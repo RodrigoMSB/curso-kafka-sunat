@@ -30,3 +30,6 @@ scripts/diagnostico/logs/
 # Artefactos temporales y volúmenes locales
 # ---------------------------------------------------------------------------
 *.log
+
+# Reporte generado por el harness E2E (tests/run-all.sh)
+tests/VALIDACION-REPORT.md
