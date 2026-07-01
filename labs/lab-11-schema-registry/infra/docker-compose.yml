@@ -113,7 +113,7 @@ services:
   # KAFBAT UI con integración a Schema Registry
   # ═══════════════════════════════════════════════════════════
   kafbat-ui:
-    image: ghcr.io/kafbat/kafka-ui:latest
+    image: ghcr.io/kafbat/kafka-ui:${KAFBAT_UI_VERSION}
     hostname: kafbat-ui
     container_name: kafbat-ui
     ports:
