@@ -77,7 +77,7 @@ wait_for_container() {  # <name> [timeout_s]
 # Produce <count> mensajes "<mark>-1..<count>" (auth opcional)
 produce_marked() {  # <container> <bootstrap> <topic> <mark> <count> [config_file]
     local ctr="$1" boot="$2" topic="$3" mark="$4" count="$5" cfg="${6:-}" extra="" i
-    [ -n "$cfg" ] && extra="--producer.config $cfg"
+    [ -n "$cfg" ] && extra="--command-config $cfg"
     for i in $(seq 1 "$count"); do echo "${mark}-${i}"; done | \
         MSYS_NO_PATHCONV=1 docker exec -i -e KAFKA_OPTS= "$ctr" \
         kafka-console-producer --bootstrap-server "$boot" $extra \
@@ -88,7 +88,7 @@ produce_marked() {  # <container> <bootstrap> <topic> <mark> <count> [config_fil
 # El grep '^<mark>-' inmuniza contra warnings en stdout.
 consume_count_mark() {  # <container> <bootstrap> <topic> <mark> [timeout_ms] [config_file]
     local ctr="$1" boot="$2" topic="$3" mark="$4" tms="${5:-8000}" cfg="${6:-}" extra=""
-    [ -n "$cfg" ] && extra="--consumer.config $cfg"
+    [ -n "$cfg" ] && extra="--command-config $cfg"
     MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= "$ctr" bash -c \
         "kafka-console-consumer --bootstrap-server $boot $extra --topic $topic --from-beginning --timeout-ms $tms 2>/dev/null | grep -c '^${mark}-'"
 }
