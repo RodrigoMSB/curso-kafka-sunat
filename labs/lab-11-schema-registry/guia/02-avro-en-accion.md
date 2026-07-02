@@ -86,7 +86,7 @@ Verifica el throughput en Kafbat UI (gráfico de mensajes/seg en el tópico).
 
 ---
 
-## Actividad 6: Producir clientes (para JOIN en Parte 4)
+## Actividad 6: Producir clientes
 
 ```bash
 kafka-cli/produce-cliente-avro.sh 1001 "Acme S.A." VIP Santiago
@@ -104,6 +104,8 @@ kafka-cli/consume-avro.sh novatech.lab10.clientes
 ```
 
 (Ctrl+C tras ver los 4.)
+
+> Los datos Avro que registraste aquí se reutilizan en el **Lab 12 (ksqlDB)**, donde harás streams y consultas sobre ellos — incluido el JOIN entre tópicos.
 
 ---
 

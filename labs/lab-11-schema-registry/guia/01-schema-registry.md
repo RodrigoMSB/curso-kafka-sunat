@@ -143,6 +143,19 @@ schema-cli/register-schema.sh novatech.lab10.pedidos-value infra/schemas/pedido-
 
 ---
 
+> **Para explorar (opcional):** el mecanismo es el mismo para los otros modos. Cambia la compatibilidad del subject y observa cómo cambia lo que el registro acepta:
+>
+> ```bash
+> # Ver el modo actual del subject
+> curl -s http://localhost:8081/config/novatech.lab10.pedidos-value 2>/dev/null || curl -s http://localhost:8081/config
+>
+> # Cambiarlo a FORWARD (los datos escritos con el schema nuevo deben poder leerse con el viejo)
+> curl -s -X PUT -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+>   --data '{"compatibility":"FORWARD"}' http://localhost:8081/config/novatech.lab10.pedidos-value
+> ```
+>
+> Con `FORWARD`, intenta ahora un cambio que BACKWARD sí aceptaría (agregar un campo con default) y verás que la regla evaluada es otra. `FULL` exige ambas direcciones. Restaura `BACKWARD` al terminar.
+
 ## Actividad 5: Inspeccionar en Kafbat UI
 
 Abre **http://localhost:8090** > pestaña **Schema Registry**.
