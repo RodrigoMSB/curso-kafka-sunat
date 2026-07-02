@@ -22,10 +22,10 @@
 
 | Pregunta | Respuesta |
 |----------|-----------|
-| ¿Respondió el broker desde fuera de la red? (comando + resultado) | |
-| ¿Qué dirección publica tu EXTERNAL en `advertised.listeners`? | |
-| Al romperlo (advertised interno): ¿qué error y en qué momento? | |
-| ¿Por qué el bootstrap puede funcionar y aun así el cliente fallar? | |
+| ¿Qué dirección publica el EXTERNAL en `advertised.listeners`? ¿Respondió el puerto 9092 desde el host? | |
+| En el primer intento (contenedor por el EXTERNAL): ¿qué conectó y qué falló? | |
+| ¿Por qué el mismo `advertised.listeners` es correcto para el host e inservible para ese contenedor? | |
+| A un colega que dice "el bootstrap responde, así que Kafka está bien configurado", ¿qué le contestas? | |
 
 ---
 

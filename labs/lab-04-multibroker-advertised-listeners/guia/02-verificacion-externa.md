@@ -2,46 +2,82 @@
 
 ## Objetivo
 
-Comprobar desde FUERA de la red Docker que los `advertised.listeners` publican direcciones alcanzables — el error de configuración más común de Kafka en el mundo real.
+Comprobar que los `advertised.listeners` publican direcciones alcanzables para su público, y ver en vivo el fallo clásico de Kafka: bootstrap que responde, cliente que muere.
 
 ## Contexto
 
-`advertised.listeners` es la dirección que el broker **le dice al cliente** que use. Si publica un hostname interno de Docker, el cliente de fuera se conecta al bootstrap... y muere al primer metadata. La prueba honesta se hace desde fuera de la red.
+`advertised.listeners` es la **tarjeta de presentación** del broker: la dirección que le entrega al cliente para todo lo que viene después del bootstrap. La clave es que una tarjeta no es correcta en absoluto — es correcta **para un público**:
+
+| Público | Listener que le sirve | Qué publica |
+|---------|----------------------|-------------|
+| Clientes del host (tus apps, los Java del Lab 09) | EXTERNAL | `localhost:9092` |
+| Otros brokers y contenedores de la red | INTERNAL (PLAINTEXT) | `kafka-broker-1:29092` |
+
+Si un cliente lee una tarjeta que no fue escrita para él, el bootstrap puede responder... y el cliente muere igual.
 
 ---
 
-## Actividad 1: La prueba del cliente externo
+## Actividad 1: Verificar desde el host (el público del EXTERNAL)
 
-Con tus listeners separados (Parte 1) corriendo, simula un cliente externo usando un contenedor **fuera** de la red del clúster:
+**Paso 1 — Leer la tarjeta de presentación.** Mira qué publica realmente tu broker (usando lo aprendido en el Lab 03):
 
 ```bash
-docker run --rm confluentinc/cp-kafka:8.2.0 \
-  kafka-broker-api-versions --bootstrap-server host.docker.internal:9092 | head -5
+docker exec kafka-broker-1 bash -c 'grep advertised.listeners /etc/kafka/*.properties'
 ```
 
-Si responde con la lista de APIs, el listener EXTERNAL está bien publicado.
+**Paso 2 — Confirmar el alcance desde el host.** El puerto publicado debe estar vivo desde donde está su público:
+
+```bash
+bash -c 'exec 3<>/dev/tcp/localhost/9092 && echo "EXTERNAL alcanzable desde el host"'
+```
 
 ### Anota
 
 | Pregunta | Tu respuesta |
 |----------|-------------|
-| ¿Respondió el broker desde fuera de la red? | |
-| ¿Qué dirección publica tu EXTERNAL en `advertised.listeners`? | |
+| ¿Qué dirección publica el EXTERNAL en `advertised.listeners`? | |
+| ¿El puerto 9092 respondió desde el host? | |
 
 ---
 
-## Actividad 2: Romperlo a propósito
+## Actividad 2: El fallo clásico, en vivo (sin romper nada)
 
-Cambia temporalmente el `advertised.listeners` EXTERNAL de un broker a un hostname interno (p. ej. `kafka-broker-1:9092`), recréalo, y repite la prueba de la Actividad 1.
+Sobre el **mismo clúster sano**, un cliente del público equivocado. Lanza un contenedor dentro de la red del clúster y hazlo bootstrapear por el listener EXTERNAL.
+
+Primero descubre el nombre de tu red (Docker Compose le antepone el prefijo del proyecto, así que no es fijo):
+
+```bash
+RED=$(docker inspect kafka-broker-1 --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}')
+echo "Tu red: $RED"
+```
+
+Ahora el cliente-contenedor, bootstrapeando por el EXTERNAL (puerto 9092):
+
+```bash
+docker run --rm --network "$RED" confluentinc/cp-kafka:8.2.0 \
+  bash -c 'echo "hola" | kafka-console-producer --bootstrap-server kafka-broker-1:9092 \
+  --topic prueba.listeners --request-timeout-ms 10000' 2>&1 | tail -5
+```
+
+Observa: el bootstrap **conecta** (el contenedor sí alcanza `kafka-broker-1:9092`), pero el produce **falla** con un `TimeoutException` — el metadata le entregó `localhost:9092`, y para ese contenedor "localhost" es él mismo.
+
+Ahora el mismo cliente, leyendo la tarjeta que SÍ es para él (el listener interno, puerto 29092):
+
+```bash
+docker run --rm --network "$RED" confluentinc/cp-kafka:8.2.0 \
+  bash -c 'echo "hola" | kafka-console-producer --bootstrap-server kafka-broker-1:29092 \
+  --topic prueba.listeners --request-timeout-ms 10000'
+```
+
+Funciona: el advertised interno publica `kafka-broker-1:29092`, resoluble en la red.
 
 ### Pregunta
 
 | Pregunta | Tu respuesta |
 |----------|-------------|
-| ¿Qué error viste y en qué momento (conexión inicial o después)? | |
-| ¿Por qué el bootstrap puede funcionar y aun así el cliente fallar? | |
-
-Restaura el valor correcto al terminar.
+| En el primer intento, ¿qué conectó y qué falló? | |
+| ¿Por qué el mismo `advertised.listeners` es correcto para el host e inservible para ese contenedor? | |
+| Un colega dice "el bootstrap responde, así que Kafka está bien configurado". ¿Qué le contestas? | |
 
 ---
 
@@ -49,6 +85,6 @@ Restaura el valor correcto al terminar.
 
 | Concepto | Lo aprendiste haciendo... |
 |----------|---------------------------|
-| Listeners separados | Interno para brokers, externo para clientes |
-| advertised.listeners | Es lo que el cliente recibe, no lo que el broker escucha |
+| Listeners separados | Interno para brokers/contenedores, externo para el host |
+| advertised.listeners | Es la tarjeta que recibe el cliente, correcta PARA un público |
 | El fallo clásico | Bootstrap OK + metadata con dirección inalcanzable = cliente muerto |

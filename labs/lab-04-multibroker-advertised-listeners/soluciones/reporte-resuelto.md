@@ -17,18 +17,14 @@
 | EXTERNAL anunciado como `kafka-broker-1` | El cliente del host no puede resolver `kafka-broker-1` porque ese hostname solo existe dentro de la red Docker. Por eso `localhost` es la dirección correcta para clientes externos |
 | INTER_BROKER vs CONTROLLER | El tráfico de datos (entre brokers, replicación) y el tráfico de control (quorum, metadatos) se aíslan. Permite aplicar políticas distintas: cifrado, autenticación, QoS |
 
----
-
-*Solución - Lab 04*
-
 ## Parte 2: Verificación externa de advertised.listeners
 
 | Pregunta | Respuesta esperada |
 |----------|--------------------|
-| ¿Respondió el broker desde fuera de la red? | Sí, si el EXTERNAL publica una dirección alcanzable desde el host (p. ej. `localhost:9092`). |
-| ¿Qué dirección publica tu EXTERNAL? | La del host (`localhost:<puerto>`), no un hostname interno de Docker. |
-| Al romperlo (advertised interno), ¿qué error y cuándo? | El bootstrap inicial puede conectar, pero al recibir metadata con un hostname interno inalcanzable el cliente falla en la primera operación real (timeout / host no resoluble). |
-| ¿Por qué bootstrap OK pero cliente falla? | El bootstrap solo obtiene la lista de brokers (advertised.listeners); si esas direcciones no son alcanzables desde el cliente, toda operación posterior muere aunque la conexión inicial pareciera exitosa. |
+| ¿Qué dirección publica el EXTERNAL? ¿Respondió el puerto 9092 desde el host? | El EXTERNAL publica `localhost:9092`; el puerto 9092 responde desde el host (es su público). |
+| En el primer intento (contenedor por el EXTERNAL), ¿qué conectó y qué falló? | **Conectó el bootstrap** (TCP a `kafka-broker-1:9092`, alcanzable en la red), pero **falló el produce** con `TimeoutException`: el metadata devolvió `localhost:9092` y el contenedor resolvió "localhost" a sí mismo. |
+| ¿Por qué el mismo advertised es correcto para el host e inservible para ese contenedor? | Porque la tarjeta se escribe para un público: para el host `localhost` ES el broker publicado; para el contenedor `localhost` es él mismo. El valor no es correcto "en absoluto", sino para quién lo lee. |
+| Al colega del "bootstrap responde" | El bootstrap solo prueba la primera conexión; el cliente vive de las direcciones **advertidas** en el metadata. Bootstrap OK no garantiza nada — hay que validar el advertised con un cliente del público real. |
 
 ---
 
