@@ -128,8 +128,32 @@ Reglas propias de la variante:
 - Todo lo demás (marca única, ground truth, `--command-property`, fail-fast, `trap` teardown, veredicto
   binario) es idéntico al molde estándar.
 
-## 8. Estado de cobertura
+## 8. El 95 (recuperación del alumno)
 
-- **Pares construidos y en verde** (build-and-run, Docker real): **los 14 labs (01–14)**.
+`bin/95-recuperar-lab.sh` lleva a un alumno rezagado a un **estado funcional** para seguir la clase sin
+depurar con el grupo esperando. Contrato uniforme en los 14 labs:
+
+1. **Advertir y confirmar** (es destructivo sobre el estado actual): «Esto reemplaza tu estado actual…
+   ¿Continuar? (s/N)». Flag **`--si`** salta la confirmación (lo usa la validación automatizada).
+2. **Limpiar** el estado actual (teardown del lab).
+3. **Reconstruir** la línea base funcional: `start-lab.sh` (estándar) o desplegar `soluciones/` (build-your-own).
+4. **Modo `--completo`** (opcional, donde aplique): aplica además los pasos resueltos clave para quien quedó
+   atrás en partes avanzadas — Lab 09 compila los proyectos; Lab 11 registra el schema + siembra Avro;
+   Lab 12 crea el STREAM base; Lab 13 crea el connector y espera RUNNING. En los demás labs `--completo`
+   no aplica (la línea base ya es el estado final).
+5. **Autoverificarse**: al final corre `bin/90-test-lab.sh`; si aprueba imprime «LAB RECUPERADO — puedes
+   continuar en …»; si no, lo dice honesto y sugiere pedir ayuda al instructor.
+
+Autocontenido (sin `source` a `tests/`), portable bash 3.2, `-e KAFKA_OPTS=`/`MSYS_NO_PATHCONV=1` donde toca.
+
+**Checklist para un lab nuevo**: copiar el esqueleto → adaptar el bloque de teardown y el de reconstrucción
+a la arquitectura del lab → añadir el bloque `--completo` solo si hay pasos resueltos scriptados → dejar la
+autoverificación con el 90 tal cual → probarlo con `bin/95-recuperar-lab.sh --si` (debe terminar en
+«LAB RECUPERADO»).
+
+## 9. Estado de cobertura
+
+- **Pares 90 + e2e construidos y en verde** (build-and-run, Docker real): **los 14 labs (01–14)**.
 - Labs 05–14: molde estándar (`start-lab.sh` + `wait_for_brokers`).
 - Labs 01–04: variante build-your-own (despliegan `soluciones/` + `wait_for_broker_api` + `byo_teardown`).
+- **`95-recuperar-lab.sh`** presente y validado (`--si`) en los 14 labs.
