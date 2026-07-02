@@ -105,12 +105,31 @@ bash tests/run-all.sh
 
 ---
 
-## 7. Estado de cobertura
+## 7. Variante build-your-own (labs 01–04)
 
-- **Pares construidos y en verde** (build-and-run, Docker real): labs **05, 06, 07, 08, 09, 10, 11, 12, 13, 14**.
-- **Labs 01–04**: **pendientes de decisión**. No usan la infra estándar (`start-lab.sh` / `infra/docker-compose.yml`
-  / `reset-lab.sh`): son labs de "construye tu propio clúster" a partir de `plantillas/*.template.yml` en
-  `mi-cluster/`, con `soluciones/*.SOLUCION.yml` como referencia y **sin healthchecks** en la compose de
-  solución. Requieren una variante del molde (bring-up por la compose de solución, readiness por
-  `kafka-broker-api-versions` en vez de health, teardown por `docker compose down -v` sobre ese archivo).
-  Además, el contenido de 02/03/04 aún es copia del de 01. Se documentará aquí su variante una vez decidido.
+Los labs 01–04 son de **"construye tu propio clúster"**: el alumno arma su compose a partir de
+`plantillas/*.template.yml` en `mi-cluster/`, sin `start-lab.sh` y sin healthchecks garantizados.
+El molde estándar no calza; esta variante lo adapta:
+
+| Pieza | Molde estándar | Variante build-your-own |
+|-------|----------------|-------------------------|
+| Arranque e2e | `bin/start-lab.sh` | **desplegar el compose de `soluciones/`** (`docker compose -f <sol> up -d`): el e2e valida la solución de referencia = el estado final esperado del alumno. |
+| Espera | `wait_for_brokers` (lee `.State.Health`) | **`wait_for_broker_api`**: sondea `kafka-broker-api-versions` (el compose del alumno puede no tener healthcheck). |
+| Teardown | `lab_teardown` (`reset-lab.sh`) | **`byo_teardown <lab_dir> <compose>`**: `docker compose -f <sol> down -v`. |
+| 90 del alumno | valida el lab de `start-lab` | valida **SU clúster construido a mano**, con sugerencias que apuntan a la **guía** o a **`soluciones/`**. |
+
+Reglas propias de la variante:
+- **Paso 0 obligatorio**: localizar el compose real de `soluciones/` (`find soluciones -name 'docker-compose*.yml'`)
+  y confirmar su convención de nombres/puertos. **No asumir** `kafka-broker-N`: el Lab 01 usa un único
+  contenedor llamado **`kafka-broker`** (singular); labs 02–04 usan `kafka-broker-1/2/3`.
+- **Listener EXTERNAL**: cuando `advertised.listeners` publica `localhost:<port>`, solo es alcanzable desde
+  **el host**, no desde otro contenedor (un contenedor resolvería `localhost` a sí mismo). La verificación
+  EXTERNAL se hace por **conexión TCP desde el host** (`/dev/tcp`, portable), no con un `docker run` sonda.
+- Todo lo demás (marca única, ground truth, `--command-property`, fail-fast, `trap` teardown, veredicto
+  binario) es idéntico al molde estándar.
+
+## 8. Estado de cobertura
+
+- **Pares construidos y en verde** (build-and-run, Docker real): **los 14 labs (01–14)**.
+- Labs 05–14: molde estándar (`start-lab.sh` + `wait_for_brokers`).
+- Labs 01–04: variante build-your-own (despliegan `soluciones/` + `wait_for_broker_api` + `byo_teardown`).
