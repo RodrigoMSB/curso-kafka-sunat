@@ -2,7 +2,7 @@
 
 **Curso**: Administración de Confluent Apache Kafka (SUNAT)
 **Unidad**: 2 - Arquitectura y puesta en marcha
-**Duración estimada**: ~45 minutos
+**Duración estimada**: ~60 minutos
 
 ---
 
@@ -42,6 +42,8 @@ Este lab **continúa el clúster que construiste en el Lab 01**. Si no lo tienes
 Construcción propia (sin `start-lab.sh`); `soluciones/` como referencia y `bin/90-test-lab.sh` para validar tu avance.
 
 ---
+
+> **Nota de cobertura (temario):** este lab completa el bootstrap del quórum de tres controladores iniciado en el Lab 01 y ejecuta su validación y prueba de resiliencia.
 
 > **¿Te atascaste?** Ejecuta `bin/95-recuperar-lab.sh` y te deja en un estado funcional para seguir la clase.
 
