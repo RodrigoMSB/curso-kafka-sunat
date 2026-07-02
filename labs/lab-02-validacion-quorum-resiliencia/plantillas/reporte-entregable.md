@@ -6,18 +6,32 @@
 
 | Pregunta | Respuesta |
 |----------|-----------|
-| Voters que observaste en el quórum (ids) | |
-| ¿Qué variable definió el conjunto de voters (`controller.quorum.voters`)? | |
-| Evidencia de que los 3 nodos se descubrieron (comando + resultado) | |
+| ¿Los 3 contenedores están corriendo? | |
+| Si alguno NO arrancó, ¿qué dice `docker logs <nombre>`? | |
+| ¿Cuál es el LeaderId? | |
+| ¿Aparecen los 3 voters? | |
+| ¿Qué LAG tienen los voters? | |
+| ¿Cuántas particiones tiene? | |
+| ¿Cuántas réplicas tiene cada partición? | |
+| ¿Quién es el líder de la partición 0? | |
+| ¿Qué brokers tiene en su ISR? | |
 
 ## Parte 2: Chequeo de salud y resiliencia
 
 | Pregunta | Respuesta |
 |----------|-----------|
-| Salida de `kafka-metadata-quorum ... describe --status` (LeaderId + voters) | |
-| ¿Qué pasó al apagar el controlador líder? (re-elección observada) | |
-| ¿El clúster siguió respondiendo? Evidencia | |
-| ¿Por qué 3 nodos toleran la caída de exactamente 1? | |
+| ¿Qué es `LeaderEpoch`? | |
+| ¿Qué pasa si el líder muere? ¿Cómo cambian estos valores? | |
+| ¿Qué diferencia hay entre `CurrentVoters` y `CurrentObservers`? | |
+| ¿Qué significa `Lag` aquí, en el contexto del quorum? | |
+| Si un broker tuviera Lag muy alto y `LastCaughtUpTimestamp` antiguo, ¿qué problema indicaría? | |
+| ¿Cambió el LeaderId? | |
+| ¿Cambió el LeaderEpoch? | |
+| ¿Cuántos voters quedan disponibles? | |
+| ¿El clúster sigue operativo? | |
+| ¿El broker volvió como voter o como observer? | |
+| ¿Recuperó su rol de líder? | |
+| ¿Por qué crees que se mantiene el nuevo líder en vez de "devolver" el liderazgo? | |
 
 ---
 

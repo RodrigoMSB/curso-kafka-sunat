@@ -6,16 +6,20 @@
 
 | Pregunta | Respuesta |
 |----------|-----------|
-| ¿Qué usuario y directorios clave usa la imagen cp-kafka? | |
-| ¿Cómo se le pasa configuración al broker (mecanismo)? | |
+| ¿Cuántos binarios `kafka-*` aparecen? | |
+| ¿Qué archivos hay en `/etc/kafka/`? | |
+| ¿Qué versión de Java trae? | |
+| ¿Qué `process.roles` están definidos por defecto? | |
+| ¿En qué puerto escucha por defecto? | |
+| ¿Dónde guarda los logs? | |
 
 ## Parte 2: Primer broker
 
 | Pregunta | Respuesta |
 |----------|-----------|
-| Tu cluster-id generado | |
-| ¿Qué hace exactamente el formateo del storage? | |
-| Evidencia de que el broker quedó sano (comando + resultado) | |
+| ¿El contenedor está en estado `running`? | |
+| Si NO, ¿qué dice `docker logs kafka-broker`? | |
+| ¿Cuántos tópicos aparecen? | |
 
 ## Desafío
 
