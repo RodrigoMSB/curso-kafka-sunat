@@ -140,13 +140,17 @@ docker exec kafka-broker kafka-topics \
 
 ---
 
-## Siguiente paso
+## Desafío de cierre
 
-Detén tu broker antes de continuar (vamos a expandirlo a 3):
+Tu broker guarda su identidad en el storage formateado. Demuéstralo:
 
-```bash
-cd mi-cluster
-docker compose down -v
-```
+1. Detén y elimina tu broker (contenedor y volumen).
+2. Genera un **nuevo** cluster-id con `kafka-cli/generate-cluster-id.sh`.
+3. Reformatea el storage con el nuevo id y vuelve a arrancar.
+4. Verifica con `bin/verify-storage.sh` que el `cluster.id` cambió.
 
-Luego, [Parte 3: Creciendo a tres brokers](03-creciendo-a-tres-brokers.md).
+Anota en el reporte: ¿qué pasaría si intentaras arrancar el broker con un storage formateado con **otro** cluster-id? ¿Por qué KRaft se protege así?
+
+---
+
+Con tu primer broker dominado, en el **Lab 02** harás crecer esto a un clúster de 3 nodos con quórum real.
