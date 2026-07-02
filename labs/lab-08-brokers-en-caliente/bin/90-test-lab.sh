@@ -34,11 +34,11 @@ else
     bad "el tópico ${TOPIC} no existe" "ejecuta bin/start-lab.sh (crea el tópico del lab)"
 fi
 
-# 3. Config dinámica legible
+# 3. Config del broker legible (con --all para no depender de que exista un override dinámico)
 if [ "$VIVOS" -eq 3 ]; then
     CFG=$(docker exec kafka-broker-1 kafka-configs --bootstrap-server "$BOOT" \
-        --describe --entity-type brokers --entity-name 1 2>/dev/null)
-    if echo "$CFG" | grep -q 'num.replica.fetchers'; then ok "config dinámica del broker 1 legible (describe-broker-config)"
+        --describe --entity-type brokers --entity-name 1 --all 2>/dev/null)
+    if echo "$CFG" | grep -q 'num.replica.fetchers'; then ok "config del broker 1 legible (describe-broker-config)"
     else bad "no pude leer la config del broker 1" "revisa que el clúster responda: kafka-cli/describe-broker-config.sh 1"; fi
 fi
 
