@@ -78,5 +78,7 @@ Luego abre `guia/01-anatomia-topico.md`.
 ---
 
 > **¿Te atascaste?** Ejecuta `bin/95-recuperar-lab.sh` y te deja en un estado funcional para seguir la clase.
+>
+> **Valida tu avance** en cualquier momento: `bin/90-test-lab.sh`.
 
 *Lab 05 - Curso de Administración de Confluent Apache Kafka (SUNAT)*

@@ -135,5 +135,7 @@ Consulta la [guía de troubleshooting](docs/troubleshooting.md) si encuentras pr
 ---
 
 > **¿Te atascaste?** Ejecuta `bin/95-recuperar-lab.sh` y te deja en un estado funcional para seguir la clase.
+>
+> **Valida tu avance** en cualquier momento: `bin/90-test-lab.sh`.
 
 *Lab 06 - Curso de Administración de Confluent Apache Kafka (SUNAT)*

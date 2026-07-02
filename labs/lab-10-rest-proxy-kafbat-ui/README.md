@@ -64,6 +64,10 @@ Luego abre `guia/01-que-es-rest-proxy.md`.
 
 ---
 
+> **Nota:** el temario menciona «Landoop» como herramienta de exploración visual. Ese proyecto quedó abandonado e incompatible con Kafka 4.x; en este curso se utiliza **Kafbat UI**, su reemplazo comunitario activo (ver [ADR-001](../../docs/adr/ADR-001-sustitucion-landoop.md)).
+
 > **¿Te atascaste?** Ejecuta `bin/95-recuperar-lab.sh` y te deja en un estado funcional para seguir la clase.
+>
+> **Valida tu avance** en cualquier momento: `bin/90-test-lab.sh`.
 
 *Lab 10 - Curso de Administración de Confluent Apache Kafka (SUNAT)*

@@ -2,7 +2,7 @@
 
 **Curso**: Administración de Confluent Apache Kafka (SUNAT)
 **Unidad**: 3 - Configuración del clúster, tópicos y rendimiento
-**Duración estimada**: ~40 minutos
+**Duración estimada**: ~60 minutos
 
 ---
 

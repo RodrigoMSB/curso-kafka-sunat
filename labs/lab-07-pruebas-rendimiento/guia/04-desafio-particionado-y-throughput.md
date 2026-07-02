@@ -1,4 +1,4 @@
-# Parte 5: Desafío - Particionado y throughput
+# Parte 4: Desafío - Particionado y throughput
 
 ## Objetivo
 
