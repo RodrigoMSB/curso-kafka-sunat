@@ -98,3 +98,21 @@ lab_teardown() {  # <lab_dir>
     ( cd "$1" && ( echo "s" | bash bin/reset-lab.sh >/dev/null 2>&1 || \
         docker compose -f infra/docker-compose.yml --env-file infra/.env down -v --remove-orphans >/dev/null 2>&1 ) )
 }
+
+# --- Variante build-your-own (labs 01-04) ---
+
+# Sondea la API del broker (sin depender de healthcheck del compose)
+wait_for_broker_api() {  # <container> <bootstrap> [timeout_s]
+    local ctr="$1" boot="$2" timeout="${3:-120}" waited=0
+    while [ "$waited" -lt "$timeout" ]; do
+        MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= "$ctr" \
+            kafka-broker-api-versions --bootstrap-server "$boot" >/dev/null 2>&1 && return 0
+        sleep 4; waited=$((waited+4))
+    done
+    return 1
+}
+
+# Teardown de un despliegue por compose de soluciones (down -v scoped al archivo)
+byo_teardown() {  # <lab_dir> <compose_file_relativo>
+    ( cd "$1" && docker compose -f "$2" down -v --remove-orphans >/dev/null 2>&1 )
+}
