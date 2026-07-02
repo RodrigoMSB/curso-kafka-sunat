@@ -1,4 +1,4 @@
-# Reporte del Lab 03 — VALIDADO POR MOCITO (referencia instructor)
+# Reporte del Lab 03 — Validación fuente (curso 28h) — referencia del instructor
 
 > Versión completada por el agente de validación con datos reales obtenidos al ejecutar el lab end-to-end. Para referencia del instructor.
 
@@ -6,7 +6,7 @@
 
 | Campo | Valor |
 |-------|-------|
-| Nombre | Mocito (validador) |
+| Nombre | el validador |
 | Fecha | 2026-05-09 |
 | Sección | N/A |
 
