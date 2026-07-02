@@ -68,3 +68,7 @@ El script es la versión automática. La versión manual es seguir las Partes 1-
 | Recuperación | Reintegración del broker, ISR de vuelta a 3, cero pérdida |
 
 Con esto cierras el curso: un clúster Kafka **seguro y resiliente**, operado de punta a punta.
+
+---
+
+Documenta tus resultados en `plantillas/reporte-entregable.md` — es el entregable de la evaluación final.
