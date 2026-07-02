@@ -1,107 +1,45 @@
 # Lab 04: Clúster multi-broker y advertised.listeners
 
-**Curso**: Administración de Confluent Apache Kafka (SUNAT)  
-**Unidad**: 3 - Configuración del clúster, tópicos y rendimiento  
-**Duración estimada**: ~60 minutos
+**Curso**: Administración de Confluent Apache Kafka (SUNAT)
+**Unidad**: 3 - Configuración del clúster, tópicos y rendimiento
+**Duración estimada**: ~40 minutos
 
 ---
 
 ## Contexto narrativo
 
-NovaTech necesita expandir su clúster a múltiples brokers y exponerlo correctamente a clientes en distintas redes. El equipo de infraestructura te pide levantar un clúster multi-broker y configurar `advertised.listeners` —una de las opciones más críticas y peor entendidas de Kafka— para que productores y consumidores se conecten sin errores, paso por paso, **sin usar un docker-compose pre-hecho**.
+El clúster de NovaTech corre puertas adentro, pero los clientes reales viven fuera de la red de Docker. Exponerlo mal es el error de configuración más clásico de Kafka: el bootstrap conecta, y al primer metadata el cliente muere porque el broker publicó una dirección que nadie de afuera puede alcanzar.
 
-Tu misión:
-1. Empezar con un broker mínimo
-2. Expandir a 3 brokers con quorum KRaft
-3. Validar que el clúster está sano usando solo CLI
+El CTO te dice:
+*"Nuestros productores no van a correr dentro del contenedor. Sepáralo bien: un listener para los brokers, otro para el quórum, otro para los clientes de afuera. Y pruébame desde fuera que funciona — no me sirve que 'conecte' y luego se caiga."*
+
+Tu misión: entender y separar los listeners (PLAINTEXT / CONTROLLER / EXTERNAL) de tu clúster de 3 nodos, y verificar desde fuera de la red que `advertised.listeners` publica direcciones realmente alcanzables.
+
+---
+
+## Prerrequisito encadenado
+
+El clúster de 3 nodos del Lab 02. Si no lo tienes, `soluciones/` del Lab 02 lo reconstruye.
 
 ---
 
 ## ¿Qué vas a aprender?
 
-- La estructura interna de las imágenes Confluent (qué binarios trae, dónde viven)
-- Cómo se configura un broker Kafka en modo KRaft (sin ZooKeeper)
-- Cómo se inicializa el almacenamiento con `kafka-storage format`
-- Cómo se configura el quorum de controladores con `controller.quorum.voters`
-- Cómo se valida el estado del clúster con `kafka-metadata-quorum`
-- Cómo configurar `advertised.listeners` y separar listeners internos de externos
+- Por qué un broker KRaft necesita listeners separados (interno, controlador, externo)
+- Qué es `advertised.listeners` y en qué se diferencia de `listeners`
+- Cómo verificar desde FUERA de la red que el listener EXTERNAL es alcanzable
+- El fallo clásico: bootstrap OK + metadata con dirección inalcanzable = cliente muerto
 
 ---
 
-## Prerrequisitos
+## Estructura
 
-| Requisito | Mínimo |
-|-----------|--------|
-| Docker Desktop | v4.x |
-| Docker Compose | v2.x |
-| RAM asignada a Docker | 6 GB |
-| Puertos libres | 9092, 9093, 9094 |
-| Otro clúster Kafka detenido | Sí |
-| Imagen Docker | `confluentinc/cp-kafka:8.2.0` |
+| Guía | Contenido |
+|------|-----------|
+| `guia/01-listeners-separados.md` | Listeners PLAINTEXT / CONTROLLER / EXTERNAL |
+| `guia/02-verificacion-externa.md` | Prueba del cliente externo + romperlo a propósito |
 
----
-
-## Inicio rápido
-
-```bash
-# 1. Asegurar que no haya otro clúster Kafka corriendo en los mismos puertos
-# (desde sus carpetas: bin/stop-lab.sh)
-
-# 2. Dar permisos de ejecución a los scripts del lab
-chmod +x bin/*.sh kafka-cli/*.sh
-
-# 3. Abre la primera guía
-# guia/01-anatomia-imagen.md
-```
-
-A diferencia de los Labs anteriores, **este lab NO tiene un `start-lab.sh` único**. El alumno levanta los componentes paso a paso siguiendo las guías.
-
----
-
-## Estructura del laboratorio
-
-```
-lab-04-multibroker-advertised-listeners/
-├── README.md                  # Este archivo
-├── mi-cluster/                # ← AQUÍ CONSTRUIRÁS TUS ARCHIVOS
-├── plantillas/                # Esqueletos comentados con TODOs
-├── bin/                       # Scripts de validación
-├── kafka-cli/                 # Wrappers para tareas específicas
-├── guia/                      # 5 guías progresivas
-├── plantillas/reporte-entregable.md
-├── soluciones/                # Soluciones de referencia
-└── docs/                      # Notas instructor, troubleshooting, rúbrica
-```
-
----
-
-## Comandos principales
-
-| Acción | Comando |
-|--------|---------|
-| Inspeccionar imagen Confluent | `kafka-cli/inspect-image.sh` |
-| Generar CLUSTER_ID | `kafka-cli/generate-cluster-id.sh` |
-| Formatear storage de un broker | `kafka-cli/format-storage.sh <NOMBRE_CONTAINER>` |
-| Verificar storage formateado | `bin/verify-storage.sh <NOMBRE_CONTAINER>` |
-| Verificar quorum KRaft | `bin/check-quorum.sh` |
-| Detener mi-cluster | `bin/stop-mi-cluster.sh` |
-| Reset (borra TODO) | `bin/reset-mi-cluster.sh` |
-
----
-
-## Entregables
-
-1. **`mi-cluster/docker-compose.yml`**: el archivo final con los 3 brokers configurados
-2. **`mi-cluster/.env`**: variables de entorno utilizadas
-3. **`plantillas/reporte-entregable.md` completado**: con todas las preguntas respondidas
-
----
-
-## Tecnologías utilizadas
-
-- Apache Kafka 4.2 (modo KRaft, sin ZooKeeper) — vía `confluentinc/cp-kafka:8.2.0`
-- Bash scripts
-- Docker & Docker Compose v2
+Construcción propia (sin `start-lab.sh`); `soluciones/` como referencia y `bin/90-test-lab.sh` para validar tu avance.
 
 ---
 

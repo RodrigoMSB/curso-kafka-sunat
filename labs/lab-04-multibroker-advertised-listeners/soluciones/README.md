@@ -6,11 +6,10 @@ Esta carpeta contiene las soluciones de referencia del laboratorio.
 
 | Archivo | Contenido |
 |---------|-----------|
-| `reporte-resuelto.md` | Respuestas modelo a las preguntas del reporte del lab |
-| `respuestas-desafio.md` | Solución comentada de listeners (Parte 5) |
-| `docker-compose-1-broker.SOLUCION.yml` | Compose de referencia para el clúster de 1 broker (Parte 2) |
-| `docker-compose-3-brokers.SOLUCION.yml` | Compose de referencia para el clúster de 3 brokers (Parte 4) |
-| `env.SOLUCION` | Variables de entorno de referencia para los composes anteriores |
+| `reporte-resuelto.md` | Respuestas modelo (listeners separados + verificación externa) |
+| `respuestas-desafio.md` | Solución comentada de los retos de listeners |
+| `docker-compose-3-brokers.SOLUCION.yml` | Compose de referencia con listeners separados (objetivo del lab) |
+| `env.SOLUCION` | Variables de entorno de referencia para el compose |
 
 ## Cómo usar estas soluciones
 

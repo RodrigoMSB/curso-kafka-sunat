@@ -1,12 +1,16 @@
-# Parte 5: Listeners separados y advertised.listeners
+# Parte 1: Listeners separados y advertised.listeners
 
 ## Objetivo
 
 Entender en profundidad por qué un broker Kafka necesita múltiples listeners (PLAINTEXT, CONTROLLER, EXTERNAL) y qué pasa si los configuras mal.
 
+## Prerrequisito
+
+El clúster de 3 nodos del Lab 02. Si no lo tienes, `soluciones/` del Lab 02 lo reconstruye.
+
 ## Contexto
 
-En el docker-compose de la Parte 3, configuraste tres listeners distintos:
+En el docker-compose del clúster de 3 brokers que construiste (Lab 02), configuraste tres listeners distintos:
 - `PLAINTEXT` para comunicación entre brokers (puerto interno 29092/29093/29094)
 - `CONTROLLER` para el quorum KRaft (puerto interno 39092/39093/39094)
 - `EXTERNAL` para clientes desde el host (puerto público 9092/9093/9094)
@@ -99,3 +103,9 @@ Responde con tus palabras:
 ## Entrega
 
 Documenta tus respuestas en `plantillas/reporte-entregable.md` en la sección de listeners.
+
+---
+
+## Siguiente paso
+
+Continúa con [Parte 2: Verificación externa de advertised.listeners](02-verificacion-externa.md).
