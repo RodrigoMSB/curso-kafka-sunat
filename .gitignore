@@ -39,3 +39,6 @@ tests/VALIDACION-REPORT.md
 
 # Artefactos de compilación Maven (labs Java/Spring)
 **/target/
+
+# Respaldos crudos de PPTX (pre-canonizacion LibreOffice)
+*.crudo.pptx
