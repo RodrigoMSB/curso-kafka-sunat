@@ -64,4 +64,6 @@ Luego abre `guia/01-que-es-rest-proxy.md`.
 
 ---
 
+> **¿Te atascaste?** Ejecuta `bin/95-recuperar-lab.sh` y te deja en un estado funcional para seguir la clase.
+
 *Lab 10 - Curso de Administración de Confluent Apache Kafka (SUNAT)*

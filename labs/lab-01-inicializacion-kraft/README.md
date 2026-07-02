@@ -48,4 +48,6 @@ Este lab es **construcción propia**: no hay `start-lab.sh`. Tú escribes y leva
 
 ---
 
+> **¿Te atascaste?** Ejecuta `bin/95-recuperar-lab.sh` y te deja en un estado funcional para seguir la clase.
+
 *Lab 01 - Curso de Administración de Confluent Apache Kafka (SUNAT)*

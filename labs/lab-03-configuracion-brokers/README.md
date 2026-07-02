@@ -32,4 +32,6 @@ El clúster de 3 nodos del Lab 02. Si no lo tienes, `soluciones/` del Lab 02 lo 
 
 ---
 
+> **¿Te atascaste?** Ejecuta `bin/95-recuperar-lab.sh` y te deja en un estado funcional para seguir la clase.
+
 *Lab 03 - Curso de Administración de Confluent Apache Kafka (SUNAT)*

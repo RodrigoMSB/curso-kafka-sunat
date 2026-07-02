@@ -66,4 +66,6 @@ Para el cierre integrador automático: `bin/run-capstone.sh`.
 
 ---
 
+> **¿Te atascaste?** Ejecuta `bin/95-recuperar-lab.sh` y te deja en un estado funcional para seguir la clase.
+
 *Lab 14 - Curso de Administración de Confluent Apache Kafka (SUNAT)*

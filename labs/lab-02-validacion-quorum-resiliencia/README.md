@@ -43,4 +43,6 @@ Construcción propia (sin `start-lab.sh`); `soluciones/` como referencia y `bin/
 
 ---
 
+> **¿Te atascaste?** Ejecuta `bin/95-recuperar-lab.sh` y te deja en un estado funcional para seguir la clase.
+
 *Lab 02 - Curso de Administración de Confluent Apache Kafka (SUNAT)*
