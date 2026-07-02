@@ -4,6 +4,9 @@
 **/.DS_Store
 **/__MACOSX/
 
+# Estado local de herramientas (Claude Code)
+.claude/
+
 # ---------------------------------------------------------------------------
 # Lab 03 — "mi-cluster": directorio de trabajo del alumno.
 # Se versiona solo el placeholder y el README; nada de lo que genere el alumno.
