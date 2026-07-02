@@ -69,8 +69,10 @@
 
 ### Análisis
 
-1. ¿Cuál throughput fue mayor, producción o consumo? ¿Por qué?
-2. ¿Qué parámetro tuvo más impacto en cada lado?
+> Las tablas de métricas dependen del hardware; lo evaluable es que el alumno **justifique con sus propios números**. Respuestas modelo:
+
+1. **¿Cuál throughput fue mayor, producción o consumo? ¿Por qué?** Típicamente el **consumo**: leer es secuencial y se sirve mayormente desde el page cache del SO (zero-copy hacia la red), mientras que producir paga replicación (RF 3), acuse según `acks` y la construcción de batches. En hardware con disco lento la brecha se agranda. El resultado exacto depende de la corrida — lo importante es justificarlo con los números medidos.
+2. **¿Qué parámetro tuvo más impacto en cada lado?** En producción, el par `batch.size` + `linger.ms` (más batching = menos requests = más throughput, a costa de latencia) y la compresión (`lz4` suele subir los MB/s efectivos). En consumo, `fetch-size` (fetches más grandes = menos round-trips). La respuesta del alumno debe citar sus propias mediciones.
 
 ---
 

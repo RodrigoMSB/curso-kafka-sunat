@@ -63,12 +63,12 @@ Después de 5 mensajes con clave NVT-1001, el alumno **probablemente verá los 5
 
 ## Parte 4: Retención por tiempo en vivo
 
-| Pregunta | Tu respuesta |
+| Pregunta | Respuesta esperada |
 |----------|-------------|
-| Offset más antiguo disponible tras esperar (`--time -2`) | |
-| ¿Se eliminaron mensajes viejos? ¿Por qué `segment.ms` corto importa? | |
-| Tamaño en disco de `efimero` vs `resiliente` (Kafbat UI) | |
-| ¿Por qué Kafka borra por segmentos completos y no mensaje a mensaje? | |
+| Offset más antiguo disponible tras esperar (`--time -2`) | Avanza (deja de ser 0): tras superar `retention.ms=60s` y rotar el segmento (`segment.ms=10s`), los segmentos viejos se eliminan y el offset más antiguo pasa a ser el inicio del primer segmento sobreviviente. El valor exacto depende de la corrida. |
+| ¿Se eliminaron mensajes viejos? ¿Por qué `segment.ms` corto importa? | Sí. Kafka solo elimina **segmentos cerrados**, nunca el segmento activo. Con `segment.ms=10s` los segmentos rotan rápido y quedan elegibles para borrado apenas vence la retención; con el default (7 días de rotación) la retención de 60 s no tendría efecto visible porque todo viviría en el segmento activo. |
+| Tamaño en disco de `efimero` vs `resiliente` (Kafbat UI) | `efimero` se mantiene pequeño y estable (pierde datos constantemente por la retención de 60 s); `resiliente` solo crece (retención de 7 días). Los bytes exactos dependen de la corrida. |
+| ¿Por qué Kafka borra por segmentos completos y no mensaje a mensaje? | El log es un archivo append-only; borrar mensajes individuales exigiría reescribir el archivo (costoso y con bloqueos). Eliminar un segmento completo es un simple `delete` de archivo: O(1), sin tocar el resto del log. Por eso la granularidad de la retención es el segmento. |
 
 ---
 
