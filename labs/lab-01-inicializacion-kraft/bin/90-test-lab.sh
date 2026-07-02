@@ -29,7 +29,7 @@ fi
 
 # 3. Storage formateado con cluster.id
 CID=$(MSYS_NO_PATHCONV=1 docker exec kafka-broker bash -c \
-      "grep -h 'cluster.id' /var/lib/kafka/data/meta.properties 2>/dev/null | head -1")
+      "grep -h 'cluster.id' /var/lib/kafka/data/meta.properties 2>/dev/null | head -1" 2>/dev/null)
 if [ -n "$CID" ]; then
     ok "storage formateado (${CID})"
 else
