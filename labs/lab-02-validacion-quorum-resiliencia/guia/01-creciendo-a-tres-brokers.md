@@ -1,4 +1,4 @@
-# Parte 3: Creciendo a 3 brokers (con quorum)
+# Parte 1: Creciendo a 3 brokers (con quorum)
 
 ## Objetivo
 
@@ -159,4 +159,4 @@ docker exec kafka-broker-1 kafka-topics \
 
 ## Siguiente paso
 
-Continúa con [Parte 4: Chequeo de salud KRaft](04-chequeo-salud-kraft.md).
+Continúa con [Parte 2: Chequeo de salud y resiliencia](02-chequeo-salud-y-resiliencia.md).

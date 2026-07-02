@@ -1,4 +1,4 @@
-# Parte 4: Chequeo de salud KRaft
+# Parte 2: Chequeo de salud y resiliencia
 
 ## Objetivo
 
@@ -128,6 +128,4 @@ bin/check-quorum.sh
 
 ---
 
-## Siguiente paso
-
-Continúa con el [Desafío 5: Listeners separados](05-desafio-listeners-separados.md) (opcional).
+Tu clúster de 3 nodos con quórum validado es la base de los próximos labs: en el **Lab 03** desmenuzarás su configuración, y en el **Lab 04** separarás sus listeners como en producción.
