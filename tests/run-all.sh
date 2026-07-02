@@ -30,6 +30,8 @@ for t in "$HERE"/lab-*.sh; do
     # Aviso (no matar) si quedan contenedores del ecosistema del curso
     docker ps --format '{{.Names}}' | grep -qE 'kafka-broker|novatech|kafbat|kafka-rest|cli-client|schema-registry|ksqldb|connect' \
         && echo -e "${YELLOW}  OJO: quedan contenedores tras ${name} — revisar teardown${NC}"
+    # Respiro para que Docker libere recursos antes del siguiente clúster (labs pesados en serie).
+    sleep 8
 done
 
 TOTAL=${#RESULTS[@]}; DUR_G=$(( $(date +%s) - T_GLOBAL0 ))
