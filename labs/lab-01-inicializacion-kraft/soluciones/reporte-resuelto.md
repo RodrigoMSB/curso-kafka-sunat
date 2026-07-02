@@ -32,6 +32,11 @@
 
 ---
 
+## Desafío de cierre (respuesta modelo)
+
+- **¿Qué pasaría al arrancar con storage de OTRO cluster-id?** El broker rehúsa arrancar: al iniciar compara el `cluster.id` grabado en `meta.properties` del storage con el que se le entrega, y si no coinciden falla con un error de inconsistencia (INCONSISTENT_CLUSTER_ID / mismatch de cluster id). No hay arranque "a medias".
+- **¿Por qué KRaft se protege así?** Porque el storage contiene metadata y datos que pertenecen a UN clúster concreto. Aceptar un storage ajeno podría mezclar metadata de dos clústeres (offsets, tópicos, quórum) y corromper ambos. El formateo con cluster-id sella la identidad: o el storage es de este clúster, o no se usa.
+
 ---
 
 *Solución - Lab 01 (rebanada: inicialización)*
