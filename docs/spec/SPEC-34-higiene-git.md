@@ -4,7 +4,7 @@
 **Fecha:** 2026-07-08
 **Autor:** Arquitecto (Claude) · **Ejecuta / commitea:** Mocito (Claude Code, dev) · **PO:** Rodrigo
 **Rama:** `spec-01-reestructura-sunat`
-**Estado:** EN CURSO — parte commiteada, parte pendiente de decisión del PO
+**Estado:** CERRADO — working tree limpio
 **Depende de:** SPEC-32 (discovery), SPEC-33 (pulido presentación)
 
 ---
@@ -54,10 +54,18 @@ SPEC-33: `curso-sunat-COMPLETO.pptx` en commit `9157bed`, y SPEC-32/33 en `docs/
 
 ---
 
-## 4. Pendientes de decisión del PO (working tree no-limpio justificado)
+## 4. Resolución de los dudosos (decisión PO, 2026-07-08)
 
-Quedan 3 untracked a la espera de decisión (ver tabla §2): `VALIDACION-STATUS.md`,
-`ppt/arregladas/`, `ppt-template/template-sunat.pptx`. Ninguno se versiona ni se borra sin luz verde.
+Los 3 untracked eran material redundante/obsoleto; el PO decidió **borrar los tres** (ninguno estaba
+en git, así que el borrado no deja rastro en el historial):
+
+- `VALIDACION-STATUS.md` → **borrado**. Estado vigente = `tests/VALIDACION-REPORT.md` + commits fix.
+- `presentacion/ppt/arregladas/` → **borrada**. El Cap 1 canónico ya vive en `ppt/cap1-*.pptx` y el
+  deck de 147 slides (`curso-sunat-COMPLETO.pptx`) lo subsume.
+- `presentacion/ppt-template/template-sunat.pptx` → **borrado**. Scratch intermedio (69 slides); la
+  base versionada es `plantilla-netec.pptx` (0 slides).
+
+`git status --porcelain` → vacío. **Working tree limpio.**
 
 ---
 
@@ -67,7 +75,8 @@ Quedan 3 untracked a la espera de decisión (ver tabla §2): `VALIDACION-STATUS.
 - [x] Guiones cap 2-5 versionados.
 - [x] SPEC-34 versionado en `docs/spec/` (SPEC-32/33 ya estaban).
 - [x] Reporte de qué se commiteó, qué se dejó fuera y por qué.
-- [ ] Resolución de los 3 pendientes según decisión del PO.
+- [x] Resolución de los 3 pendientes según decisión del PO (los tres borrados).
+- [x] Working tree limpio (`git status --porcelain` vacío).
 
 ---
 
