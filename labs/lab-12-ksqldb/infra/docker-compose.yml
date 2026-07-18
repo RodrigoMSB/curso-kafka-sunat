@@ -212,6 +212,10 @@ services:
   # KSQLDB CLI (cliente interactivo)
   # ═══════════════════════════════════════════════════════════
   ksqldb-cli:
+    # cp-ksqldb-cli se mantiene en 8.0.3 de forma intencional: Confluent no publica
+    # una imagen de CLI para la serie 8.2.x (el ultimo build del CLI es 7.9.6). El CLI
+    # 8.0.3 opera correctamente contra cp-ksqldb-server:8.2.0. No "alinear" a 8.2.0:
+    # ese tag no existe en Docker Hub y romperia el pull. Verificado 2026-07-18.
     image: confluentinc/cp-ksqldb-cli:8.0.3
     container_name: ksqldb-cli
     depends_on:
