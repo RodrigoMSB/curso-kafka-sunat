@@ -1,0 +1,14 @@
+{
+  "type": "record",
+  "name": "Pedido",
+  "namespace": "com.novatech.lab10",
+  "fields": [
+    {"name": "id", "type": "int"},
+    {"name": "cliente_id", "type": "int"},
+    {"name": "producto", "type": "string"},
+    {"name": "cantidad", "type": "int"},
+    {"name": "monto", "type": "double"},
+    {"name": "estado", "type": "string"},
+    {"name": "tarjeta_credito", "type": "string"}
+  ]
+}
