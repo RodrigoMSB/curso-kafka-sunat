@@ -42,3 +42,4 @@ tests/VALIDACION-REPORT.md
 
 # Respaldos crudos de PPTX (pre-canonizacion LibreOffice)
 *.crudo.pptx
+presentacion/
