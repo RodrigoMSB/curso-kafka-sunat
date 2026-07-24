@@ -73,7 +73,10 @@ fi
 
 echo -e "\n  ${BOLD}Auditoria de portabilidad de los scripts:${NC}"
 SCAN_DIRS="labs tests"
-scan() { grep -rn "$1" $SCAN_DIRS 2>/dev/null | grep -vE '_fuente-extra|/\.git/'; }
+# --include='*.sh': la auditoria de portabilidad mira SOLO ejecutables. La
+# documentacion (p.ej. tests/CONVENCIONES-TEST.md, que cita los GNU-ismos
+# prohibidos) no es codigo y se auto-detectaba como violacion.
+scan() { grep -rn --include='*.sh' "$1" $SCAN_DIRS 2>/dev/null | grep -vE '_fuente-extra|/\.git/'; }
 
 H=$(scan 'sed -i ' | grep -vE "sed -i ''|sed -i\.bak" || true)
 [ -z "$H" ] && ok "sin 'sed -i' sin sufijo (rompe en BSD sed de macOS)" || { fatal "sed -i sin sufijo:"; echo "$H" | sed 's/^/       /'; }
@@ -118,7 +121,9 @@ fi
 
 # --- /dev/tcp: la sonda TCP del Lab 04. Feature de bash (no del SO),
 #     y Git-Bash trae bash -> funciona en ambas plataformas.
-if echo >/dev/tcp/127.0.0.1/1 2>/dev/null; then :; fi
+# El fallo de la redireccion lo reporta el shell (no el comando), asi que el
+# 2>/dev/null va sobre el bloque completo para no ensuciar la salida.
+{ echo >/dev/tcp/127.0.0.1/1; } 2>/dev/null || true
 ok "la sonda TCP '/dev/tcp' es soportada por bash (Mac y Git-Bash)"
 
 echo ""

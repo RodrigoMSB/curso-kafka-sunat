@@ -4,7 +4,7 @@
 **/.DS_Store
 **/__MACOSX/
 
-# Estado local de herramientas (Claude Code)
+# Estado local de herramientas
 .claude/
 
 # ---------------------------------------------------------------------------

@@ -70,7 +70,7 @@ Esto NO se ejecuta en este lab — es solo para que veas la sintaxis:
 
 ```bash
 confluent iam rbac role-binding create \
-  --principal User:rodrigo.silva@empresa.com \
+  --principal User:analista-datos \
   --role DeveloperRead \
   --resource Topic:pagos.transacciones \
   --kafka-cluster-id lkc-abc123
@@ -90,7 +90,7 @@ Compáralo con su equivalente "ACL nativa":
 
 ```bash
 kafka-acls --add \
-  --allow-principal User:rodrigo.silva@empresa.com \
+  --allow-principal User:analista-datos \
   --consumer \
   --topic pagos.transacciones \
   --group '*'
