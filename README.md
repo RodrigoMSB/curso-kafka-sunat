@@ -14,7 +14,6 @@ arquitectos que operan plataformas de mensajería en producción.
 | Carpeta / archivo | Contenido |
 |---|---|
 | `labs/` | Los **14 laboratorios** guiados, cada uno autocontenido (guía, solución, plantilla de entrega, infraestructura Docker, scripts y troubleshooting). |
-| `presentacion/` | La **presentación del curso** (`ppt/curso-sunat-COMPLETO.pptx`, 147 slides) y los guiones de contenido por capítulo. |
 | `tests/` | **Harness de validación** automatizada de los 14 labs + convenciones de test. |
 | `validar-todo.sh` | Botón único de validación cross-platform (macOS + Git-Bash/Windows). |
 | `docs/adr/` | **Decisiones de arquitectura** registradas (p. ej. ADR-001: sustitución de Landoop por Kafbat UI). |
