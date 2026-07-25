@@ -152,10 +152,10 @@ REPORT_FILE="$LOGS_DIR/REPORTE-FINAL.txt"
 ALL_LABS=()
 while IFS= read -r line; do
     [[ -n "$line" ]] && ALL_LABS+=("$line")
-done < <(find "$REPO_ROOT/labs" -maxdepth 1 -type d -name "lab-*" 2>/dev/null | sort)
+done < <(find "$REPO_ROOT"/Capitulo_* -maxdepth 1 -type d -name "lab-*" 2>/dev/null | sort)
 
 if [[ ${#ALL_LABS[@]} -eq 0 ]]; then
-    echo -e "${RED}[ERROR] No se encontraron labs en $REPO_ROOT/labs/${NC}" >&2
+    echo -e "${RED}[ERROR] No se encontraron labs en $REPO_ROOT/Capitulo_*/${NC}" >&2
     exit 1
 fi
 

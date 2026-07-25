@@ -72,7 +72,7 @@ if command -v "docker" >/dev/null 2>&1; then
 fi
 
 echo -e "\n  ${BOLD}Auditoria de portabilidad de los scripts:${NC}"
-SCAN_DIRS="labs tests"
+SCAN_DIRS="Capitulo_1 Capitulo_2 Capitulo_3 Capitulo_4 Capitulo_5 tests"
 # --include='*.sh': la auditoria de portabilidad mira SOLO ejecutables. La
 # documentacion (p.ej. tests/CONVENCIONES-TEST.md, que cita los GNU-ismos
 # prohibidos) no es codigo y se auto-detectaba como violacion.
@@ -169,7 +169,7 @@ else
   if [ -f "tests/run-all.sh" ]; then
     bash tests/run-all.sh; RUN_RC=$?
   else
-    fatal "No encuentro tests/run-all.sh en la raiz. Estas en la raiz del repo? (debe verse 'labs/' y 'tests/')"
+    fatal "No encuentro tests/run-all.sh en la raiz. Estas en la raiz del repo? (deben verse 'Capitulo_1..5/' y 'tests/')"
     RUN_RC=1
   fi
 fi

@@ -137,7 +137,7 @@ curl -s -X PUT \
 
 Detener cualquier otro clúster Kafka antes:
 ```bash
-# desde labs/<otro-lab>/
+# desde Capitulo_N/<otro-lab>/
 bin/stop-lab.sh
 ```
 

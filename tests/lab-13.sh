@@ -5,7 +5,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 source "$HERE/lib-test.sh"
 
 LAB_DIR=""
-for d in "$HERE/../labs/"lab-13-*; do [ -d "$d" ] && LAB_DIR="$(cd "$d" && pwd)" && break; done
+for d in "$HERE"/../Capitulo_*/lab-13-*; do [ -d "$d" ] && LAB_DIR="$(cd "$d" && pwd)" && break; done
 [ -n "$LAB_DIR" ] || { echo "No encuentro la carpeta del lab 13"; exit 1; }
 
 trap 'lab_teardown "$LAB_DIR"' EXIT

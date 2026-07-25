@@ -13,7 +13,8 @@ arquitectos que operan plataformas de mensajería en producción.
 
 | Carpeta / archivo | Contenido |
 |---|---|
-| `labs/` | Los **14 laboratorios** guiados, cada uno autocontenido (guía, solución, plantilla de entrega, infraestructura Docker, scripts y troubleshooting). |
+| `Capitulo_1/` | Capítulo conceptual (arquitectura y ecosistema) + práctica de **validación del entorno**. |
+| `Capitulo_2..5/` | Los **14 laboratorios** guiados, agrupados por capítulo. Cada lab es autocontenido (guía, solución, plantilla de entrega, infraestructura Docker, scripts y troubleshooting). |
 | `tests/` | **Harness de validación** automatizada de los 14 labs + convenciones de test. |
 | `validar-todo.sh` | Botón único de validación cross-platform (macOS + Git-Bash/Windows). |
 | `docs/adr/` | **Decisiones de arquitectura** registradas (p. ej. ADR-001: sustitución de Landoop por Kafbat UI). |
@@ -62,7 +63,7 @@ Labs: `09-clientes-java-spring` · `10-rest-proxy-kafbat-ui` · `11-schema-regis
 Cada laboratorio es autocontenido y se ejecuta desde su propia carpeta. La estructura estándar de un lab:
 
 ```
-labs/lab-NN-<nombre>/
+Capitulo_N/lab-NN-<nombre>/
 ├── README.md          → punto de entrada del lab (leer primero)
 ├── guia/              → guía paso a paso para el participante
 ├── soluciones/        → respuestas modelo (para el instructor)

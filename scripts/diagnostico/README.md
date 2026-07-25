@@ -39,7 +39,7 @@ Desde la raíz del repositorio:
 También funciona desde cualquier subdirectorio (el script detecta la raíz del repo automáticamente):
 
 ```bash
-cd labs/lab-05-resiliencia-y-retencion
+cd Capitulo_3/lab-05-operacion-topicos
 ../../scripts/diagnostico/validar-ambiente.sh
 ```
 
@@ -128,7 +128,7 @@ scripts/diagnostico/logs/validacion-YYYYMMDD-HHMMSS/
    - **`unhealthy`**: el broker no respondió al healthcheck. Mirar `docker logs kafka-broker-1` mientras el lab está corriendo (con `--skip-cleanup`) o revisar el log capturado.
    - **`Connection refused`**: bootstrap-server apuntando a un broker que no existe; revisar config del lab.
    - **`TIMEOUT (>600s)`**: el lab tarda demasiado en levantar; típicamente Lab 09 (descarga plugin JDBC) o Lab 11 (descarga grafana). Si pasa una segunda vez con cache caliente, reportar.
-4. Revisá el troubleshooting específico del lab: `labs/lab-NN-*/docs/troubleshooting.md`.
+4. Revisá el troubleshooting específico del lab: `Capitulo_N/lab-NN-*/docs/troubleshooting.md`.
 
 ---
 

@@ -53,7 +53,7 @@ curl -s -X PUT \
 
 Detener TODOS los demás labs antes:
 ```bash
-# desde labs/<otro-lab>/
+# desde Capitulo_N/<otro-lab>/
 bin/stop-lab.sh
 ```
 
