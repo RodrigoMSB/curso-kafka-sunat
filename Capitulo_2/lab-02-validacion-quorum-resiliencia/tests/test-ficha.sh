@@ -36,6 +36,15 @@ verde() {
     printf '  verde  %s\n' "$1"
 }
 
+# Cobertura que falta porque falta el fixture. No suma verde ni rojo: si
+# sumara verde estaríamos diciendo que algo está probado cuando no lo está.
+N_PENDIENTE=0
+pendiente() {
+    N_PENDIENTE=$(( N_PENDIENTE + 1 ))
+    printf '  PENDIENTE  %s\n' "$1"
+    printf '             falta el fixture  %s\n' "$2"
+}
+
 rojo() {
     N_TOTAL=$(( N_TOTAL + 1 ))
     printf '  ROJO   %s\n' "$1"
@@ -201,6 +210,22 @@ afirmar_igual 'nombre_broker_sin_dos_puntos · formato WARN de Kafka 4.x' \
 afirmar_no_contiene 'nombre_broker_sin_dos_puntos · sin dos puntos pegados' \
     ':' "$HOST_WARN"
 
+# El bug del ':' pegado solo aparece en el otro formato, el
+# "UnknownHostException: kafka-broker-1: Name or service not known".
+# Este Docker no lo produce nunca, siempre devuelve el WARN de arriba, y un
+# fixture inventado es justo lo que dejó pasar el bug del CurrentVoters.
+# Cuando el fixture exista, esta prueba se enciende sola.
+if [ -f "$DIR_FIX/replication-unknownhost.txt" ]; then
+    HOST_UHE=$(q_host_error "$(fx replication-unknownhost.txt)")
+    afirmar_no_contiene 'nombre_broker_sin_dos_puntos · formato UnknownHostException' \
+        ':' "$HOST_UHE"
+    afirmar_no_contiene 'nombre_broker_sin_dos_puntos · sin el resto del mensaje' \
+        ' ' "$HOST_UHE"
+else
+    pendiente 'nombre_broker_sin_dos_puntos · formato UnknownHostException' \
+        'tests/fixtures/replication-unknownhost.txt'
+fi
+
 # ── json_con_espacios ────────────────────────────────────────
 # El JSON real trae espacios y el parser se quedaba con "[{"id":".
 VOTERS=$(q_valor 'CurrentVoters' "$(fx status-sano.txt)")
@@ -287,14 +312,23 @@ afirmar_igual 'formato · cero dos puntos en prosa' '0' "$DOSPUNTOS"
 # La medición rápida de ancho se hace dentro de bash. Se compara contra la
 # lenta y obvia sobre cada línea real que produce el wrapper, con acentos,
 # cajas Unicode y flechas incluidas.
+# La referencia lenta se calcula de una sola pasada para todas las líneas.
+# Llamarla una vez por línea son tres procesos por línea y el runner se iba
+# a más de 5 segundos.
+printf '%s\n' "$TODAS" | sort -u > "$TMP/lineas.txt"
+LC_ALL=C tr -d '\200-\277' < "$TMP/lineas.txt" | awk '{ print length }' > "$TMP/lento.txt"
+
 DISCREPAN=0
-while IFS= read -r LINEA; do
-    if [ "$(ficha_ancho_visible "$LINEA")" != "$(ficha_ancho_visible_lento "$LINEA")" ]; then
+exec 3< "$TMP/lineas.txt"
+exec 4< "$TMP/lento.txt"
+while IFS= read -r LINEA <&3; do
+    IFS= read -r ESPERADO <&4 || ESPERADO=''
+    if [ "$(ficha_ancho_visible "$LINEA")" != "$ESPERADO" ]; then
         DISCREPAN=$(( DISCREPAN + 1 ))
     fi
-done <<EOF
-$(printf '%s\n' "$TODAS" | sort -u)
-EOF
+done
+exec 3<&-
+exec 4<&-
 afirmar_igual 'formato · la medición rápida de ancho coincide con la lenta' \
     '0' "$DISCREPAN"
 
@@ -312,9 +346,15 @@ afirmar_igual 'fixtures · todos documentan cómo se capturaron' '0' "$FALTA_CAP
 
 echo ''
 if [ "$N_VERDE" -eq "$N_TOTAL" ]; then
-    printf '  %s pruebas, %s en verde\n\n' "$N_TOTAL" "$N_VERDE"
-    exit 0
+    printf '  %s pruebas, %s en verde' "$N_TOTAL" "$N_VERDE"
+else
+    printf '  %s pruebas, %s en verde, %s en ROJO' \
+        "$N_TOTAL" "$N_VERDE" "$(( N_TOTAL - N_VERDE ))"
 fi
-printf '  %s pruebas, %s en verde, %s en ROJO\n\n' \
-    "$N_TOTAL" "$N_VERDE" "$(( N_TOTAL - N_VERDE ))"
-exit 1
+if [ "$N_PENDIENTE" -gt 0 ]; then
+    printf ', %s sin fixture para probarse' "$N_PENDIENTE"
+fi
+printf '\n\n'
+
+[ "$N_VERDE" -eq "$N_TOTAL" ] || exit 1
+exit 0
