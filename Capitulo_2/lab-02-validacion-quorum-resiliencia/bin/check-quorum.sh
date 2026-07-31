@@ -55,7 +55,15 @@ q_contar_ids() {
 # Imprime "<votantes> <vivos> <observadores> <rezagados> <lag_maximo>".
 q_resumen_replicacion() {
     local ahora_ms
-    ahora_ms=$(( $(date +%s) * 1000 ))
+    # Q_AHORA_MS existe para las pruebas. Un fixture guardado envejece, y a
+    # los 15 segundos de capturarlo sus nodos pasarían por muertos. Los tests
+    # lo fijan al instante en que se capturó. En una corrida normal no está
+    # seteada y manda el reloj.
+    if [ -n "${Q_AHORA_MS:-}" ]; then
+        ahora_ms="$Q_AHORA_MS"
+    else
+        ahora_ms=$(( $(date +%s) * 1000 ))
+    fi
     printf '%s\n' "$1" | awk -v ahora="$ahora_ms" -v umbral=15000 '
         NR == 1 { for (i = 1; i <= NF; i++) col[$i] = i; next }
         NF < 3 { next }

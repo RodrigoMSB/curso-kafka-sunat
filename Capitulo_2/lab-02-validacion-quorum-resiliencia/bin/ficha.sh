@@ -48,7 +48,18 @@ ficha_init_color() {
 # Se borran los bytes de continuación UTF-8 (0x80-0xBF) y se cuentan
 # los que quedan, que son exactamente uno por carácter. Todo el
 # cálculo va bajo LC_ALL=C para que no dependa del entorno del alumno.
+# Se resuelve dentro de bash, sin lanzar procesos. Se llama una vez por
+# palabra al ajustar las líneas, y con tres procesos por llamada la ficha
+# tardaba segundos en dibujarse.
 ficha_ancho_visible() {
+    local LC_ALL=C
+    local limpio=${1//[$'\200'-$'\277']/}
+    printf '%s' "${#limpio}"
+}
+
+# La versión lenta pero obvia, que sirve de patrón de comparación en los
+# tests. Si las dos dejan de coincidir, la rápida está mal.
+ficha_ancho_visible_lento() {
     printf '%s' "$1" | LC_ALL=C tr -d '\200-\277' | LC_ALL=C wc -c | tr -d ' '
 }
 
