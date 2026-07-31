@@ -1,0 +1,25 @@
+# Capturado con kafka-broker-1 detenido (docker stop kafka-broker-1) y el wrapper eligiendo kafka-broker-3, en el primer intento:  docker exec kafka-broker-3 kafka-metadata-quorum --bootstrap-server kafka-broker-3:29094 describe --replication
+[2026-07-31 23:47:01,575] WARN [AdminClient clientId=adminclient-1] Error connecting to node kafka-broker-1:29092 (id: 1 rack: null isFenced: false) (org.apache.kafka.clients.NetworkClient)
+java.net.UnknownHostException: kafka-broker-1: Name or service not known
+	at java.base/java.net.Inet6AddressImpl.lookupAllHostAddr(Native Method)
+	at java.base/java.net.Inet6AddressImpl.lookupAllHostAddr(Unknown Source)
+	at java.base/java.net.InetAddress$PlatformResolver.lookupByName(Unknown Source)
+	at java.base/java.net.InetAddress.getAddressesFromNameService(Unknown Source)
+	at java.base/java.net.InetAddress$NameServiceAddresses.get(Unknown Source)
+	at java.base/java.net.InetAddress.getAllByName0(Unknown Source)
+	at java.base/java.net.InetAddress.getAllByName(Unknown Source)
+	at org.apache.kafka.clients.DefaultHostResolver.resolve(DefaultHostResolver.java:27)
+	at org.apache.kafka.clients.ClientUtils.resolve(ClientUtils.java:125)
+	at org.apache.kafka.clients.ClusterConnectionStates$NodeConnectionState.resolveAddresses(ClusterConnectionStates.java:536)
+	at org.apache.kafka.clients.ClusterConnectionStates$NodeConnectionState.currentAddress(ClusterConnectionStates.java:511)
+	at org.apache.kafka.clients.ClusterConnectionStates.currentAddress(ClusterConnectionStates.java:173)
+	at org.apache.kafka.clients.NetworkClient.initiateConnect(NetworkClient.java:1140)
+	at org.apache.kafka.clients.NetworkClient.ready(NetworkClient.java:368)
+	at org.apache.kafka.clients.admin.KafkaAdminClient$AdminClientRunnable.sendEligibleCalls(KafkaAdminClient.java:1256)
+	at org.apache.kafka.clients.admin.KafkaAdminClient$AdminClientRunnable.processRequests(KafkaAdminClient.java:1517)
+	at org.apache.kafka.clients.admin.KafkaAdminClient$AdminClientRunnable.run(KafkaAdminClient.java:1460)
+	at java.base/java.lang.Thread.run(Unknown Source)
+NodeId	DirectoryId           	LogEndOffset	Lag	LastFetchTimestamp	LastCaughtUpTimestamp	Status  	
+2     	AAAAAAAAAAAAAAAAAAAAAA	39980       	0  	1785541621635     	1785541621635        	Leader  	
+1     	AAAAAAAAAAAAAAAAAAAAAA	39972       	8  	1785541617711     	1785541617217        	Follower	
+3     	AAAAAAAAAAAAAAAAAAAAAA	39980       	0  	1785541621224     	1785541621224        	Follower	

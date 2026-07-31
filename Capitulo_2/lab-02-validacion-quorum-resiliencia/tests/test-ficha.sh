@@ -210,16 +210,20 @@ afirmar_igual 'nombre_broker_sin_dos_puntos · formato WARN de Kafka 4.x' \
 afirmar_no_contiene 'nombre_broker_sin_dos_puntos · sin dos puntos pegados' \
     ':' "$HOST_WARN"
 
-# El bug del ':' pegado solo aparece en el otro formato, el
-# "UnknownHostException: kafka-broker-1: Name or service not known".
-# Este Docker no lo produce nunca, siempre devuelve el WARN de arriba, y un
-# fixture inventado es justo lo que dejó pasar el bug del CurrentVoters.
-# Cuando el fixture exista, esta prueba se enciende sola.
+# El bug del ':' pegado solo aparece en este otro formato, el
+# "UnknownHostException: kafka-broker-1: Name or service not known", que
+# Kafka emite de forma intermitente. Se reproduce apagando kafka-broker-1 y
+# corriendo el wrapper, pero no en todas las corridas: depende de si el
+# resolutor de nombres de Docker todavía tiene el nombre en cache. Si el
+# fixture llegara a faltar, la prueba se declara PENDIENTE y no se inventa
+# el archivo, que fue lo que dejó pasar el bug del CurrentVoters tres SPECs.
 if [ -f "$DIR_FIX/replication-unknownhost.txt" ]; then
     HOST_UHE=$(q_host_error "$(fx replication-unknownhost.txt)")
-    afirmar_no_contiene 'nombre_broker_sin_dos_puntos · formato UnknownHostException' \
+    afirmar_igual 'nombre_broker_sin_dos_puntos · formato UnknownHostException' \
+        'kafka-broker-1' "$HOST_UHE"
+    afirmar_no_contiene 'nombre_broker_sin_dos_puntos · sin los dos puntos del mensaje' \
         ':' "$HOST_UHE"
-    afirmar_no_contiene 'nombre_broker_sin_dos_puntos · sin el resto del mensaje' \
+    afirmar_no_contiene 'nombre_broker_sin_dos_puntos · sin el resto de la frase' \
         ' ' "$HOST_UHE"
 else
     pendiente 'nombre_broker_sin_dos_puntos · formato UnknownHostException' \
