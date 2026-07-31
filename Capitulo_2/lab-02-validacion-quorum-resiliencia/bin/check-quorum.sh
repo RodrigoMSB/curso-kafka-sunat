@@ -119,8 +119,17 @@ q_linea_error() {
     printf '%s' "$l"
 }
 
-# El nombre de host que Kafka no pudo resolver, si el error lo trae.
-# Se cubren las dos formas que emite Kafka 4.x para lo mismo.
+# El nombre del contenedor que Kafka no pudo resolver, si el error lo trae.
+# Se cubren las dos formas que emite Kafka 4.x para lo mismo:
+#   UnknownHostException: kafka-broker-1: Name or service not known
+#   ... DNS resolution failed for kafka-broker-1
+# Kafka pega cosas al nombre. En el primer caso, el ':' que separa el resto
+# del mensaje. En otras variantes, el puerto. Se corta en el primer ':' y en
+# la primera ',', que saca las dos.
+#
+# Lo que sale de acá va dentro de un 'docker start' que el alumno copia y
+# pega, así que si no es un nombre de contenedor válido se devuelve vacío
+# y el diagnóstico no ofrece el comando. Antes que un comando roto, ninguno.
 q_host_error() {
     local h
     h=$(printf '%s\n' "$1" \
@@ -129,7 +138,23 @@ q_host_error() {
         h=$(printf '%s\n' "$1" \
             | sed -n 's/.*DNS resolution failed for[[:space:]]*\([^ ][^ ]*\).*/\1/p' | head -1)
     fi
+
+    h="${h%%:*}"
+    h="${h%%,*}"
+
+    case "$h" in
+        ''|*[!A-Za-z0-9._-]*) h='' ;;
+    esac
+
     printf '%s' "$h"
+}
+
+# El nombre salió de un mensaje de error de Kafka, no de docker. Antes de
+# ofrecer un 'docker start' se confirma que ese contenedor existe en esta
+# máquina, porque el alumno lo va a copiar y pegar tal cual.
+q_contenedor_existe() {
+    docker ps -a --filter "name=^${1}$" --format '{{.Names}}' 2>/dev/null \
+        | grep -q "^${1}$"
 }
 
 # ── Reformateo de la salida para que se pueda leer ───────────
@@ -408,9 +433,12 @@ diagnostico_parcial() {
     ficha_texto 'Sin ese detalle no puedo decirte cuántos votantes están al día.'
 
     ficha_vacia
-    ficha_causa '  ¿Qué brokers están vivos?' 'docker ps'
-    if [ -n "$host" ]; then
-        ficha_causa '  Levantar el que falta' "docker start ${host}"
+    if [ -n "$host" ] && q_contenedor_existe "$host"; then
+        ficha_causa '  ¿Qué brokers están vivos?' 'docker ps'
+        ficha_causa '  Levantar el que falta'     "docker start ${host}"
+    else
+        # Sin un nombre limpio no se ofrece un 'docker start' a medias.
+        ficha_causa '  ¿Qué brokers están vivos?' 'docker ps -a'
     fi
 
     ficha_cerrar
