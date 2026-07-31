@@ -276,11 +276,15 @@ ficha_encabezado() {
     ficha_flag 'describe'           '--status'      '--status'
     ficha_flag 'describe'           '--replication' '--replication'
 
+    # Los dos comandos son dos consultas separadas por milisegundos, así que
+    # sus cifras no siempre calzan. Eso no se esconde, se explica acá.
     ficha_medio 'CÓMO SE LEE LA SALIDA'
     ficha_campo 'LeaderId'         'quién manda ahora mismo'
     ficha_campo 'LeaderEpoch'      'cuántas veces hubo elección. Sube en cada relevo'
     ficha_campo 'HighWatermark'    'hasta dónde está confirmado por la mayoría'
-    ficha_campo 'MaxFollowerLag'   'cuánto le falta al más atrasado. Debe ser bajo'
+    ficha_campo 'LogEndOffset'     'hasta dónde escribió cada nodo. Va por delante del HighWatermark, y esa diferencia es Kafka funcionando, no un problema'
+    ficha_campo 'MaxFollowerLag'   'cuánto le falta al más atrasado. Debe ser bajo. Es del instante de la primera consulta'
+    ficha_campo 'Lag'              'lo mismo pero nodo por nodo. Sale de la segunda consulta, así que puede no coincidir con MaxFollowerLag'
     ficha_campo 'CurrentVoters'    'los que votan'
     ficha_campo 'CurrentObservers' 'los que copian pero no votan'
     ficha_campo 'DirectoryId'      'el identificador del directorio de datos de cada nodo'
