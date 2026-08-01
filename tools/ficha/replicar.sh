@@ -82,6 +82,11 @@ labs_check_quorum() {
     labs_verify_storage
 }
 
+# Los wrappers de kafka-cli/ de las sesiones 1 a 3, en los mismos 4 labs.
+labs_kafka_cli_01_04() {
+    labs_verify_storage
+}
+
 sha() {
     shasum -a 256 "$1" 2>/dev/null | awk '{print $1}'
 }
@@ -194,6 +199,14 @@ EOF
                   "$RAIZ/$lab/bin/check-quorum.sh"
     done <<EOF
 $(labs_check_quorum)
+EOF
+
+    while IFS= read -r lab; do
+        [ -z "$lab" ] && continue
+        "$accion" "$DIR_CANON/wrappers/generate-cluster-id.sh" \
+                  "$RAIZ/$lab/kafka-cli/generate-cluster-id.sh"
+    done <<EOF
+$(labs_kafka_cli_01_04)
 EOF
 }
 
