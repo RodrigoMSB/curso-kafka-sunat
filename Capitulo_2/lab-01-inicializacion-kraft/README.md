@@ -8,7 +8,7 @@
 
 ## Contexto narrativo
 
-NovaTech Logistics decidió operar Kafka por su cuenta. Antes de pensar en clústeres productivos, el equipo debe dominar el nacimiento de un broker: qué trae la imagen de Confluent, qué es un cluster-id, por qué el storage se formatea, y cómo se levanta el primer nodo en modo KRaft (sin ZooKeeper).
+NovaTech Logistics decidió operar Kafka por su cuenta. Antes de pensar en clústeres productivos, el equipo debe dominar el nacimiento de un broker: qué trae la imagen de Confluent, qué es un cluster-id, por qué el storage se formatea, y cómo se levanta el primer nodo en modo KRaft.
 
 El CTO te dice:
 *"No quiero que nadie opere lo que no sabe encender desde cero. Muéstrame que entiendes cada pieza del arranque: la imagen, el id del clúster, el formateo y el broker corriendo."*
