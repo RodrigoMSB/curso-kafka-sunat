@@ -29,6 +29,25 @@ instructor sí usa la lib central (DRY).
   inflan los conteos (lección del capstone: `--consumer.config` warning contaba como mensaje).
 - **Conteos dinámicos, no fijos frágiles**: p. ej. particiones = líneas `Partition: N`; ISR = tamaño
   mínimo de `Isr:`; réplicas parseando `Replicas:` (no `assert_contains " 4"`).
+- **Nunca se compara contra la salida cruda de una caja**: los wrappers con ficha didáctica dibujan
+  un marco de 76 columnas y **envuelven** las frases largas, así que una frase de dos renglones no
+  aparece contigua en la salida. Toda aserción sobre ese texto pasa antes por un aplanado que quita
+  el marco y colapsa los espacios:
+
+  ```bash
+  plano() {
+      printf '%s\n' "$1" | sed 's/^│//; s/│$//' | tr '\n' ' ' | tr -s ' '
+  }
+  afirmar_contiene_plano() { afirmar_contiene "$1" "$2" "$(plano "$3")"; }
+  ```
+
+  Sin esto la aserción se pone roja cuando el texto crece, o peor, pasa en verde porque compara
+  contra un fragmento corto que sí quedó contiguo. Ocurrió tres veces en el piloto de la ficha antes
+  de escribirse esta regla.
+- **Una aserción que no puede distinguir lo correcto de lo incorrecto no es una aserción**: se
+  comparan **valores** (el número de particiones, el id del broker que falta, el lag exacto), nunca la
+  presencia de una palabra. Antes de dar un test por bueno se lo rompe a propósito y se confirma que
+  se pone rojo.
 - **Tests negativos que afirman la denegación**: en seguridad, el test PASA cuando la operación
   FALLA. Se lee el **stderr real** del cliente (no el stdout del script del lab, que puede mencionar
   la excepción esperada en su texto de ayuda y dar un falso positivo).
