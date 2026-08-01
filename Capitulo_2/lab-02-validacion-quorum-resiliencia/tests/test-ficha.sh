@@ -147,10 +147,16 @@ correr_wrapper() {
     # El reloj se fija al instante en que se capturó el fixture. Sin esto, un
     # fixture sano da DEGRADADO apenas pasan 15 segundos de haberlo tomado, y
     # la prueba se pudriría sola con el tiempo.
+    # La cabecera puede no estar en la línea 1: Kafka a veces manda un error
+    # antes de la tabla. Se busca igual que en el wrapper.
     if [ -n "$ruta_repl" ]; then
         ahora=$(awk '
-            NR == 1 { for (i = 1; i <= NF; i++) c[$i] = i; next }
-            ("LastFetchTimestamp" in c) {
+            !vista && $1 == "NodeId" {
+                for (i = 1; i <= NF; i++) c[$i] = i
+                vista = 1
+                next
+            }
+            vista && ("LastFetchTimestamp" in c) {
                 t = $(c["LastFetchTimestamp"]) + 0
                 if (t > m) m = t
             }
@@ -260,6 +266,30 @@ do
     afirmar_igual "sin_nombre_usable_no_ofrece_comando · <$(printf '%.32s' "$BASURA")>" \
         '' "$(q_host_error "$BASURA")"
 done
+
+# ── tabla_con_ruido_antes ────────────────────────────────────
+# Kafka manda el stack trace y DESPUÉS la tabla, saliendo con código 0.
+# El validador la rechazaba entera y se perdían los lags reales, justo en
+# la Actividad 3 del lab, que es cuando el alumno mata un nodo.
+if q_repl_es_tabla "$(fx replication-unknownhost.txt)"; then
+    verde 'tabla_con_ruido_antes · el validador encuentra la cabecera'
+else
+    rojo 'tabla_con_ruido_antes · el validador encuentra la cabecera' \
+        'que la aceptara' 'la rechazó entera'
+fi
+
+FILAS_RUIDO=$(q_repl_legible "$(fx replication-unknownhost.txt)" | grep -c '^[0-9]')
+afirmar_igual 'tabla_con_ruido_antes · lee los 3 nodos' '3' "$FILAS_RUIDO"
+
+correr_wrapper status-degradado.txt replication-unknownhost.txt "$BROKERS"
+afirmar_contiene 'tabla_con_ruido_antes · el diagnóstico usa la tabla real' \
+    'Quórum ' "$SALIDA"
+afirmar_contiene 'tabla_con_ruido_antes · el error no se tira en silencio' \
+    'Kafka devolvió un error antes de la tabla' "$SALIDA"
+afirmar_contiene 'tabla_con_ruido_antes · muestra cuál fue el error' \
+    'UnknownHostException' "$SALIDA"
+afirmar_no_contiene 'tabla_con_ruido_antes · ya no dice que no pudo leer' \
+    'No pude leer el detalle por nodo' "$SALIDA"
 
 echo ''
 echo 'Los cuatro escenarios y sus códigos de salida'

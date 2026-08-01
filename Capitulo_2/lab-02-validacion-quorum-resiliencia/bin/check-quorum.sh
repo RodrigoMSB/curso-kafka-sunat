@@ -64,7 +64,7 @@ q_resumen_replicacion() {
     else
         ahora_ms=$(( $(date +%s) * 1000 ))
     fi
-    printf '%s\n' "$1" | awk -v ahora="$ahora_ms" -v umbral=15000 '
+    q_repl_desde_cabecera "$1" | awk -v ahora="$ahora_ms" -v umbral=15000 '
         NR == 1 { for (i = 1; i <= NF; i++) col[$i] = i; next }
         NF < 3 { next }
         {
@@ -87,12 +87,36 @@ q_resumen_replicacion() {
 # stack trace se cuentan como nodos y el diagnóstico afirma números que no
 # existen. Un dato que no se pudo leer no se estima. Se declara que falta.
 #
-# Es tabla válida solo si la cabecera trae NodeId y TODAS las filas que
-# siguen empiezan con un entero. Un "Exception" o un "at ..." la invalida
-# entera, porque no arrancan con entero.
-q_repl_es_tabla() {
+# Kafka a veces escupe un error por stdout y DESPUÉS la tabla, saliendo con
+# código 0. Pasa al matar un nodo, que es la Actividad 3 del lab. La
+# cabecera se busca en cualquier posición y lo anterior es ruido de log.
+q_repl_desde_cabecera() {
     printf '%s\n' "$1" | awk '
-        NR == 1 { if ($0 !~ /NodeId/) malo = 1; next }
+        vista { print; next }
+        $1 == "NodeId" { vista = 1; print }
+    '
+}
+
+# Lo que vino antes de la cabecera. No se tira en silencio, se le muestra
+# al alumno junto con la tabla.
+q_repl_antes_de_cabecera() {
+    printf '%s\n' "$1" | awk '
+        vista { next }
+        $1 == "NodeId" { vista = 1; next }
+        { print }
+    '
+}
+
+# Es tabla válida solo si aparece la cabecera NodeId y TODAS las filas que
+# la siguen empiezan con un entero. Sin cabecera no hay tabla, y ahí se
+# declara ilegible. Un "Exception" o un "at ..." DESPUÉS de la cabecera la
+# invalidan igual, porque no arrancan con entero.
+q_repl_es_tabla() {
+    local tabla
+    tabla=$(q_repl_desde_cabecera "$1")
+    [ -n "$tabla" ] || return 1
+    printf '%s\n' "$tabla" | awk '
+        NR == 1 { next }
         /^[ \t]*$/ { next }
         { if ($1 !~ /^[0-9]+$/) malo = 1; else filas++ }
         END { if (malo || filas == 0) exit 1; exit 0 }
@@ -224,7 +248,7 @@ q_status_legible() {
 # explica. Las posiciones se leen de la cabecera por nombre, así que un
 # cambio de orden en otra versión de Kafka no lo rompe.
 q_repl_legible() {
-    printf '%s\n' "$1" | awk '
+    q_repl_desde_cabecera "$1" | awk '
         NR == 1 {
             for (i = 1; i <= NF; i++) col[$i] = i
             printf "%-8s %-14s %-5s %s\n", "NodeId", "LogEndOffset", "Lag", "Status"
@@ -248,6 +272,14 @@ q_nodos() {
         printf '1 nodo'
     else
         printf '%s nodos' "$1"
+    fi
+}
+
+q_votantes() {
+    if [ "$1" -eq 1 ]; then
+        printf '1 votante'
+    else
+        printf '%s votantes' "$1"
     fi
 }
 
@@ -375,9 +407,17 @@ diagnostico_quorum() {
         fi
     else
         ficha_texto "Quórum DEGRADADO. Manda el nodo ${lider}, epoch ${epoch}."
-        ficha_texto "${vot} votantes configurados, pero ${rezag} no responde hace más de 15s."
+        if [ "$rezag" -eq 1 ]; then
+            ficha_texto "${vot} votantes configurados, pero 1 no responde hace más de 15s."
+        else
+            ficha_texto "${vot} votantes configurados, pero ${rezag} no responden hace más de 15s."
+        fi
         ficha_texto "El más atrasado va $(q_mensajes "$maxlag") atrás."
-        ficha_texto "Quedan ${vivos} al día y hacen falta ${mayoria} para poder decidir."
+        if [ "$vivos" -eq 1 ]; then
+            ficha_texto "Queda 1 al día y hacen falta ${mayoria} para poder decidir."
+        else
+            ficha_texto "Quedan ${vivos} al día y hacen falta ${mayoria} para poder decidir."
+        fi
     fi
 
     ficha_texto "Confirmado por la mayoría hasta el offset ${hw}."
@@ -394,7 +434,7 @@ diagnostico_quorum() {
         ficha_texto "Estás justo en la mayoría, ${vivos} de ${vot} y hacen falta ${mayoria}."
         ficha_warn 'Pierdes 1 más y el clúster queda sin control. Nadie elige líderes.'
     else
-        ficha_warn "SIN mayoría. Hay ${vivos} votantes al día y hacen falta ${mayoria}."
+        ficha_warn "SIN mayoría. Hay $(q_votantes "$vivos") al día y hacen falta ${mayoria}."
         ficha_warn 'El clúster no elige líderes ni acepta cambios de metadatos.'
     fi
 
@@ -571,6 +611,15 @@ main() {
 
     if [ -n "$salida_repl" ]; then
         if [ "$repl_ok" -eq 1 ]; then
+            # Si Kafka mandó un error antes de la tabla, el alumno tiene que
+            # verlo. La tabla llegó igual y el diagnóstico se arma con ella.
+            local ruido
+            ruido=$(q_repl_antes_de_cabecera "$salida_repl")
+            if [ -n "$ruido" ]; then
+                ficha_nota 'Kafka devolvió un error antes de la tabla. La tabla sí llegó y es la'
+                ficha_cruda 'que ves abajo. El error fue:' "$(q_linea_error "$ruido")"
+                echo ''
+            fi
             ficha_cruda 'Esto devolvió Kafka con describe --replication' \
                 "$(q_repl_legible "$salida_repl")"
             ficha_nota_salida 'Se omiten DirectoryId y las marcas de tiempo. Para verlo todo,'
