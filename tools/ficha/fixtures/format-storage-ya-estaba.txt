@@ -1,0 +1,2 @@
+# Capturado con docker run sobre un volumen efimero, sin cluster:  kafka-storage format --cluster-id MkU3OEVBNTcwNTJENDM2Qk --config /etc/kafka/kafka.properties --ignore-formatted  Segunda vez, el directorio ya estaba formateado.
+All of the log directories are already formatted.

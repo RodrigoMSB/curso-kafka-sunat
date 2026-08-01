@@ -208,6 +208,14 @@ EOF
     done <<EOF
 $(labs_kafka_cli_01_04)
 EOF
+
+    while IFS= read -r lab; do
+        [ -z "$lab" ] && continue
+        "$accion" "$DIR_CANON/wrappers/format-storage.sh" \
+                  "$RAIZ/$lab/kafka-cli/format-storage.sh"
+    done <<EOF
+$(labs_kafka_cli_01_04)
+EOF
 }
 
 case "${1:-}" in
