@@ -29,7 +29,7 @@ kafka-cli/create-topic.sh novatech.lab05.resiliente --partitions 3 --rf 3
 ## Actividad 1: Estado del tópico efímero
 
 ```bash
-kafka-cli/describe-topic.sh novatech.lab05.efimero | head -10
+kafka-cli/describe-topic.sh novatech.lab05.efimero | head -4
 ```
 
 Verifica que tiene:
