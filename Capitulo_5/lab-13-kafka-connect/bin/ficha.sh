@@ -299,12 +299,17 @@ ficha_nota_warn() {
 
 # Salida de una herramienta, rotulada e indentada para que no se confunda
 # con la ficha. Los VALORES no se tocan nunca. Lo único que se hace acá es
-# envolver las líneas que no entran en 80 columnas, para que ninguna quede
-# partida por el terminal. Envolver conserva el texto entero.
+# envolver las líneas largas, para que ninguna quede partida por el
+# terminal. Envolver conserva el texto entero.
+#
+# El ancho de envoltura descuenta la sangría de 4, así que el techo de TODA
+# la salida del wrapper es el mismo FICHA_ANCHO que el de la caja. Un solo
+# número y no dos. Antes esto envolvía a 76 y después indentaba 4, y la
+# salida cruda llegaba a 80 justas, sin margen para una ruta más larga.
 ficha_cruda() {
     local rotulo="$1" texto="$2" l
     printf '%s  %s%s\n' "$F_NOTA" "$rotulo" "$F_OFF"
-    printf '%s\n' "$texto" | ficha_envolver "$FICHA_ANCHO" | while IFS= read -r l; do
+    printf '%s\n' "$texto" | ficha_envolver "$(( FICHA_ANCHO - 4 ))" | while IFS= read -r l; do
         printf '    %s\n' "$l"
     done
 }

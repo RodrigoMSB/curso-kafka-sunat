@@ -222,10 +222,10 @@ TODO="$TODO
 $SALIDA"
 
 ANCHO=$(printf '%s\n' "$TODO" | LC_ALL=C tr -d '\200-\277' | awk 'length > m { m = length } END { print m + 0 }')
-if [ "$ANCHO" -le 80 ]; then
-    verde "formato · ninguna línea pasa de 80 columnas (máximo ${ANCHO})"
+if [ "$ANCHO" -le 76 ]; then
+    verde "formato · ninguna línea pasa de 76 columnas (máximo ${ANCHO})"
 else
-    rojo 'formato · ninguna línea pasa de 80 columnas' '80 o menos' "$ANCHO"
+    rojo 'formato · ninguna línea pasa de 76 columnas' '76 o menos' "$ANCHO"
 fi
 afirmar_igual 'formato · el borde derecho siempre en la misma columna' '76 ' \
     "$(printf '%s\n' "$TODO" | grep '^[┌├└│]' | LC_ALL=C tr -d '\200-\277' | awk '{print length}' | sort -u | tr '\n' ' ')"

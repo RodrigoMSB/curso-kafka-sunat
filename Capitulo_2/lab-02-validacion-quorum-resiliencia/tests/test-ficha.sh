@@ -325,10 +325,10 @@ echo 'Formato'
 
 ANCHO=$(printf '%s\n' "$TODAS" | LC_ALL=C tr -d '\200-\277' \
     | awk 'length > m { m = length } END { print m + 0 }')
-if [ "$ANCHO" -le 80 ]; then
-    verde "formato · ninguna línea pasa de 80 columnas (máximo ${ANCHO})"
+if [ "$ANCHO" -le 76 ]; then
+    verde "formato · ninguna línea pasa de 76 columnas (máximo ${ANCHO})"
 else
-    rojo 'formato · ninguna línea pasa de 80 columnas' '80 o menos' "$ANCHO"
+    rojo 'formato · ninguna línea pasa de 76 columnas' '76 o menos' "$ANCHO"
 fi
 
 COLUMNAS=$(printf '%s\n' "$TODAS" | grep '^[┌├└│]' | LC_ALL=C tr -d '\200-\277' \
