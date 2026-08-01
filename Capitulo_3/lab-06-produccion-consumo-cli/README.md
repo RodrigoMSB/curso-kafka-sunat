@@ -127,7 +127,7 @@ Consulta la [guía de troubleshooting](docs/troubleshooting.md) si encuentras pr
 
 ## Tecnologías utilizadas
 
-- Apache Kafka 4.2 (modo KRaft, sin ZooKeeper) — vía `confluentinc/cp-kafka:8.2.0`
+- Apache Kafka 4.2 (modo KRaft) — vía `confluentinc/cp-kafka:8.2.0`
 - Kafbat UI — interfaz web open-source — vía `ghcr.io/kafbat/kafka-ui`
 - Bash scripts
 - Docker & Docker Compose v2

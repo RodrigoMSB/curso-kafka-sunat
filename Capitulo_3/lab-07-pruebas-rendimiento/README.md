@@ -72,7 +72,7 @@ Luego abre `guia/01-tuning-batch-y-linger.md`.
 
 ## Tecnologías utilizadas
 
-- Apache Kafka 4.2 (modo KRaft, sin ZooKeeper) — vía `confluentinc/cp-kafka:8.2.0` (Confluent Platform 8.2)
+- Apache Kafka 4.2 (modo KRaft) — vía `confluentinc/cp-kafka:8.2.0` (Confluent Platform 8.2)
 - **OpenJDK 17** — embebido en las imágenes Docker, no requiere instalación local
 - Kafbat UI — interfaz web open-source — vía `ghcr.io/kafbat/kafka-ui`
 - Bash scripts
