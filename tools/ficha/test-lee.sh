@@ -165,6 +165,18 @@ afirmar_igual 'diagnostico_resume · una sola línea de ISR para un solo broker'
 afirmar_igual 'diagnostico_resume · ninguna línea por partición suelta' '0' \
     "$(printf '%s\n' "$SALIDA" | grep -c 'Partición [0-9], falta')"
 
+# El sabotaje 3 prueba que el diagnóstico USA el ISR. Este prueba que lo
+# LEE BIEN. Si dijera siempre "broker 2", todo lo anterior seguiría verde.
+# La entrada se deriva del fixture real cambiando quién falta. No es un
+# fixture nuevo ni se toca el archivo capturado.
+sed 's/Isr: 1,3/Isr: 1,2/; s/Isr: 3,1/Isr: 2,1/' "$T_DESC_ISR" > "$TMP/isr-falta-3.txt"
+T_DESC="$TMP/isr-falta-3.txt"; export T_DESC
+correr describe-topic.sh 1 novatech.fleet.gps
+afirmar_contiene 'lee_bien_el_isr · nombra al 3 cuando el que falta es el 3' \
+    'El broker 3 está fuera del ISR de las 3 particiones' "$SALIDA"
+afirmar_no_contiene 'lee_bien_el_isr · y ya no nombra al 2' \
+    'El broker 2 está fuera' "$SALIDA"
+
 echo ''
 echo 'Agrupación por broker · entradas adversarias, no fixtures'
 
