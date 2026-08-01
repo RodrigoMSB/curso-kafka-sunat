@@ -179,6 +179,7 @@ diagnostico_topico() {
     local salida="$1" topico="$2"
     local nparts rf minisr filas
     local total=0 incompletas=0 sin_lider=0 rf_real isr_minimo=
+    local pares='' agrupado
     local linea part lider rep isr n_rep n_isr faltan
     local lideres='' tolerancia mayoria
 
@@ -207,7 +208,12 @@ diagnostico_topico() {
         if [ "$n_isr" -lt "$n_rep" ]; then
             incompletas=$(( incompletas + 1 ))
             faltan=$(t_faltantes "$rep" "$isr")
-            ficha_warn "Partición ${part}, falta el broker ${faltan}. Quedan ${n_isr} de ${n_rep} copias al día."
+            # Se acumula "broker particion" para agrupar despues. El
+            # diagnostico resume: una linea por broker que falta, no una
+            # por particion. Con 12 particiones serian 12 lineas diciendo
+            # un solo hecho, y para listar ya esta la salida cruda de arriba.
+            pares="${pares}$(printf '%s\n' "$faltan" | tr ',' '\n' | sed "s/\$/ ${part}/")
+"
         fi
     done <<EOF
 $filas
@@ -221,6 +227,27 @@ EOF
 
     if [ "$incompletas" -eq 0 ] && [ "$sin_lider" -eq 0 ]; then
         ficha_texto "Las ${total} particiones tienen su ISR completo. Nadie falta."
+    fi
+
+    if [ -n "$pares" ]; then
+        agrupado=$(printf '%s\n' "$pares" | awk 'NF == 2 {
+            n[$1]++
+            if (lista[$1] == "") lista[$1] = $2; else lista[$1] = lista[$1] ", " $2
+        }
+        END { for (b in n) printf "%s|%s|%s\n", b, n[b], lista[b] }' | sort -n)
+        local br cuantas cuales
+        while IFS='|' read -r br cuantas cuales; do
+            [ -z "$br" ] && continue
+            if [ "$cuantas" -eq "$total" ]; then
+                ficha_warn "El broker ${br} está fuera del ISR de las ${total} particiones."
+            elif [ "$cuantas" -le 6 ]; then
+                ficha_warn "El broker ${br} está fuera del ISR de $(t_particion_es "$cuantas") de ${total}, la ${cuales}."
+            else
+                ficha_warn "El broker ${br} está fuera del ISR de ${cuantas} de las ${total} particiones."
+            fi
+        done <<AGRUPADO
+$agrupado
+AGRUPADO
     fi
     if [ "$sin_lider" -gt 0 ]; then
         ficha_warn "$(t_particion_es "$sin_lider") sin líder. Eso no se lee ni se escribe."
