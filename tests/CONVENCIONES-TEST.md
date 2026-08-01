@@ -64,6 +64,13 @@ instructor sí usa la lib central (DRY).
   se pone rojo en cuanto el mapa crece, y peor, una constante desactualizada no distingue
   "verificó todo" de "no verificó nada". El número sale de la misma fuente que el trabajo, por
   ejemplo `replicar.sh --listar | wc -l`, más una aserción de que esa fuente no está vacía.
+- **Una SPEC no se cierra sin la lista de sus decisiones verificada una por una**: al declarar
+  cerrada una SPEC se enumeran **todas** las decisiones que el PO tomó en ella, y para cada una se
+  pega el comando que la verifica y su salida. Sin esa lista no hay cierre. La SPEC-59 se declaró
+  cerrada con tres decisiones del PO y solo dos aplicadas: la de que `check-quorum.sh` respetara el
+  TTY nunca se ejecutó y se descubrió dos SPECs después, por casualidad. Es el mismo principio que
+  las dos reglas de arriba, aplicado al proceso en vez de a los tests: **no se declara un estado sin
+  leer la evidencia que lo prueba.**
 - **Tests negativos que afirman la denegación**: en seguridad, el test PASA cuando la operación
   FALLA. Se lee el **stderr real** del cliente (no el stdout del script del lab, que puede mencionar
   la excepción esperada en su texto de ayuda y dar un falso positivo).
