@@ -29,7 +29,10 @@ RAIZ="$(cd "$DIR_CANON/../.." && pwd)"
 # Labs que llevan el motor. Son los que tienen algún wrapper con ficha.
 labs_con_motor() {
     cat <<'MAPA'
+Capitulo_2/lab-01-inicializacion-kraft
 Capitulo_2/lab-02-validacion-quorum-resiliencia
+Capitulo_3/lab-03-configuracion-brokers
+Capitulo_3/lab-04-multibroker-advertised-listeners
 Capitulo_3/lab-05-operacion-topicos
 Capitulo_3/lab-07-pruebas-rendimiento
 Capitulo_3/lab-08-brokers-en-caliente
@@ -60,6 +63,16 @@ Capitulo_3/lab-07-pruebas-rendimiento
 Capitulo_4/lab-11-schema-registry
 Capitulo_5/lab-12-ksqldb
 Capitulo_5/lab-13-kafka-connect
+MAPA
+}
+
+# Labs de las sesiones 1 a 3. Los cuatro tienen el mismo archivo.
+labs_verify_storage() {
+    cat <<'MAPA'
+Capitulo_2/lab-01-inicializacion-kraft
+Capitulo_2/lab-02-validacion-quorum-resiliencia
+Capitulo_3/lab-03-configuracion-brokers
+Capitulo_3/lab-04-multibroker-advertised-listeners
 MAPA
 }
 
@@ -152,6 +165,14 @@ EOF
                   "$RAIZ/$lab/kafka-cli/list-topics.sh"
     done <<EOF
 $(labs_list_topics)
+EOF
+
+    while IFS= read -r lab; do
+        [ -z "$lab" ] && continue
+        "$accion" "$DIR_CANON/wrappers/verify-storage.sh" \
+                  "$RAIZ/$lab/bin/verify-storage.sh"
+    done <<EOF
+$(labs_verify_storage)
 EOF
 }
 

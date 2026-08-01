@@ -248,11 +248,21 @@ ficha_comando() {
 # Causa probable más el comando para verificarla, en dos columnas.
 # No usa ficha_bloque porque el ajuste de línea colapsa la alineación.
 ficha_causa() {
-    local texto="$1" cmd="$2" n relleno esp
+    local texto="$1" cmd="$2" n relleno esp total
     n=$(ficha_ancho_visible "$texto")
     relleno=$(( 36 - n ))
     [ "$relleno" -lt 1 ] && relleno=1
     esp=$(ficha_espacios "$relleno")
+
+    # Si el comando no entra en la misma fila, baja a la siguiente en vez
+    # de desbordar el marco. Un comando cortado no se puede copiar.
+    total=$(ficha_ancho_visible "${texto}${esp}${cmd}")
+    if [ "$total" -gt $(( FICHA_ANCHO - 4 )) ]; then
+        ficha_fila "${F_EXPL}${texto}${F_OFF}" "$texto"
+        ficha_fila "    ${F_BIN}${cmd}${F_OFF}" "    ${cmd}"
+        return 0
+    fi
+
     ficha_fila "${F_EXPL}${texto}${F_OFF}${esp}${F_BIN}${cmd}${F_OFF}" "${texto}${esp}${cmd}"
 }
 
