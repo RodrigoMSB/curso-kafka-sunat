@@ -47,6 +47,28 @@ La salida tiene **2 secciones** de datos:
 1. **Esto devolvió Kafka** (estructura: particiones, líderes y réplicas)
 2. **Y estas son las configuraciones efectivas del tópico** (parámetros)
 
+> **Sobre `Elr` y `LastKnownElr`.** Los vas a ver en cada línea de partición y la ficha
+> no los explica, así que acá va. Son campos nuevos de Kafka 4.x. `Elr` (Eligible Leader
+> Replicas) son las réplicas que Kafka sabe que tienen todos los datos confirmados y por
+> eso podría elegir como líder sin perder nada, aunque ya no estén en el ISR.
+> `LastKnownElr` guarda las últimas que estuvieron en esa condición.
+>
+> En este laboratorio los vas a ver **siempre vacíos**, incluso después de apagar un
+> broker en la Actividad 3, y el motivo es el `min.insync.replicas=2` que este tópico
+> ya te mostró la ficha. Con 3 copias, al caer un broker quedan 2 al día, que es
+> exactamente el mínimo, así que el ISR nunca dejó de ser utilizable. ELR se puebla
+> cuando el ISR cae **por debajo** de ese mínimo, o sea en escenarios de pérdida más
+> severos que los de este lab.
+>
+> El wrapper los omite de su tabla resumida por ancho. Para verlos, corré el comando de
+> Kafka directo:
+>
+> ```bash
+> docker exec kafka-broker-1 kafka-topics \
+>     --bootstrap-server kafka-broker-1:29092 \
+>     --describe --topic novatech.fleet.gps
+> ```
+
 ### Anota la estructura
 
 | Atributo | Valor |

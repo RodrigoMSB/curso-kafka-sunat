@@ -48,6 +48,13 @@ instructor sí usa la lib central (DRY).
   comparan **valores** (el número de particiones, el id del broker que falta, el lag exacto), nunca la
   presencia de una palabra. Antes de dar un test por bueno se lo rompe a propósito y se confirma que
   se pone rojo.
+- **La restauración de un sabotaje preserva lo que no era parte del sabotaje**: al demostrar que un
+  test se pone rojo se rompe el código a propósito y después se restaura, casi siempre con
+  `git checkout`. Ese checkout se lleva puesto **todo** lo que estuviera sin commitear, incluidos los
+  tests recién escritos. Se cuenta el total de pruebas **antes y después** de cada sabotaje y se
+  verifica que coincida, además de dejar `git diff --stat HEAD` vacío. Ocurrió en el piloto de la
+  ficha: un checkout borró el sexto test y se detectó porque el conteo bajó de 31 a 29, no porque
+  hubiera un control.
 - **Tests negativos que afirman la denegación**: en seguridad, el test PASA cuando la operación
   FALLA. Se lee el **stderr real** del cliente (no el stdout del script del lab, que puede mencionar
   la excepción esperada en su texto de ayuda y dar un falso positivo).
