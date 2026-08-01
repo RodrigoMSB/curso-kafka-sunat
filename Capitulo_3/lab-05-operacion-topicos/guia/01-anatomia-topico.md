@@ -43,9 +43,9 @@ Describe el tópico GPS de la flota:
 kafka-cli/describe-topic.sh novatech.fleet.gps
 ```
 
-La salida tiene **2 secciones**:
-1. **Particiones, líderes y réplicas** (estructura)
-2. **Configuraciones efectivas** (parámetros)
+La salida tiene **2 secciones** de datos:
+1. **Esto devolvió Kafka** (estructura: particiones, líderes y réplicas)
+2. **Y estas son las configuraciones efectivas del tópico** (parámetros)
 
 ### Anota la estructura
 
