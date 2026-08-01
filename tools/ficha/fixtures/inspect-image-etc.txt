@@ -1,0 +1,21 @@
+# Capturado con docker run --rm sobre confluentinc/cp-kafka:8.2.0, sin ningun cluster levantado.  Paso 3 de 4:  docker run --rm confluentinc/cp-kafka:8.2.0 sh -c "ls -la /etc/kafka/ | head -20"
+total 120
+drwxrwxr-x 3 appuser root  4096 Feb 24 14:22 .
+drwxr-xr-x 1 root    root  4096 Aug  1 21:05 ..
+-rw-rw-r-- 1 appuser root 12425 Feb 24 12:12 broker.properties
+-rw-rw-r-- 1 appuser root   906 Feb 24 12:12 connect-console-sink.properties
+-rw-rw-r-- 1 appuser root   909 Feb 24 12:12 connect-console-source.properties
+-rw-rw-r-- 1 appuser root  5489 Feb 24 12:12 connect-distributed.properties
+-rw-rw-r-- 1 appuser root   883 Feb 24 12:12 connect-file-sink.properties
+-rw-rw-r-- 1 appuser root   881 Feb 24 12:12 connect-file-source.properties
+-rw-rw-r-- 1 appuser root  1486 Feb 24 12:12 connect-log4j2.yaml
+-rw-rw-r-- 1 appuser root  2540 Feb 24 12:12 connect-mirror-maker.properties
+-rw-rw-r-- 1 appuser root  2276 Feb 24 12:12 connect-standalone.properties
+-rw-rw-r-- 1 appuser root  5863 Feb 24 12:12 consumer.properties
+-rw-rw-r-- 1 appuser root 12399 Feb 24 12:12 controller.properties
+-rw-rw-r-- 1 appuser root  5583 Feb 24 12:12 log4j2.yaml
+-rw-rw-r-- 1 appuser root  5676 Feb 24 12:12 producer.properties
+drwxrwxr-x 2 appuser root  4096 Feb 24 14:22 secrets
+-rw-rw-r-- 1 appuser root  6365 Feb 24 12:12 server.properties
+-rw-rw-r-- 1 appuser root  1091 Feb 24 12:12 tools-log4j2.yaml
+-rw-rw-r-- 1 appuser root  1169 Feb 24 12:12 trogdor.conf

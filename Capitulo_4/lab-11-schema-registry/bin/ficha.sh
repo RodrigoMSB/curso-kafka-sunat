@@ -308,7 +308,12 @@ ficha_nota_warn() {
 # salida cruda llegaba a 80 justas, sin margen para una ruta más larga.
 ficha_cruda() {
     local rotulo="$1" texto="$2" l
-    printf '%s  %s%s\n' "$F_NOTA" "$rotulo" "$F_OFF"
+    # Rótulo vacío significa que el bloque ya viene anunciado por otra cosa,
+    # como el [N/4] de los wrappers de varios pasos. Ahí no se imprime una
+    # línea en blanco de adorno.
+    if [ -n "$rotulo" ]; then
+        printf '%s  %s%s\n' "$F_NOTA" "$rotulo" "$F_OFF"
+    fi
     printf '%s\n' "$texto" | ficha_envolver "$(( FICHA_ANCHO - 4 ))" | while IFS= read -r l; do
         printf '    %s\n' "$l"
     done
