@@ -65,7 +65,13 @@ cat > "$TMP/bin/docker" <<'DOBLE'
 case "$*" in
     *"kafka-storage info"*)   [ -n "${T_INFO:-}" ] && cat "$T_INFO"; exit "${T_INFO_RC:-0}" ;;
     *"ls -la /var/lib/kafka"*) [ -n "${T_LS:-}" ] && cat "$T_LS"; exit 0 ;;
-    *"kafka-storage format"*) [ -n "${T_FMT:-}" ] && cat "$T_FMT"; exit "${T_FMT_RC:-0}" ;;
+    *"kafka-storage format"*)
+        # Foto de lo que el wrapper ya habia impreso en el instante exacto
+        # en que se ejecuta el comando que escribe. Es la unica forma de
+        # probar que el aviso llego ANTES, y no solo que quedo mas arriba.
+        [ -n "${T_SNAP_SRC:-}" ] && [ -f "$T_SNAP_SRC" ] && cp "$T_SNAP_SRC" "${T_SNAP_DST:-/dev/null}"
+        [ -n "${T_FMT:-}" ] && cat "$T_FMT"
+        exit "${T_FMT_RC:-0}" ;;
     *"random-uuid"*)          printf '%s\n' "${T_UUID:-MkU3OEVBNTcwNTJENDM2Qk}"; exit "${T_UUID_RC:-0}" ;;
     *"ls /usr/bin/kafka-"*)   [ -n "${T_BIN:-}" ] && cat "$T_BIN"; exit 0 ;;
     *"ls -la /etc/kafka"*)    [ -n "${T_ETC:-}" ] && cat "$T_ETC"; exit 0 ;;
@@ -167,14 +173,22 @@ $SALIDA"
 afirmar_contiene 'format_avisa_antes · el bloque de aviso existe' \
     'ESTO ESCRIBE EN EL DISCO' "$SALIDA"
 
-# El aviso tiene que estar ANTES de la salida del comando, no después.
-LINEA_AVISO=$(printf '%s\n' "$SALIDA" | grep -n 'ESTO ESCRIBE EN EL DISCO' | head -1 | cut -d: -f1)
-LINEA_SALIDA=$(printf '%s\n' "$SALIDA" | grep -n 'Esto devolvió Kafka' | head -1 | cut -d: -f1)
-if [ -n "$LINEA_AVISO" ] && [ -n "$LINEA_SALIDA" ] && [ "$LINEA_AVISO" -lt "$LINEA_SALIDA" ]; then
-    verde "format_avisa_antes · el aviso está antes de la salida (línea ${LINEA_AVISO} vs ${LINEA_SALIDA})"
+# Que el aviso quede más arriba en el texto no prueba nada: se puede
+# imprimir todo junto después de haber escrito en el disco. Lo que hay que
+# probar es que ya estaba en pantalla en el instante en que el comando
+# corrió. El doble de docker saca la foto justo ahí.
+rm -f "$TMP/snap.txt"
+T_SNAP_SRC="$TMP/fmt-vivo.txt" T_SNAP_DST="$TMP/snap.txt" \
+    PATH="$TMP/bin:$PATH" FICHA_FORZAR=1 \
+    T_FMT="$T_FMT" T_FMT_RC="${T_FMT_RC:-0}" T_PS="$T_PS" \
+    /bin/bash -c 'cd "$1" && exec /bin/bash kafka-cli/format-storage.sh kafka-broker-1 MkU3OEVBNTcwNTJENDM2Qk' \
+    _ "$LAB" > "$TMP/fmt-vivo.txt" 2>&1
+if [ -f "$TMP/snap.txt" ] && grep -q 'ESTO ESCRIBE EN EL DISCO' "$TMP/snap.txt"; then
+    verde 'format_avisa_antes · el aviso ya estaba en pantalla cuando el comando corrió'
 else
-    rojo 'format_avisa_antes · el aviso está antes de la salida' \
-        'aviso con número de línea menor' "aviso=${LINEA_AVISO} salida=${LINEA_SALIDA}"
+    rojo 'format_avisa_antes · el aviso ya estaba en pantalla cuando el comando corrió' \
+        'el bloque de aviso, ya impreso' \
+        "$(head -c 90 "$TMP/snap.txt" 2>/dev/null || echo '(no se imprimió nada antes)')"
 fi
 
 afirmar_contiene_plano 'format_resultado_corto · nombra broker e identidad' \
