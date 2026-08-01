@@ -1,0 +1,3 @@
+# Capturado en un cluster efimero de 3 brokers (fx-broker-1..3, KRaft, RF=3), levantado solo para esto y bajado despues.  Sin topicos internos:  docker exec fx-broker-1 kafka-topics --bootstrap-server fx-broker-1:29092 --list --exclude-internal
+novatech.audit.events
+novatech.fleet.gps
