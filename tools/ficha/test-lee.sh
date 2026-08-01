@@ -239,8 +239,18 @@ echo 'Réplicas'
 
 "$DIR_CANON/replicar.sh" --verificar > "$TMP/hash.txt" 2>&1
 afirmar_igual 'replicas · ninguna copia divergió del canónico' '0' "$?"
-afirmar_igual 'replicas · cuántas copias verifica' '35' \
+
+# La cantidad esperada sale del mapa del replicador, no de una constante.
+# Escrita a mano se ponía roja en cada SPEC que agrega un wrapper, y una
+# constante desactualizada no distingue "verificó todo" de "no verificó nada".
+ESPERADAS=$("$DIR_CANON/replicar.sh" --listar | grep -c '[^[:space:]]')
+afirmar_igual 'replicas · verifica todos los destinos del mapa' "$ESPERADAS" \
     "$(grep -c '^  igual' "$TMP/hash.txt")"
+if [ "$ESPERADAS" -gt 0 ]; then
+    verde "replicas · el mapa no está vacío (${ESPERADAS} destinos)"
+else
+    rojo 'replicas · el mapa no está vacío' 'más de 0 destinos' '0'
+fi
 
 echo ''
 if [ "$N_VERDE" -eq "$N_TOTAL" ]; then

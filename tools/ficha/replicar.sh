@@ -11,8 +11,9 @@
 # para nada. tools/ es infraestructura de desarrollo, no dependencia de
 # ejecución.
 #
-#   bash tools/ficha/replicar.sh            replica
-#   bash tools/ficha/replicar.sh --verificar solo comprueba los hashes
+#   bash tools/ficha/replicar.sh             replica
+#   bash tools/ficha/replicar.sh --verificar  solo comprueba los hashes
+#   bash tools/ficha/replicar.sh --listar     imprime los destinos del mapa
 #
 # Portabilidad exigida, macOS bash 3.2 y Git Bash. Sin declare -A,
 # sin mapfile, sin grep -P, sin sed -i, sin jq.
@@ -76,6 +77,11 @@ Capitulo_3/lab-04-multibroker-advertised-listeners
 MAPA
 }
 
+# check-quorum.sh vive en los mismos 4 labs que verify-storage.
+labs_check_quorum() {
+    labs_verify_storage
+}
+
 sha() {
     shasum -a 256 "$1" 2>/dev/null | awk '{print $1}'
 }
@@ -93,6 +99,13 @@ copiar() {
     cp "$origen" "$destino"
     chmod +x "$destino"
     N_COPIAS=$(( N_COPIAS + 1 ))
+}
+
+# Imprime cada destino sin tocar nada. Sirve para que los tests deriven
+# la cantidad de copias del mapa y no de una constante escrita a mano,
+# que se pone roja cada vez que el mapa crece.
+listar() {
+    printf '%s\n' "${2#$RAIZ/}"
 }
 
 verificar() {
@@ -174,9 +187,20 @@ EOF
     done <<EOF
 $(labs_verify_storage)
 EOF
+
+    while IFS= read -r lab; do
+        [ -z "$lab" ] && continue
+        "$accion" "$DIR_CANON/wrappers/check-quorum.sh" \
+                  "$RAIZ/$lab/bin/check-quorum.sh"
+    done <<EOF
+$(labs_check_quorum)
+EOF
 }
 
 case "${1:-}" in
+    --listar)
+        recorrer listar
+        ;;
     --verificar)
         echo 'Verificando que ninguna copia haya divergido del canónico'
         recorrer verificar

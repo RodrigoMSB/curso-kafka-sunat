@@ -165,7 +165,7 @@ correr_wrapper() {
 
     SALIDA=$(PATH="$TMP/bin:$PATH" \
         T_STATUS="$ruta_status" T_REPL="$ruta_repl" T_PS="$contenedores" \
-        Q_AHORA_MS="$ahora" \
+        Q_AHORA_MS="$ahora" FICHA_FORZAR=1 \
         /bin/bash "$DIR_LAB/bin/check-quorum.sh" 2>&1)
     CODIGO=$?
 }

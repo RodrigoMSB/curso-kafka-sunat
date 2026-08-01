@@ -586,6 +586,21 @@ main() {
         repl_ok=1
     fi
 
+    # Sin terminal se emite solo lo de Kafka, tal cual, igual que el resto
+    # de la familia LEE. Al tuberiar, la ficha delante mostraría marco en
+    # vez de datos.
+    if ! ficha_activa; then
+        if [ "$hay_broker" -eq 0 ]; then
+            echo "[ERROR] No hay ningún contenedor de Kafka corriendo." >&2
+            exit 1
+        fi
+        printf '%s\n' "$salida_status"
+        if [ -n "$salida_repl" ]; then
+            printf '%s\n' "$salida_repl"
+        fi
+        exit "$rc"
+    fi
+
     ficha_encabezado "$destino"
     if [ "$rc" -eq 0 ] && [ "$hay_broker" -eq 1 ] && [ "$repl_ok" -eq 0 ]; then
         # El comando salió bien pero la respuesta no sirve. El alumno tiene

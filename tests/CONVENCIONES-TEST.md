@@ -55,6 +55,15 @@ instructor sí usa la lib central (DRY).
   verifica que coincida, además de dejar `git diff --stat HEAD` vacío. Ocurrió en el piloto de la
   ficha: un checkout borró el sexto test y se detectó porque el conteo bajó de 31 a 29, no porque
   hubiera un control.
+- **El estado que se reporta se lee de la salida de un comando, no de una etiqueta**: antes de
+  declarar "árbol limpio" o "suite en verde" se corre el comando y se **lee su salida**. Escribir
+  `(vacío = limpio)` al lado de un `git status` que lista archivos no es una verificación, es una
+  leyenda. Pasó dos veces en el piloto de la ficha, con tres archivos sin commitear la segunda.
+  El orden es **verde primero, push después**: nunca se empuja con la suite en rojo.
+- **Las cantidades esperadas se derivan, no se escriben a mano**: un test que afirma "35 copias"
+  se pone rojo en cuanto el mapa crece, y peor, una constante desactualizada no distingue
+  "verificó todo" de "no verificó nada". El número sale de la misma fuente que el trabajo, por
+  ejemplo `replicar.sh --listar | wc -l`, más una aserción de que esa fuente no está vacía.
 - **Tests negativos que afirman la denegación**: en seguridad, el test PASA cuando la operación
   FALLA. Se lee el **stderr real** del cliente (no el stdout del script del lab, que puede mencionar
   la excepción esperada en su texto de ayuda y dar un falso positivo).
