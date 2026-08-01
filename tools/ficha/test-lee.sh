@@ -239,7 +239,7 @@ echo 'Réplicas'
 
 "$DIR_CANON/replicar.sh" --verificar > "$TMP/hash.txt" 2>&1
 afirmar_igual 'replicas · ninguna copia divergió del canónico' '0' "$?"
-afirmar_igual 'replicas · cuántas copias verifica' '25' \
+afirmar_igual 'replicas · cuántas copias verifica' '35' \
     "$(grep -c '^  igual' "$TMP/hash.txt")"
 
 echo ''
