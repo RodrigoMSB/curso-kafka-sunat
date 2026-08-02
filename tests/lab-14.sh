@@ -47,7 +47,7 @@ isr_min() {
         | grep -oE 'Isr: [0-9,]+' | sed 's/Isr: //' | awk -F, '{print NF}' | sort -n | head -1
 }
 
-bash bin/start-lab.sh >/dev/null 2>&1
+levantar_lab "$LAB_DIR" || abort_test "no se pudo levantar el entorno del lab"
 # El clúster seguro (TLS+PKI) es el más pesado; más margen para hosts cargados.
 wait_for_brokers 3 240 || abort_test "clúster seguro no subió (3 brokers no healthy en 240s)"
 _pass "clúster seguro arriba (TLS+SASL+ACL, 3 brokers)"

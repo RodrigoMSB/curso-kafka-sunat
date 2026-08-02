@@ -24,7 +24,7 @@ chmod +x bin/*.sh ksql-cli/*.sh kafka-cli/*.sh infra/scripts/*.sh 2>/dev/null
 KSQL="http://localhost:8088"
 TOPIC="novatech.lab10.pedidos"
 
-bash bin/start-lab.sh >/dev/null 2>&1
+levantar_lab "$LAB_DIR" || abort_test "no se pudo levantar el entorno del lab"
 wait_for_brokers 3 || abort_test "clúster no subió (3 brokers no healthy en 150s)"
 
 # ksqlDB tarda en servir: poll a /info hasta 150s

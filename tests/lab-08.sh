@@ -30,7 +30,7 @@ has_broker4() {
         | grep -oE 'Replicas: [0-9,]+' | grep -oE '[0-9]+' | grep -qx 4 && echo yes || echo no
 }
 
-bash bin/start-lab.sh >/dev/null 2>&1
+levantar_lab "$LAB_DIR" || abort_test "no se pudo levantar el entorno del lab"
 wait_for_brokers 3 || abort_test "clúster no subió (3 brokers no healthy en 150s)"
 _pass "clúster arriba (3 brokers healthy)"
 

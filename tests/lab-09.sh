@@ -32,7 +32,7 @@ chmod +x bin/*.sh infra/scripts/*.sh 2>/dev/null
 BOOT="kafka-broker-1:29092"
 TOPIC="novatech.lab09.pedidos"
 
-bash bin/start-lab.sh >/dev/null 2>&1
+levantar_lab "$LAB_DIR" || abort_test "no se pudo levantar el entorno del lab"
 wait_for_brokers 3 || abort_test "clúster no subió (3 brokers no healthy en 150s)"
 _pass "clúster arriba (3 brokers healthy)"
 

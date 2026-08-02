@@ -23,7 +23,7 @@ chmod +x bin/*.sh kafka-cli/*.sh infra/scripts/*.sh 2>/dev/null
 
 BENCH="novatech.tuning.bench"
 
-bash bin/start-lab.sh >/dev/null 2>&1
+levantar_lab "$LAB_DIR" || abort_test "no se pudo levantar el entorno del lab"
 wait_for_brokers 3 || abort_test "clúster no subió (3 brokers no healthy en 150s)"
 _pass "clúster arriba (3 brokers healthy)"
 

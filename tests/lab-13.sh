@@ -30,7 +30,7 @@ running_count() {
         | grep -o '"state":"RUNNING"' | grep -c . || true
 }
 
-bash bin/start-lab.sh >/dev/null 2>&1
+levantar_lab "$LAB_DIR" || abort_test "no se pudo levantar el entorno del lab"
 wait_for_brokers 3 || abort_test "clúster no subió (3 brokers no healthy en 150s)"
 wait_for_container postgres 120 || abort_test "postgres no llegó a healthy"
 wait_for_container kafka-connect 150 || abort_test "Kafka Connect no llegó a healthy"

@@ -25,7 +25,7 @@ SR_PORT="8081"
 TOPIC="novatech.lab10.pedidos"
 SUBJECT="novatech.lab10.pedidos-value"
 
-bash bin/start-lab.sh >/dev/null 2>&1
+levantar_lab "$LAB_DIR" || abort_test "no se pudo levantar el entorno del lab"
 wait_for_brokers 3 || abort_test "clúster no subió (3 brokers no healthy en 150s)"
 wait_for_container schema-registry 120 || abort_test "Schema Registry no llegó a healthy"
 _pass "clúster + Schema Registry arriba"
