@@ -12,7 +12,10 @@ OK=0; BAD=0
 ok()  { OK=$((OK+1));  echo -e "  ${GREEN}✓${NC} $1"; }
 bad() { BAD=$((BAD+1)); echo -e "  ${RED}✗${NC} $1"; echo -e "    ${YELLOW}→ $2${NC}"; }
 BOOT="kafka-broker-1:29092"
-EXT_PORT="9092"
+# El puerto que el lab publica al host. Por defecto el de siempre, que es
+# el que ve el alumno. Los e2e del instructor exportan otro para no chocar
+# con un cluster ya levantado, y este validador tiene que seguirlo.
+EXT_PORT="${BROKER1_EXTERNAL_PORT:-9092}"
 
 echo -e "${BOLD}Validador del Lab 04 — listeners y advertised.listeners${NC}"
 
