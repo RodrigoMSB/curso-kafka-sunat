@@ -24,9 +24,12 @@ trap 'byo_teardown "$LAB_DIR" "$SOL_COMPOSE" "$PROY"' EXIT
 test_start "Lab 04 - Listeners y advertised (solucion de referencia)"
 
 BOOT="kafka-broker-1:29092"
-EXT_PORT="9092"
+# El puerto que el broker publica al host es el que exporta el e2e, no el
+# 9092 del alumno. Si se deja fijo, esta asercion prueba el clusterizado de
+# otro, o falla porque no hay nadie ahi.
+EXT_PORT="${BROKER1_EXTERNAL_PORT:-9092}"
 
-docker compose -f "$SOL_COMPOSE" -p "$PROY" up -d >/dev/null 2>&1
+levantar_compose "$SOL_COMPOSE" "$PROY" kafka-broker-1 kafka-broker-2 kafka-broker-3 || abort_test "no se pudo levantar el entorno del lab"
 wait_for_broker_api kafka-broker-1 "$BOOT" 150 || abort_test "el clúster de la solución no respondió (interno)"
 _pass "clúster de 3 nodos arriba (listener interno)"
 

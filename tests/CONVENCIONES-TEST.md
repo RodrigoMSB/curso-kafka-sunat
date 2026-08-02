@@ -78,6 +78,14 @@ instructor sí usa la lib central (DRY).
   destruyó los volúmenes de un clúster ajeno que compartía nombre de proyecto. Antes de cualquier
   comando que pueda destruir algo, **el chequeo es sobre el proyecto**, no sobre el archivo ni sobre
   el puerto. Todo `docker compose` del harness lleva `-p` explícito.
+- **Un test que no verifica que su propio entorno se levantó no puede declarar verde**: antes de la
+  primera aserción se confirma que el entorno **propio** existe y responde. No alcanza con que haya
+  *un* clúster sano del otro lado. Los composes fijan `container_name`, y Docker exige nombres únicos
+  en toda la máquina sin importar el proyecto: si ya existe un contenedor con ese nombre, el `up`
+  falla y las aserciones terminan corriendo contra el despliegue ajeno que se llama igual. Pasó: tres
+  e2e dieron verde probando un clúster que no era el suyo, y el único que falló fue el único que
+  verificaba un puerto del host. **El `up` nunca se silencia**: si falla, el test muere ahí con el
+  error a la vista. Un test que no sabe si levantó algo no es un test.
 - **Tests negativos que afirman la denegación**: en seguridad, el test PASA cuando la operación
   FALLA. Se lee el **stderr real** del cliente (no el stdout del script del lab, que puede mencionar
   la excepción esperada en su texto de ayuda y dar un falso positivo).

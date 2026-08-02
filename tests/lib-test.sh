@@ -68,6 +68,47 @@ proyecto_e2e() {  # <numero de lab>
     printf 'e2e-lab-%s' "$1"
 }
 
+# ── El entorno propio del e2e ────────────────────────────────
+# Los composes de los labs fijan container_name, y Docker exige nombres
+# unicos en toda la maquina sin importar el proyecto. Con -p se aisla el
+# proyecto, NO los nombres: si ya existe un contenedor con ese nombre, el
+# up falla y el e2e termina corriendo sus aserciones contra el cluster
+# ajeno que se llama igual. Paso: tres e2e dieron verde probando un
+# cluster que no era el suyo.
+nombres_libres() {  # <nombre>...
+    local ocupados='' n
+    for n in "$@"; do
+        if docker ps -a --filter "name=^${n}$" --format '{{.Names}}' 2>/dev/null | grep -q "^${n}$"; then
+            ocupados="${ocupados}${n} "
+        fi
+    done
+    if [ -n "$ocupados" ]; then
+        echo -e "${RED}[E2E] Ya existe(n) contenedor(es) con el nombre que usa este lab:${NC}" >&2
+        echo -e "${RED}      ${ocupados}${NC}" >&2
+        echo -e "${RED}      El compose fija container_name, asi que el up fallaria y el test${NC}" >&2
+        echo -e "${RED}      terminaria probando ese cluster ajeno. Se aborta.${NC}" >&2
+        return 1
+    fi
+    return 0
+}
+
+# Levanta el compose SIN silenciar el error. Un e2e que no sabe si levanto
+# algo no es un test: si el up falla, se muere aca con el error a la vista.
+levantar_compose() {  # <compose> <proyecto> [nombres esperados...]
+    local compose="$1" proy="$2"; shift 2
+    if [ $# -gt 0 ]; then
+        nombres_libres "$@" || return 1
+    fi
+    local salida rc=0
+    salida=$(docker compose -f "$compose" -p "$proy" up -d 2>&1) || rc=$?
+    if [ "$rc" -ne 0 ]; then
+        echo -e "${RED}[E2E] El 'docker compose up' fallo (codigo ${rc}). Esto devolvio:${NC}" >&2
+        printf '%s\n' "$salida" >&2
+        return 1
+    fi
+    return 0
+}
+
 # Marca única por corrida (anti-frágil)
 new_mark() { echo "e2e-$(date +%s)-${RANDOM}"; }
 

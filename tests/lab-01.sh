@@ -21,7 +21,7 @@ trap 'byo_teardown "$LAB_DIR" "$SOL_COMPOSE" "$PROY"' EXIT
 
 test_start "Lab 01 - Inicializacion KRaft (solucion de referencia)"
 
-docker compose -f "$SOL_COMPOSE" -p "$PROY" up -d >/dev/null 2>&1
+levantar_compose "$SOL_COMPOSE" "$PROY" kafka-broker || abort_test "no se pudo levantar el entorno del lab"
 wait_for_broker_api kafka-broker kafka-broker:29092 150 || abort_test "el broker de la solución no respondió"
 _pass "broker de la solución arriba y respondiendo"
 

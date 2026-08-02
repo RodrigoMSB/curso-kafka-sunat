@@ -22,7 +22,7 @@ test_start "Lab 03 - Configuracion de brokers (solucion de referencia)"
 
 BOOT="kafka-broker-1:29092"
 
-docker compose -f "$SOL_COMPOSE" -p "$PROY" up -d >/dev/null 2>&1
+levantar_compose "$SOL_COMPOSE" "$PROY" kafka-broker-1 kafka-broker-2 kafka-broker-3 || abort_test "no se pudo levantar el entorno del lab"
 wait_for_broker_api kafka-broker-1 "$BOOT" 150 || abort_test "el clúster de la solución no respondió"
 _pass "clúster de 3 nodos arriba y respondiendo"
 

@@ -23,7 +23,7 @@ test_start "Lab 02 - Quorum y resiliencia (solucion de referencia)"
 BOOT="kafka-broker-1:29092"
 BOOT_SURV="kafka-broker-1:29092,kafka-broker-2:29093"
 
-docker compose -f "$SOL_COMPOSE" -p "$PROY" up -d >/dev/null 2>&1
+levantar_compose "$SOL_COMPOSE" "$PROY" kafka-broker-1 kafka-broker-2 kafka-broker-3 || abort_test "no se pudo levantar el entorno del lab"
 wait_for_broker_api kafka-broker-1 "$BOOT" 150 || abort_test "el clúster de la solución no respondió"
 wait_for_broker_api kafka-broker-2 kafka-broker-2:29093 60 || abort_test "broker-2 no respondió"
 wait_for_broker_api kafka-broker-3 kafka-broker-3:29094 60 || abort_test "broker-3 no respondió"
