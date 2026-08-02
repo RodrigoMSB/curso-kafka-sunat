@@ -229,7 +229,7 @@ $SALIDA"
 afirmar_igual 'inspect_una_sola_ficha · una sola caja de apertura' '1' \
     "$(printf '%s\n' "$SALIDA" | grep -c '^┌─ QUÉ VAMOS A HACER')"
 afirmar_igual 'inspect_cuatro_pasos · los cuatro rótulos [N/4]' '4' \
-    "$(printf '%s\n' "$SALIDA" | grep -c '^  \[[0-9]/4\]')"
+    "$(printf '%s\n' "$SALIDA" | grep -c '^  ── \[[0-9]/4\]')"
 afirmar_igual 'inspect_sin_nota_docker · sin nota al pie de docker exec' '0' \
     "$(printf '%s\n' "$SALIDA" | grep -c 'En el lab corre dentro del contenedor')"
 afirmar_contiene_plano 'inspect_cierra_adelante · cuenta los binarios reales' \
