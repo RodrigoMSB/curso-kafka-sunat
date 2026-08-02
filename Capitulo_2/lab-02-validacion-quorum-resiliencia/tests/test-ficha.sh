@@ -206,7 +206,7 @@ fi
 correr_wrapper status-sano.txt replication-stacktrace.txt "$BROKERS"
 afirmar_no_contiene 'no_inventa_votantes · no afirma un quórum' 'Quórum ' "$SALIDA"
 afirmar_contiene 'no_inventa_votantes · declara lo que no pudo leer' \
-    'no puedo decirte cuántos votantes están al día' "$SALIDA"
+    'no es posible saber cuántos votantes están al día' "$SALIDA"
 
 # ── nombre_broker_sin_dos_puntos ─────────────────────────────
 # La ficha ofrecía 'docker start kafka-broker-1:', que no funciona.

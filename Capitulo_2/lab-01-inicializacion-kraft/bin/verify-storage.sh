@@ -89,7 +89,7 @@ ficha_encabezado() {
 
     ficha_cerrar
     ficha_nota "En el lab corre dentro del contenedor con docker exec ${contenedor}"
-    ficha_nota 'En tu servidor, kafka-storage está en el PATH y no hace falta docker.'
+    ficha_nota 'En su servidor, kafka-storage está en el PATH y no hace falta docker.'
     echo ''
 }
 
@@ -135,7 +135,7 @@ diagnostico_storage() {
     ficha_texto 'Los tres brokers tienen que tener exactamente esa misma cadena. Si alguno tiene otra, no van a formar quórum entre ellos.'
     if [ -n "$did" ]; then
         ficha_vacia
-        ficha_texto "El directory.id ${did} es de este directorio y no del clúster, y por eso es distinto en cada broker. No lo copies entre nodos."
+        ficha_texto "El directory.id ${did} es de este directorio y no del clúster, y por eso es distinto en cada broker. No debe copiarse entre nodos."
     fi
     if [ -n "$ver" ]; then
         ficha_texto "El formato de metadatos en disco es la versión ${ver}."

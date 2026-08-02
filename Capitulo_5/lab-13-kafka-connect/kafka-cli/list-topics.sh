@@ -78,7 +78,7 @@ ficha_encabezado() {
 
     ficha_cerrar
     ficha_nota "En el lab corre dentro del contenedor con docker exec ${BROKER}"
-    ficha_nota 'En tu servidor, --bootstrap-server lleva la IP real de tu broker.'
+    ficha_nota 'En su servidor, --bootstrap-server lleva la IP real del broker.'
     echo ''
 }
 
@@ -110,7 +110,7 @@ diagnostico_lista() {
     ficha_vacia
     ficha_texto 'Los internos empiezan con dos guiones bajos y son la contabilidad'
     ficha_texto 'propia de Kafka. El más importante es __consumer_offsets, donde'
-    ficha_texto 'anota por dónde va cada grupo de consumo. Si lo borras, todos los'
+    ficha_texto 'anota por dónde va cada grupo de consumo. Si se borra, todos los'
     ficha_texto 'consumidores pierden su lugar.'
 
     if [ "$ver_internos" -eq 0 ]; then
@@ -150,7 +150,7 @@ main() {
     ficha_encabezado "$destino" "$ver_internos"
 
     if [ "$rc" -ne 0 ]; then
-        ficha_cruda 'Kafka no devolvió la lista. Esto respondió:' \
+        ficha_cruda_envuelta 'Kafka no devolvió la lista. Esto respondió:' \
             "$(ficha_linea_error "$salida")"
         echo ''
         ficha_abrir 'DIAGNÓSTICO'

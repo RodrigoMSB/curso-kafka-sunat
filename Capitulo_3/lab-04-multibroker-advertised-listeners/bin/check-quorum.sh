@@ -20,7 +20,7 @@ source "$DIR_LAB/bin/common.sh"
 # Función con case, NO array asociativo. Bash 3.2 no los soporta.
 flag_desc() {
     case "$1" in
-        --bootstrap-server) echo "la puerta de entrada al clúster. En tu servidor va la IP de tu broker" ;;
+        --bootstrap-server) echo "la puerta de entrada al clúster. En su servidor va la IP de su broker" ;;
         describe)           echo "solo consulta, no toca nada" ;;
         --status)           echo "el resumen del quórum, quién manda y desde cuándo" ;;
         --replication)      echo "el detalle por nodo, cuánto le falta a cada uno" ;;
@@ -343,7 +343,7 @@ ficha_pie() {
     elif [ "$rc" -ne 0 ]; then
         ficha_nota_warn 'Ese comando acaba de fallar. Mirá el diagnóstico del final.'
     fi
-    ficha_nota 'En tu servidor, --bootstrap-server lleva la IP real de tu broker.'
+    ficha_nota 'En su servidor, --bootstrap-server lleva la IP real del broker.'
     echo ''
 }
 
@@ -389,7 +389,7 @@ diagnostico_quorum() {
         ficha_texto 'quórum está sano sin arriesgarme a mentirte.'
         ficha_vacia
         ficha_causa '  ¿Qué brokers están vivos?' 'docker ps'
-        ficha_causa '  Volvé a preguntar'         'bin/check-quorum.sh'
+        ficha_causa '  Vuelva a consultar'         'bin/check-quorum.sh'
         ficha_cerrar
         return 0
     fi
@@ -428,11 +428,11 @@ diagnostico_quorum() {
     ficha_vacia
 
     if [ "$tolerancia" -gt 0 ]; then
-        ficha_texto "Toleras perder $(q_nodos "$tolerancia") y el clúster sigue mandando."
-        ficha_warn "Pierdes $(( tolerancia + 1 )) y el clúster queda sin control. Nadie elige líderes."
+        ficha_texto "Tolera perder $(q_nodos "$tolerancia") y el clúster sigue mandando."
+        ficha_warn "Si pierde $(( tolerancia + 1 )), el clúster queda sin control. Nadie elige líderes."
     elif [ "$tolerancia" -eq 0 ]; then
-        ficha_texto "Estás justo en la mayoría, ${vivos} de ${vot} y hacen falta ${mayoria}."
-        ficha_warn 'Pierdes 1 más y el clúster queda sin control. Nadie elige líderes.'
+        ficha_texto "Está justo en la mayoría, ${vivos} de ${vot} y hacen falta ${mayoria}."
+        ficha_warn 'Si pierde uno más, el clúster queda sin control. Nadie elige líderes.'
     else
         ficha_warn "SIN mayoría. Hay $(q_votantes "$vivos") al día y hacen falta ${mayoria}."
         ficha_warn 'El clúster no elige líderes ni acepta cambios de metadatos.'
@@ -482,7 +482,7 @@ diagnostico_parcial() {
             ficha_texto 'devolvió el error que está acá arriba.'
             ;;
     esac
-    ficha_texto 'Sin ese detalle no puedo decirte cuántos votantes están al día.'
+    ficha_texto 'Sin ese detalle no es posible saber cuántos votantes están al día.'
 
     ficha_vacia
     if [ -n "$host" ] && q_contenedor_existe "$host"; then
@@ -526,7 +526,7 @@ diagnostico_error() {
             ficha_texto 'El comando falló y el error no es uno de los conocidos.'
             ficha_texto 'Lo que devolvió Kafka está acá arriba, sin tocar.'
             ficha_vacia
-            ficha_texto 'Revisa la guía del lab.'
+            ficha_texto 'Consulte la guía del laboratorio.'
             ;;
     esac
 
@@ -539,7 +539,7 @@ diagnostico_sin_contenedor() {
     ficha_texto 'No hay ningún contenedor de Kafka corriendo en esta máquina.'
     ficha_vacia
     ficha_texto 'No es un error del comando. Todavía no hay a quién preguntarle.'
-    ficha_causa '  1. ¿Levantaste el clúster?' 'docker compose up -d'
+    ficha_causa '  1. ¿Está levantado el clúster?' 'docker compose up -d'
     ficha_causa '  2. ¿Desde qué directorio?'  'mi-cluster/'
     ficha_causa '  3. ¿Qué quedó vivo?'        'docker ps -a'
     ficha_cerrar
@@ -619,7 +619,7 @@ main() {
         ficha_cruda 'Esto devolvió Kafka con describe --status' \
             "$(q_status_legible "$salida_status")"
     else
-        ficha_cruda 'Kafka no devolvió el estado del quórum. Esto respondió:' \
+        ficha_cruda_envuelta 'Kafka no devolvió el estado del quórum. Esto respondió:' \
             "$(q_linea_error "$salida_status")"
     fi
     echo ''
@@ -632,7 +632,7 @@ main() {
             ruido=$(q_repl_antes_de_cabecera "$salida_repl")
             if [ -n "$ruido" ]; then
                 ficha_nota 'Kafka devolvió un error antes de la tabla. La tabla sí llegó y es la'
-                ficha_cruda 'que ves abajo. El error fue:' "$(q_linea_error "$ruido")"
+                ficha_cruda_envuelta 'que ves abajo. El error fue:' "$(q_linea_error "$ruido")"
                 echo ''
             fi
             ficha_cruda 'Esto devolvió Kafka con describe --replication' \
@@ -641,7 +641,7 @@ main() {
             ficha_nota_salida 'corre el comando de arriba a mano.'
         else
             # No se maquilla en columnas lo que no es una tabla.
-            ficha_cruda 'Kafka no devolvió una tabla. Esto respondió:' \
+            ficha_cruda_envuelta 'Kafka no devolvió una tabla. Esto respondió:' \
                 "$(q_linea_error "$salida_repl")"
         fi
         echo ''

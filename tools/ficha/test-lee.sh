@@ -146,7 +146,7 @@ afirmar_contiene 'topico_sano · declara el ISR completo' \
 afirmar_contiene_plano 'topico_sano · el liderazgo repartido entre los 3' \
     'repartido entre 3 brokers. El que más atiende lleva 1 de 3' "$SALIDA"
 afirmar_contiene_plano 'topico_sano · tolerancia calculada con el ISR real' \
-    'peor parada tiene 3, así que todavía toleras perder 1 broker' "$SALIDA"
+    'peor parada tiene 3, así que todavía tolera perder 1 broker' "$SALIDA"
 afirmar_no_contiene 'topico_sano · sin advertencias' '⚠' "$SALIDA"
 
 T_DESC="$T_DESC_ISR"; export T_DESC
@@ -221,7 +221,9 @@ correr list-topics.sh 1 --internal
 TODO="$TODO
 $SALIDA"
 
-ANCHO=$(printf '%s\n' "$TODO" | LC_ALL=C tr -d '\200-\277' | awk 'length > m { m = length } END { print m + 0 }')
+# El techo de 76 rige la CAJA, que es lo que dibujamos. La salida que
+# emite una herramienta va tal cual: envolverla destruiria sus columnas.
+ANCHO=$(printf '%s\n' "$TODO" | grep '^[┌├└│]' | LC_ALL=C tr -d '\200-\277' | awk 'length > m { m = length } END { print m + 0 }')
 if [ "$ANCHO" -le 76 ]; then
     verde "formato · ninguna línea pasa de 76 columnas (máximo ${ANCHO})"
 else

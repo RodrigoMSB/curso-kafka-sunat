@@ -26,7 +26,7 @@ source "$DIR_LAB/bin/common.sh"
 flag_desc() {
     case "$1" in
         format)             echo "graba la identidad en el disco del broker y prepara el directorio de metadatos" ;;
-        --cluster-id)       echo "la identidad que generaste antes. La misma en los tres brokers" ;;
+        --cluster-id)       echo "la identidad generada antes. La misma en los tres brokers" ;;
         --config)           echo "de dónde saca en qué directorio escribir" ;;
         --ignore-formatted) echo "si ya estaba formateado, no lo vuelve a hacer y no falla" ;;
         *)                  flag_desc_comun "$1" ;;
@@ -57,7 +57,7 @@ ficha_encabezado() {
 
     ficha_medio 'ESTO ESCRIBE EN EL DISCO'
     ficha_warn "format inicializa el directorio de metadatos de ${contenedor}. Es el único comando de esta sesión que no solo consulta."
-    ficha_texto '--ignore-formatted te cubre las espaldas. Si el broker ya estaba formateado no toca nada, y si le pasas otra identidad se niega en vez de pisar la que había.'
+    ficha_texto '--ignore-formatted protege de un doble formateo. Si el broker ya estaba formateado no toca nada, y si recibe otra identidad se niega en vez de pisar la que había.'
 
     ficha_medio 'DESGLOSE'
     ficha_flag 'format'             ''     ''
@@ -68,11 +68,11 @@ ficha_encabezado() {
     ficha_medio 'CÓMO SE LEE LA SALIDA'
     ficha_campo 'Formatting metadata directory' 'lo hizo ahora, el disco estaba vacío'
     ficha_campo 'already formatted'             'ya estaba hecho. No pasó nada y está bien'
-    ficha_campo 'Invalid cluster.id'            'le pasaste una identidad distinta de la que ya tenía'
+    ficha_campo 'Invalid cluster.id'            'recibió una identidad distinta de la que ya tenía'
 
     ficha_cerrar
     ficha_nota "En el lab corre dentro del contenedor con docker exec ${contenedor}"
-    ficha_nota 'En tu servidor, kafka-storage está en el PATH y no hace falta docker.'
+    ficha_nota 'En su servidor, kafka-storage está en el PATH y no hace falta docker.'
     echo ''
 }
 
@@ -88,8 +88,8 @@ resultado() {
         local leido
         leido=$(printf '%s\n' "$salida" | sed -n 's/.*but read \([A-Za-z0-9_-]*\).*/\1/p' | head -1)
         if [ -n "$leido" ]; then
-            ficha_warn "${contenedor} no se formateó. Ya tenía grabada la identidad ${leido}, que no es la que le pasaste."
-            ficha_texto 'Kafka se negó a pisarla. Si de verdad querés empezar de cero, hay que borrar el volumen de datos primero.'
+            ficha_warn "${contenedor} no se formateó. Ya tenía grabada la identidad ${leido}, que no es la indicada."
+            ficha_texto 'Kafka se negó a pisarla. Para empezar de cero hay que borrar antes el volumen de datos.'
         else
             ficha_warn "${contenedor} no se formateó. Lo que devolvió Kafka está acá arriba."
         fi
@@ -105,7 +105,7 @@ resultado() {
             ficha_texto "${contenedor} quedó grabado con la identidad ${cid}."
             ;;
     esac
-    ficha_causa '  Confirmalo' "bin/verify-storage.sh ${contenedor}"
+    ficha_causa '  Verifíquelo' "bin/verify-storage.sh ${contenedor}"
 
     ficha_cerrar
 }

@@ -56,7 +56,7 @@ ficha_encabezado() {
 
     ficha_cerrar
     ficha_nota "En el lab se ejecuta con docker run --rm ${IMAGEN}"
-    ficha_nota 'En tu servidor, kafka-storage ya está en el PATH y no hace falta docker.'
+    ficha_nota 'En su servidor, kafka-storage ya está en el PATH y no hace falta docker.'
     echo ''
 }
 
@@ -69,7 +69,7 @@ que_es_este_valor() {
 
     ficha_abrir 'QUÉ ES ESTE VALOR'
     ficha_texto "${cid} es la identidad del clúster."
-    ficha_texto 'Todavía no existe ningún clúster con ella. Existe cuando formatees el'
+    ficha_texto 'Todavía no existe ningún clúster con ella. Existe cuando se formatee el'
     ficha_texto 'almacenamiento de los brokers con este mismo valor.'
 
     ficha_vacia
@@ -77,10 +77,10 @@ que_es_este_valor() {
     ficha_texto 'No la confundas con el directory.id, que identifica el directorio de datos de cada nodo y por eso sí es distinto en cada broker.'
 
     ficha_vacia
-    ficha_warn 'Si formateas un broker con una cadena y otro con otra, el segundo arranca y muere con InconsistentClusterIdException.'
+    ficha_warn 'Si un broker se formatea con una cadena y otro con otra, el segundo arranca y muere con InconsistentClusterIdException.'
 
     ficha_vacia
-    ficha_causa '  Dónde va' 'CLUSTER_ID en tu .env o docker-compose.yml'
+    ficha_causa '  Dónde va' 'CLUSTER_ID en el .env o en docker-compose.yml'
     ficha_cerrar
 }
 

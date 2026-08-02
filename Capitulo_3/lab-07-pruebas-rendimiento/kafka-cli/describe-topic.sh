@@ -169,7 +169,7 @@ ficha_encabezado() {
 
     ficha_cerrar
     ficha_nota "En el lab corre dentro del contenedor con docker exec ${BROKER}"
-    ficha_nota 'En tu servidor, --bootstrap-server lleva la IP real de tu broker.'
+    ficha_nota 'En su servidor, --bootstrap-server lleva la IP real del broker.'
     echo ''
 }
 
@@ -275,7 +275,7 @@ AGRUPADO
         ficha_texto "Este tópico guarda ${rf_real} copias y necesita ${minisr} al día para aceptar escrituras."
         tolerancia=$(( isr_minimo - minisr ))
         if [ "$tolerancia" -gt 0 ]; then
-            ficha_texto "Hoy la partición peor parada tiene ${isr_minimo}, así que todavía toleras perder $(t_broker_es "$tolerancia") más."
+            ficha_texto "Hoy la partición peor parada tiene ${isr_minimo}, así que todavía tolera perder $(t_broker_es "$tolerancia") más."
         elif [ "$tolerancia" -eq 0 ]; then
             ficha_warn "Hoy la peor parada tiene justo ${isr_minimo}. Si cae un broker más, este tópico deja de aceptar escrituras."
         else
@@ -297,7 +297,7 @@ diagnostico_ilegible() {
     ficha_vacia
     ficha_texto 'Puede que el tópico no exista todavía, o que el nombre tenga una'
     ficha_texto 'letra de más.'
-    ficha_causa '  ¿Qué tópicos hay?' 'kafka-cli/list-topics.sh'
+    ficha_causa '  ¿Qué tópicos existen?' 'kafka-cli/list-topics.sh'
     ficha_cerrar
 }
 
@@ -335,7 +335,7 @@ main() {
     ficha_encabezado "$destino" "$topico"
 
     if [ "$rc" -ne 0 ] || ! t_es_descripcion "$salida"; then
-        ficha_cruda 'Kafka no devolvió una descripción. Esto respondió:' \
+        ficha_cruda_envuelta 'Kafka no devolvió una descripción. Esto respondió:' \
             "$(ficha_linea_error "$salida")"
         echo ''
         diagnostico_ilegible "$salida" "$topico"

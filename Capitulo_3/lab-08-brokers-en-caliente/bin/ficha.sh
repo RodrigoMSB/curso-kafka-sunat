@@ -302,15 +302,29 @@ ficha_nota_warn() {
 # envolver las líneas largas, para que ninguna quede partida por el
 # terminal. Envolver conserva el texto entero.
 #
-# El ancho de envoltura descuenta la sangría de 4, así que el techo de TODA
-# la salida del wrapper es el mismo FICHA_ANCHO que el de la caja. Un solo
-# número y no dos. Antes esto envolvía a 76 y después indentaba 4, y la
-# salida cruda llegaba a 80 justas, sin margen para una ruta más larga.
+# La salida NO se envuelve. Lo que devuelve una herramienta suele venir en
+# columnas, y una tabla envuelta es ilegible. El nombre de archivo cae en
+# el renglón de abajo y deja de alinearse con su tamaño y su fecha. El
+# ancho de 76 rige para la CAJA, que es lo que dibujamos nosotros. Lo que
+# emite el comando se muestra tal cual lo emitió.
 ficha_cruda() {
     local rotulo="$1" texto="$2" l
     # Rótulo vacío significa que el bloque ya viene anunciado por otra cosa,
     # como el [N/4] de los wrappers de varios pasos. Ahí no se imprime una
     # línea en blanco de adorno.
+    if [ -n "$rotulo" ]; then
+        printf '%s  %s%s\n' "$F_NOTA" "$rotulo" "$F_OFF"
+    fi
+    printf '%s\n' "$texto" | while IFS= read -r l; do
+        printf '    %s\n' "$l"
+    done
+}
+
+# Variante para un texto de una sola línea larguísima, como el mensaje de
+# una excepción de Java. Ahí no hay columnas que romper y sin envolver se
+# sale de la pantalla. NO se usa para salidas tabulares.
+ficha_cruda_envuelta() {
+    local rotulo="$1" texto="$2" l
     if [ -n "$rotulo" ]; then
         printf '%s  %s%s\n' "$F_NOTA" "$rotulo" "$F_OFF"
     fi

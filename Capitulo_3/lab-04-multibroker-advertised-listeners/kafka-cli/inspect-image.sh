@@ -30,7 +30,7 @@ flag_desc() {
         run)   echo "levanta un contenedor nuevo a partir de la imagen" ;;
         --rm)  echo "lo borra apenas termina. Es de usar y tirar, no deja rastro" ;;
         -q)    echo "sin la barra de progreso, solo el resultado" ;;
-        pull)  echo "se baja la imagen si no la tenés. Si ya está, no hace nada" ;;
+        pull)  echo "descarga la imagen si no está. Si ya está, no hace nada" ;;
         sh)    echo "abre una shell adentro del contenedor para correr el listado" ;;
         *)     flag_desc_comun "$1" ;;
     esac
@@ -39,10 +39,10 @@ flag_desc() {
 # ── Encabezado · una sola ficha para los cuatro pasos ────────
 ficha_encabezado() {
     ficha_abrir 'QUÉ VAMOS A HACER'
-    ficha_texto "Abrir la imagen ${IMAGEN} y mirar qué trae adentro, sin levantar ningún clúster"
+    ficha_texto "Abrir la imagen ${IMAGEN} y ver qué trae adentro, sin levantar ningún clúster"
 
     ficha_medio 'LOS CUATRO PASOS'
-    ficha_campo '[1/4]' 'bajar la imagen, si no la tenés todavía'
+    ficha_campo '[1/4]' 'descargar la imagen, si aún no está'
     ficha_campo '[2/4]' 'qué binarios de Kafka trae'
     ficha_campo '[3/4]' 'qué archivos de configuración de ejemplo trae'
     ficha_campo '[4/4]' 'con qué Java corre'
@@ -51,6 +51,8 @@ ficha_encabezado() {
     ficha_comando "docker pull -q ${IMAGEN}"
     ficha_comando "docker run --rm ${IMAGEN} \\"
     ficha_comando '    sh -c "ls /usr/bin/kafka-*"'
+    ficha_comando "docker run --rm ${IMAGEN} \\"
+    ficha_comando '    sh -c "ls -la /etc/kafka/"'
     ficha_comando "docker run --rm ${IMAGEN} java -version"
 
     ficha_medio 'DESGLOSE'
@@ -68,26 +70,29 @@ ficha_encabezado() {
     echo ''
 }
 
+# Cada paso abre con una regla corta y su numero, para que se lea como
+# parte de la ficha y no como una linea suelta al lado de las cajas.
 paso() {
-    printf '%s  [%s/4] %s%s\n' "$F_NOTA" "$1" "$2" "$F_OFF"
+    printf '%s  ── [%s/4] %s %s%s\n' \
+        "$F_MARCO" "$1" "$2" "$(ficha_raya $(( FICHA_ANCHO - 12 - $(ficha_ancho_visible "$2") )))" "$F_OFF"
 }
 
-# ── Qué acabás de ver ────────────────────────────────────────
+# ── Qué acaba de ver ────────────────────────────────────────
 # Cierra hacia adelante: para qué le sirve esto en los 13 labs que
 # vienen, y qué cambia cuando el mismo Kafka no viene en una imagen.
 que_acabas_de_ver() {
     local n_bin="$1" java="$2"
 
-    ficha_abrir 'QUÉ ACABÁS DE VER'
+    ficha_abrir 'QUÉ ACABA DE VER'
     if [ "$n_bin" -gt 0 ]; then
-        ficha_texto "Los ${n_bin} binarios que listaste son los que vas a usar en los 13 labs que siguen. kafka-topics, kafka-console-producer y kafka-configs son los tres que más vas a escribir."
+        ficha_texto "Los ${n_bin} binarios de arriba son los primeros de una lista más larga, recortada para que entre en pantalla. Son los que se usan en los 13 laboratorios que siguen. kafka-topics, kafka-console-producer y kafka-configs son los tres que más se escriben."
     fi
     if [ -n "$java" ]; then
-        ficha_texto "Kafka corre sobre ${java}, y esa JVM viaja dentro de la imagen. Por eso no tuviste que instalar Java en tu máquina."
+        ficha_texto "Kafka corre sobre ${java}, y esa JVM viaja dentro de la imagen. Por eso no hizo falta instalar Java en su máquina."
     fi
 
     ficha_vacia
-    ficha_texto 'En el curso llegan dentro de una imagen porque es lo que hace el laboratorio reproducible. En SUNAT no va a haber imagen. Kafka llega por paquete o por tarball y esos mismos binarios quedan en el PATH del servidor, así que los vas a llamar sin docker adelante.'
+    ficha_texto 'En el curso llegan dentro de una imagen porque es lo que hace el laboratorio reproducible. En SUNAT no habrá imagen. Kafka llega por paquete o por tarball y esos mismos binarios quedan en el PATH del servidor, así que se invocan sin docker adelante.'
     ficha_texto 'Lo que cambia es cómo llegan. Los comandos son los mismos.'
 
     ficha_cerrar
@@ -105,7 +110,7 @@ main() {
 
     local rc=0 binarios='' etc='' java='' n_bin=0 ver_java=''
 
-    [ "$con_ficha" -eq 1 ] && paso 1 'bajando la imagen si hace falta'
+    [ "$con_ficha" -eq 1 ] && paso 1 'descargando la imagen si hace falta'
     docker pull -q "$IMAGEN" > /dev/null 2>&1 || rc=$?
     if [ "$rc" -ne 0 ]; then
         echo "[ERROR] No se pudo bajar la imagen ${IMAGEN}." >&2

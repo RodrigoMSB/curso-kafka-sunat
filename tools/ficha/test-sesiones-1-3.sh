@@ -127,7 +127,7 @@ afirmar_contiene_plano 'verify_lee_el_node_id · el nodo real' \
 afirmar_contiene_plano 'verify_lee_el_directorio · la ruta real' \
     'Guarda sus datos en /var/lib/kafka/data.' "$SALIDA"
 afirmar_contiene_plano 'verify_no_deja_tarea · el directory.id no se copia' \
-    'y por eso es distinto en cada broker. No lo copies entre nodos.' "$SALIDA"
+    'y por eso es distinto en cada broker. No debe copiarse entre nodos.' "$SALIDA"
 afirmar_no_contiene 'verify_no_deja_tarea · sin el "si ves un meta.properties" viejo' \
     'Si ves un archivo' "$SALIDA"
 
@@ -216,7 +216,7 @@ afirmar_contiene_plano 'format_ya_estaba · no dice que grabó algo' \
 T_FMT=$(fx_a format-storage-id-distinto.txt); T_FMT_RC=1; export T_FMT T_FMT_RC
 correr kafka-cli/format-storage.sh 1 kafka-broker-1 OtRoClUsTeRJZERpZmVyZW
 afirmar_contiene_plano 'format_id_distinto · lee la identidad que YA estaba' \
-    'Ya tenía grabada la identidad MkU3OEVBNTcwNTJENDM2Qk, que no es la que le pasaste.' "$SALIDA"
+    'Ya tenía grabada la identidad MkU3OEVBNTcwNTJENDM2Qk, que no es la indicada.' "$SALIDA"
 afirmar_igual 'format_id_distinto · sale con el código de Kafka' '1' "$CODIGO"
 T_FMT_RC=0; export T_FMT_RC
 
@@ -233,7 +233,7 @@ afirmar_igual 'inspect_cuatro_pasos · los cuatro rótulos [N/4]' '4' \
 afirmar_igual 'inspect_sin_nota_docker · sin nota al pie de docker exec' '0' \
     "$(printf '%s\n' "$SALIDA" | grep -c 'En el lab corre dentro del contenedor')"
 afirmar_contiene_plano 'inspect_cierra_adelante · cuenta los binarios reales' \
-    'Los 20 binarios que listaste son los que vas a usar en los 13 labs' "$SALIDA"
+    'Los 20 binarios de arriba son los primeros de una lista más larga' "$SALIDA"
 afirmar_contiene_plano 'inspect_cierra_adelante · lee la versión real de Java' \
     'Kafka corre sobre Java 21.0.10' "$SALIDA"
 afirmar_contiene_plano 'inspect_cierra_adelante · el puente a SUNAT' \
@@ -242,7 +242,9 @@ afirmar_contiene_plano 'inspect_cierra_adelante · el puente a SUNAT' \
 echo ''
 echo 'Formato y réplicas'
 
-ANCHO=$(printf '%s\n' "$TODO" | LC_ALL=C tr -d '\200-\277' | awk 'length > m { m = length } END { print m + 0 }')
+# El techo de 76 rige la CAJA, que es lo que dibujamos. La salida que
+# emite una herramienta va tal cual: envolverla destruiria sus columnas.
+ANCHO=$(printf '%s\n' "$TODO" | grep '^[┌├└│]' | LC_ALL=C tr -d '\200-\277' | awk 'length > m { m = length } END { print m + 0 }')
 if [ "$ANCHO" -le 76 ]; then
     verde "formato · ninguna línea pasa de 76 columnas (máximo ${ANCHO})"
 else
