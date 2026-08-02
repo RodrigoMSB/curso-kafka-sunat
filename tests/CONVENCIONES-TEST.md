@@ -71,6 +71,13 @@ instructor sí usa la lib central (DRY).
   TTY nunca se ejecutó y se descubrió dos SPECs después, por casualidad. Es el mismo principio que
   las dos reglas de arriba, aplicado al proceso en vez de a los tests: **no se declara un estado sin
   leer la evidencia que lo prueba.**
+- **Un comentario en el código no es evidencia**: si una línea afirma un alcance, una garantía o un
+  aislamiento, se verifica **contra el sistema** antes de confiar en ella. `lib-test.sh` decía
+  *"down -v scoped al archivo"* y era falso: `-f` elige el archivo, pero el alcance del `down` lo da
+  el **proyecto**, que sale del nombre del directorio si no se pasa `-p`. Confiar en ese comentario
+  destruyó los volúmenes de un clúster ajeno que compartía nombre de proyecto. Antes de cualquier
+  comando que pueda destruir algo, **el chequeo es sobre el proyecto**, no sobre el archivo ni sobre
+  el puerto. Todo `docker compose` del harness lleva `-p` explícito.
 - **Tests negativos que afirman la denegación**: en seguridad, el test PASA cuando la operación
   FALLA. Se lee el **stderr real** del cliente (no el stdout del script del lab, que puede mencionar
   la excepción esperada en su texto de ayuda y dar un falso positivo).

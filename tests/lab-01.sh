@@ -5,6 +5,10 @@ set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 source "$HERE/lib-test.sh"
 
+# Puertos propios del e2e, para no chocar con un cluster ya levantado.
+puertos_e2e_brokers || exit 1
+PROY="$(proyecto_e2e 01)"
+
 LAB_DIR=""
 for d in "$HERE"/../Capitulo_*/lab-01-*; do [ -d "$d" ] && LAB_DIR="$(cd "$d" && pwd)" && break; done
 [ -n "$LAB_DIR" ] || { echo "No encuentro el lab 01"; exit 1; }
@@ -13,11 +17,11 @@ cd "$LAB_DIR"
 SOL_COMPOSE="$(find soluciones -name 'docker-compose*.yml' 2>/dev/null | head -1)"
 [ -n "$SOL_COMPOSE" ] || { echo "Sin compose de solución en lab 01"; exit 1; }
 
-trap 'byo_teardown "$LAB_DIR" "$SOL_COMPOSE"' EXIT
+trap 'byo_teardown "$LAB_DIR" "$SOL_COMPOSE" "$PROY"' EXIT
 
 test_start "Lab 01 - Inicializacion KRaft (solucion de referencia)"
 
-docker compose -f "$SOL_COMPOSE" up -d >/dev/null 2>&1
+docker compose -f "$SOL_COMPOSE" -p "$PROY" up -d >/dev/null 2>&1
 wait_for_broker_api kafka-broker kafka-broker:29092 150 || abort_test "el broker de la solución no respondió"
 _pass "broker de la solución arriba y respondiendo"
 

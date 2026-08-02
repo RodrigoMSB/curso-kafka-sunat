@@ -6,6 +6,11 @@ set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 source "$HERE/lib-test.sh"
 
+# Proyecto propio del e2e. Sin esto el alcance de un down -v lo da el
+# nombre del directorio y puede alcanzar a un despliegue ajeno.
+PROY="$(proyecto_e2e 09)"
+export COMPOSE_PROJECT_NAME="$PROY"
+
 LAB_DIR=""
 for d in "$HERE"/../Capitulo_*/lab-09-*; do [ -d "$d" ] && LAB_DIR="$(cd "$d" && pwd)" && break; done
 [ -n "$LAB_DIR" ] || { echo "No encuentro la carpeta del lab 09"; exit 1; }
@@ -16,7 +21,7 @@ if ! command -v java >/dev/null 2>&1 || ! command -v mvn >/dev/null 2>&1; then
     exit 0
 fi
 
-trap 'lab_teardown "$LAB_DIR"' EXIT
+trap 'lab_teardown "$LAB_DIR" "$PROY"' EXIT
 
 test_start "Lab 09 - Clientes Java/Spring"
 

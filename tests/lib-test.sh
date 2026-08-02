@@ -15,6 +15,59 @@ test_start() {
     echo -e "\n${BOLD}${CYAN}━━━ TEST E2E · ${_LAB_NAME} ━━━${NC}"
 }
 
+# ── Puertos del e2e ──────────────────────────────────────────
+# Los labs publican al host en 9092 y alrededores, que es lo que ve el
+# alumno y no se cambia. Pero el instructor suele tener SU propio clúster
+# arriba en esos mismos puertos, y entonces el e2e no puede levantar el
+# suyo. Acá se exportan puertos de un rango propio, que los .env de los
+# labs respetan porque declaran sus valores como ${VAR:-defecto}.
+#
+# El alumno nunca ve estos números: solo existen mientras corre un e2e.
+puerto_libre() {  # <puerto>
+    if command -v lsof >/dev/null 2>&1; then
+        ! lsof -nP -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1
+        return $?
+    fi
+    # Sin lsof (Git Bash), se prueba abriendo el puerto.
+    ! (exec 3<>/dev/tcp/127.0.0.1/"$1") 2>/dev/null
+}
+
+# Se verifica EN EL MOMENTO de levantar, no una vez al principio del día.
+# Un puerto libre a las 5 puede no estarlo a las 7.
+exportar_puertos_e2e() {
+    local ocupados='' p
+    for p in "$@"; do
+        if ! puerto_libre "$p"; then
+            ocupados="${ocupados}${p} "
+        fi
+    done
+    if [ -n "$ocupados" ]; then
+        echo -e "${RED}[E2E] Puerto(s) ocupado(s) para la corrida: ${ocupados}${NC}" >&2
+        echo -e "${RED}      El e2e usa un rango propio para no chocar con tu clúster.${NC}" >&2
+        echo -e "${RED}      Liberalos o cambiá el rango en tests/lib-test.sh.${NC}" >&2
+        return 1
+    fi
+    return 0
+}
+
+# Rango del e2e para los labs de brokers. Un solo lugar donde cambiarlo.
+puertos_e2e_brokers() {
+    exportar_puertos_e2e 19092 19093 19094 || return 1
+    BROKER_EXTERNAL_PORT=19092
+    BROKER1_EXTERNAL_PORT=19092
+    BROKER2_EXTERNAL_PORT=19093
+    BROKER3_EXTERNAL_PORT=19094
+    export BROKER_EXTERNAL_PORT BROKER1_EXTERNAL_PORT BROKER2_EXTERNAL_PORT BROKER3_EXTERNAL_PORT
+    return 0
+}
+
+# Nombre de proyecto de compose, propio y exclusivo del e2e. Aísla el
+# despliegue igual que los puertos aíslan la red: sin esto, un down -v
+# alcanza a cualquier cosa que comparta nombre de directorio.
+proyecto_e2e() {  # <numero de lab>
+    printf 'e2e-lab-%s' "$1"
+}
+
 # Marca única por corrida (anti-frágil)
 new_mark() { echo "e2e-$(date +%s)-${RANDOM}"; }
 
@@ -94,9 +147,11 @@ consume_count_mark() {  # <container> <bootstrap> <topic> <mark> [timeout_ms] [c
 }
 
 # Teardown scoped al lab (usa su reset-lab.sh; down -v solo afecta su proyecto compose).
-lab_teardown() {  # <lab_dir>
+lab_teardown() {  # <lab_dir> [proyecto]
+    local proy="${2:-}"
     ( cd "$1" && ( echo "s" | bash bin/reset-lab.sh >/dev/null 2>&1 || \
-        docker compose -f infra/docker-compose.yml --env-file infra/.env down -v --remove-orphans >/dev/null 2>&1 ) )
+        docker compose -f infra/docker-compose.yml --env-file infra/.env \
+            ${proy:+-p "$proy"} down -v --remove-orphans >/dev/null 2>&1 ) )
 }
 
 # --- Variante build-your-own (labs 01-04) ---
@@ -112,7 +167,18 @@ wait_for_broker_api() {  # <container> <bootstrap> [timeout_s]
     return 1
 }
 
-# Teardown de un despliegue por compose de soluciones (down -v scoped al archivo)
-byo_teardown() {  # <lab_dir> <compose_file_relativo>
-    ( cd "$1" && docker compose -f "$2" down -v --remove-orphans >/dev/null 2>&1 )
+# Teardown de un despliegue por compose de soluciones.
+# OJO: -f elige el ARCHIVO, pero el alcance del down lo da el PROYECTO, y
+# el proyecto sale del nombre del directorio si no se pasa -p. Los cuatro
+# labs de sesiones 1 a 3 levantan desde su carpeta soluciones/, así que sin
+# -p los cuatro son el proyecto "soluciones" y un down -v de uno se lleva
+# puesto cualquier otro clúster que viva en ese mismo proyecto. Pasó: se
+# destruyeron los volúmenes de un clúster ajeno. Por eso va -p siempre.
+byo_teardown() {  # <lab_dir> <compose_file_relativo> <proyecto>
+    local proy="${3:-}"
+    if [ -z "$proy" ]; then
+        echo "[E2E] byo_teardown sin nombre de proyecto. No se baja nada." >&2
+        return 1
+    fi
+    ( cd "$1" && docker compose -f "$2" -p "$proy" down -v --remove-orphans >/dev/null 2>&1 )
 }
