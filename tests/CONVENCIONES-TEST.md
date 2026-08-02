@@ -86,6 +86,13 @@ instructor sí usa la lib central (DRY).
   e2e dieron verde probando un clúster que no era el suyo, y el único que falló fue el único que
   verificaba un puerto del host. **El `up` nunca se silencia**: si falla, el test muere ahí con el
   error a la vista. Un test que no sabe si levantó algo no es un test.
+- **El validador del alumno (90) no lleva puertos de host fijos**: es el único de estos archivos que
+  corre **en la máquina del alumno, en clase**. Si tiene un `9092` escrito a mano y el entorno publica
+  en otro puerto, el alumno ve un `✗` que no entiende y que no es culpa suya. Pasó en
+  `lab-04/bin/90-test-lab.sh`, que probaba `localhost:9092` fijo mientras el lab publicaba en otro
+  puerto. Los puertos de host salen siempre de la variable, con el default de siempre:
+  `EXT_PORT="${BROKER1_EXTERNAL_PORT:-9092}"`. **Este es el tipo de defecto que aparece delante de
+  treinta personas, no en un test.**
 - **Tests negativos que afirman la denegación**: en seguridad, el test PASA cuando la operación
   FALLA. Se lee el **stderr real** del cliente (no el stdout del script del lab, que puede mencionar
   la excepción esperada en su texto de ayuda y dar un falso positivo).
