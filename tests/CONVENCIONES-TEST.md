@@ -29,6 +29,70 @@ instructor sí usa la lib central (DRY).
   inflan los conteos (lección del capstone: `--consumer.config` warning contaba como mensaje).
 - **Conteos dinámicos, no fijos frágiles**: p. ej. particiones = líneas `Partition: N`; ISR = tamaño
   mínimo de `Isr:`; réplicas parseando `Replicas:` (no `assert_contains " 4"`).
+- **Nunca se compara contra la salida cruda de una caja**: los wrappers con ficha didáctica dibujan
+  un marco de 76 columnas y **envuelven** las frases largas, así que una frase de dos renglones no
+  aparece contigua en la salida. Toda aserción sobre ese texto pasa antes por un aplanado que quita
+  el marco y colapsa los espacios:
+
+  ```bash
+  plano() {
+      printf '%s\n' "$1" | sed 's/^│//; s/│$//' | tr '\n' ' ' | tr -s ' '
+  }
+  afirmar_contiene_plano() { afirmar_contiene "$1" "$2" "$(plano "$3")"; }
+  ```
+
+  Sin esto la aserción se pone roja cuando el texto crece, o peor, pasa en verde porque compara
+  contra un fragmento corto que sí quedó contiguo. Ocurrió tres veces en el piloto de la ficha antes
+  de escribirse esta regla.
+- **Una aserción que no puede distinguir lo correcto de lo incorrecto no es una aserción**: se
+  comparan **valores** (el número de particiones, el id del broker que falta, el lag exacto), nunca la
+  presencia de una palabra. Antes de dar un test por bueno se lo rompe a propósito y se confirma que
+  se pone rojo.
+- **La restauración de un sabotaje preserva lo que no era parte del sabotaje**: al demostrar que un
+  test se pone rojo se rompe el código a propósito y después se restaura, casi siempre con
+  `git checkout`. Ese checkout se lleva puesto **todo** lo que estuviera sin commitear, incluidos los
+  tests recién escritos. Se cuenta el total de pruebas **antes y después** de cada sabotaje y se
+  verifica que coincida, además de dejar `git diff --stat HEAD` vacío. Ocurrió en el piloto de la
+  ficha: un checkout borró el sexto test y se detectó porque el conteo bajó de 31 a 29, no porque
+  hubiera un control.
+- **El estado que se reporta se lee de la salida de un comando, no de una etiqueta**: antes de
+  declarar "árbol limpio" o "suite en verde" se corre el comando y se **lee su salida**. Escribir
+  `(vacío = limpio)` al lado de un `git status` que lista archivos no es una verificación, es una
+  leyenda. Pasó dos veces en el piloto de la ficha, con tres archivos sin commitear la segunda.
+  El orden es **verde primero, push después**: nunca se empuja con la suite en rojo.
+- **Las cantidades esperadas se derivan, no se escriben a mano**: un test que afirma "35 copias"
+  se pone rojo en cuanto el mapa crece, y peor, una constante desactualizada no distingue
+  "verificó todo" de "no verificó nada". El número sale de la misma fuente que el trabajo, por
+  ejemplo `replicar.sh --listar | wc -l`, más una aserción de que esa fuente no está vacía.
+- **Una SPEC no se cierra sin la lista de sus decisiones verificada una por una**: al declarar
+  cerrada una SPEC se enumeran **todas** las decisiones que el PO tomó en ella, y para cada una se
+  pega el comando que la verifica y su salida. Sin esa lista no hay cierre. La SPEC-59 se declaró
+  cerrada con tres decisiones del PO y solo dos aplicadas: la de que `check-quorum.sh` respetara el
+  TTY nunca se ejecutó y se descubrió dos SPECs después, por casualidad. Es el mismo principio que
+  las dos reglas de arriba, aplicado al proceso en vez de a los tests: **no se declara un estado sin
+  leer la evidencia que lo prueba.**
+- **Un comentario en el código no es evidencia**: si una línea afirma un alcance, una garantía o un
+  aislamiento, se verifica **contra el sistema** antes de confiar en ella. `lib-test.sh` decía
+  *"down -v scoped al archivo"* y era falso: `-f` elige el archivo, pero el alcance del `down` lo da
+  el **proyecto**, que sale del nombre del directorio si no se pasa `-p`. Confiar en ese comentario
+  destruyó los volúmenes de un clúster ajeno que compartía nombre de proyecto. Antes de cualquier
+  comando que pueda destruir algo, **el chequeo es sobre el proyecto**, no sobre el archivo ni sobre
+  el puerto. Todo `docker compose` del harness lleva `-p` explícito.
+- **Un test que no verifica que su propio entorno se levantó no puede declarar verde**: antes de la
+  primera aserción se confirma que el entorno **propio** existe y responde. No alcanza con que haya
+  *un* clúster sano del otro lado. Los composes fijan `container_name`, y Docker exige nombres únicos
+  en toda la máquina sin importar el proyecto: si ya existe un contenedor con ese nombre, el `up`
+  falla y las aserciones terminan corriendo contra el despliegue ajeno que se llama igual. Pasó: tres
+  e2e dieron verde probando un clúster que no era el suyo, y el único que falló fue el único que
+  verificaba un puerto del host. **El `up` nunca se silencia**: si falla, el test muere ahí con el
+  error a la vista. Un test que no sabe si levantó algo no es un test.
+- **El validador del alumno (90) no lleva puertos de host fijos**: es el único de estos archivos que
+  corre **en la máquina del alumno, en clase**. Si tiene un `9092` escrito a mano y el entorno publica
+  en otro puerto, el alumno ve un `✗` que no entiende y que no es culpa suya. Pasó en
+  `lab-04/bin/90-test-lab.sh`, que probaba `localhost:9092` fijo mientras el lab publicaba en otro
+  puerto. Los puertos de host salen siempre de la variable, con el default de siempre:
+  `EXT_PORT="${BROKER1_EXTERNAL_PORT:-9092}"`. **Este es el tipo de defecto que aparece delante de
+  treinta personas, no en un test.**
 - **Tests negativos que afirman la denegación**: en seguridad, el test PASA cuando la operación
   FALLA. Se lee el **stderr real** del cliente (no el stdout del script del lab, que puede mencionar
   la excepción esperada en su texto de ayuda y dar un falso positivo).

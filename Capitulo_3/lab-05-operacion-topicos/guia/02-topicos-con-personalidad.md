@@ -187,9 +187,9 @@ kafka-cli/describe-topic.sh novatech.audit.events | grep retention.ms
 Verifica las particiones actuales y auméntalas a 18:
 
 ```bash
-kafka-cli/describe-topic.sh novatech.gps.realtime | head -3
+kafka-cli/describe-topic.sh novatech.gps.realtime | head -1
 kafka-cli/alter-topic-partitions.sh novatech.gps.realtime 18
-kafka-cli/describe-topic.sh novatech.gps.realtime | head -25
+kafka-cli/describe-topic.sh novatech.gps.realtime | head -19
 ```
 
 | Pregunta | Tu respuesta |

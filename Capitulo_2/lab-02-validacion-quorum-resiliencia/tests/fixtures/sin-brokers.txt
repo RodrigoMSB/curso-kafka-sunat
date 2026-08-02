@@ -1,0 +1,1 @@
+# Capturado sin ningun contenedor de Kafka corriendo:  docker ps --filter ancestor=confluentinc/cp-kafka:8.2.0 --filter status=running --format {{.Names}}

@@ -1,0 +1,21 @@
+# Capturado con docker run --rm sobre confluentinc/cp-kafka:8.2.0, sin ningun cluster levantado.  Paso 2 de 4:  docker run --rm confluentinc/cp-kafka:8.2.0 sh -c "ls /usr/bin/kafka-* | head -20"
+/usr/bin/kafka-acls
+/usr/bin/kafka-broker-api-versions
+/usr/bin/kafka-client-metrics
+/usr/bin/kafka-cluster
+/usr/bin/kafka-configs
+/usr/bin/kafka-console-consumer
+/usr/bin/kafka-console-producer
+/usr/bin/kafka-console-share-consumer
+/usr/bin/kafka-consumer-groups
+/usr/bin/kafka-consumer-perf-test
+/usr/bin/kafka-delegation-tokens
+/usr/bin/kafka-delete-records
+/usr/bin/kafka-dump-log
+/usr/bin/kafka-e2e-latency
+/usr/bin/kafka-features
+/usr/bin/kafka-get-offsets
+/usr/bin/kafka-groups
+/usr/bin/kafka-jmx
+/usr/bin/kafka-leader-election
+/usr/bin/kafka-log-dirs

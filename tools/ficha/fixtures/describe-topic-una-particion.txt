@@ -1,0 +1,3 @@
+# Capturado en un cluster efimero de 3 brokers (fx-broker-1..3, KRaft, RF=3), levantado solo para esto y bajado despues.  Topico de 1 particion RF=3 con fx-broker-2 detenido:  docker exec fx-broker-1 kafka-topics --bootstrap-server fx-broker-1:29092 --describe --topic novatech.audit.events
+Topic: novatech.audit.events	TopicId: CSxYUD64QK-tWakJORtSgA	PartitionCount: 1	ReplicationFactor: 3	Configs: min.insync.replicas=2
+	Topic: novatech.audit.events	Partition: 0	Leader: 3	Replicas: 3,1,2	Isr: 3,1	Elr: 	LastKnownElr: 

@@ -1,0 +1,5 @@
+# Capturado con los 3 brokers arriba y el quorum sano:  docker exec kafka-broker-1 kafka-metadata-quorum --bootstrap-server kafka-broker-1:29092 describe --replication
+NodeId	DirectoryId           	LogEndOffset	Lag	LastFetchTimestamp	LastCaughtUpTimestamp	Status  	
+2     	AAAAAAAAAAAAAAAAAAAAAA	34843       	0  	1785539125232     	1785539125232        	Leader  	
+1     	AAAAAAAAAAAAAAAAAAAAAA	34843       	0  	1785539125214     	1785539125214        	Follower	
+3     	AAAAAAAAAAAAAAAAAAAAAA	34843       	0  	1785539125214     	1785539125214        	Follower	

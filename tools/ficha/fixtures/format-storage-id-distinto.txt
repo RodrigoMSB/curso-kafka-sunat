@@ -1,0 +1,4 @@
+# Capturado con docker run sobre un volumen efimero, sin cluster:  kafka-storage format --cluster-id MkU3OEVBNTcwNTJENDM2Qk --config /etc/kafka/kafka.properties --ignore-formatted  Con un cluster-id distinto del que ya estaba grabado.
+Exception in thread "main" java.lang.RuntimeException: Invalid cluster.id in: /var/lib/kafka/data/meta.properties. Expected OtRoClUsTeRJZERpZmVyZW, but read MkU3OEVBNTcwNTJENDM2Qk
+	at org.apache.kafka.metadata.properties.MetaPropertiesEnsemble.verify(MetaPropertiesEnsemble.java:503)
+	at org.apache.kafka.metadata.storage.Formatter.doFormat(Formatter.java:398)

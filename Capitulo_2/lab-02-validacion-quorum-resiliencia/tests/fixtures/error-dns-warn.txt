@@ -1,0 +1,17 @@
+# Capturado con kafka-broker-3 detenido, apuntando el bootstrap al broker muerto:  docker exec kafka-broker-1 kafka-metadata-quorum --bootstrap-server kafka-broker-3:39094 describe --status
+[2026-07-31 23:06:46,392] WARN Couldn't resolve server kafka-broker-3:39094 from bootstrap.servers as DNS resolution failed for kafka-broker-3 (org.apache.kafka.clients.ClientUtils)
+Failed to create new KafkaAdminClient
+org.apache.kafka.common.KafkaException: Failed to create new KafkaAdminClient
+	at org.apache.kafka.clients.admin.KafkaAdminClient.createInternal(KafkaAdminClient.java:572)
+	at org.apache.kafka.clients.admin.KafkaAdminClient.createInternal(KafkaAdminClient.java:517)
+	at org.apache.kafka.clients.admin.Admin.create(Admin.java:134)
+	at org.apache.kafka.tools.MetadataQuorumCommand.execute(MetadataQuorumCommand.java:127)
+	at org.apache.kafka.tools.MetadataQuorumCommand.mainNoExit(MetadataQuorumCommand.java:81)
+	at org.apache.kafka.tools.MetadataQuorumCommand.main(MetadataQuorumCommand.java:76)
+Caused by: org.apache.kafka.common.config.ConfigException: No resolvable bootstrap urls given in bootstrap.servers
+	at org.apache.kafka.clients.ClientUtils.parseAndValidateAddresses(ClientUtils.java:104)
+	at org.apache.kafka.clients.ClientUtils.parseAndValidateAddresses(ClientUtils.java:63)
+	at org.apache.kafka.clients.admin.internals.AdminBootstrapAddresses.fromConfig(AdminBootstrapAddresses.java:72)
+	at org.apache.kafka.clients.admin.KafkaAdminClient.createInternal(KafkaAdminClient.java:536)
+	... 5 more
+

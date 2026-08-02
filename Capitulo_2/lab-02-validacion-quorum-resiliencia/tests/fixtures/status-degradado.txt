@@ -1,0 +1,9 @@
+# Capturado con kafka-broker-3 detenido (docker stop kafka-broker-3), 25s despues:  docker exec kafka-broker-1 kafka-metadata-quorum --bootstrap-server kafka-broker-1:29092 describe --status
+ClusterId:              MkU3OEVBNTcwNTJENDM2Qk
+LeaderId:               2
+LeaderEpoch:            2
+HighWatermark:          34975
+MaxFollowerLag:         53
+MaxFollowerLagTimeMs:   26252
+CurrentVoters:          [{"id": 1, "endpoints": ["CONTROLLER://kafka-broker-1:39092"]}, {"id": 2, "endpoints": ["CONTROLLER://kafka-broker-2:39093"]}, {"id": 3, "endpoints": ["CONTROLLER://kafka-broker-3:39094"]}]
+CurrentObservers:       []

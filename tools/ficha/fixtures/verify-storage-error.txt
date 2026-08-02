@@ -1,0 +1,16 @@
+# Capturado en un cluster efimero de 3 brokers (fx-broker-1..3, KRaft, RF=3), levantado solo para esto y bajado despues.  kafka-storage info contra un config que no existe:  docker exec fx-broker-1 kafka-storage info -c /etc/kafka/no-existe.properties
+Exception in thread "main" java.nio.file.NoSuchFileException: /etc/kafka/no-existe.properties
+	at java.base/sun.nio.fs.UnixException.translateToIOException(Unknown Source)
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(Unknown Source)
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(Unknown Source)
+	at java.base/sun.nio.fs.UnixFileSystemProvider.newByteChannel(Unknown Source)
+	at java.base/java.nio.file.Files.newByteChannel(Unknown Source)
+	at java.base/java.nio.file.Files.newByteChannel(Unknown Source)
+	at java.base/java.nio.file.spi.FileSystemProvider.newInputStream(Unknown Source)
+	at java.base/java.nio.file.Files.newInputStream(Unknown Source)
+	at org.apache.kafka.common.utils.Utils.loadProps(Utils.java:707)
+	at kafka.tools.StorageTool$.$anonfun$execute$1(StorageTool.scala:79)
+	at scala.Option.flatMap(Option.scala:283)
+	at kafka.tools.StorageTool$.execute(StorageTool.scala:79)
+	at kafka.tools.StorageTool$.main(StorageTool.scala:46)
+	at kafka.tools.StorageTool.main(StorageTool.scala)

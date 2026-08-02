@@ -4,11 +4,16 @@ set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 source "$HERE/lib-test.sh"
 
+# Proyecto propio del e2e. Sin esto el alcance de un down -v lo da el
+# nombre del directorio y puede alcanzar a un despliegue ajeno.
+PROY="$(proyecto_e2e 14)"
+export COMPOSE_PROJECT_NAME="$PROY"
+
 LAB_DIR=""
 for d in "$HERE"/../Capitulo_*/lab-14-*; do [ -d "$d" ] && LAB_DIR="$(cd "$d" && pwd)" && break; done
 [ -n "$LAB_DIR" ] || { echo "No encuentro la carpeta del lab 14"; exit 1; }
 
-trap 'lab_teardown "$LAB_DIR"' EXIT
+trap 'lab_teardown "$LAB_DIR" "$PROY"' EXIT
 
 test_start "Lab 14 - Capstone (seguridad + resiliencia)"
 
@@ -42,7 +47,7 @@ isr_min() {
         | grep -oE 'Isr: [0-9,]+' | sed 's/Isr: //' | awk -F, '{print NF}' | sort -n | head -1
 }
 
-bash bin/start-lab.sh >/dev/null 2>&1
+levantar_lab "$LAB_DIR" || abort_test "no se pudo levantar el entorno del lab"
 # El clúster seguro (TLS+PKI) es el más pesado; más margen para hosts cargados.
 wait_for_brokers 3 240 || abort_test "clúster seguro no subió (3 brokers no healthy en 240s)"
 _pass "clúster seguro arriba (TLS+SASL+ACL, 3 brokers)"

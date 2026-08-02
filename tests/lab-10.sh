@@ -4,11 +4,16 @@ set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 source "$HERE/lib-test.sh"
 
+# Proyecto propio del e2e. Sin esto el alcance de un down -v lo da el
+# nombre del directorio y puede alcanzar a un despliegue ajeno.
+PROY="$(proyecto_e2e 10)"
+export COMPOSE_PROJECT_NAME="$PROY"
+
 LAB_DIR=""
 for d in "$HERE"/../Capitulo_*/lab-10-*; do [ -d "$d" ] && LAB_DIR="$(cd "$d" && pwd)" && break; done
 [ -n "$LAB_DIR" ] || { echo "No encuentro la carpeta del lab 10"; exit 1; }
 
-trap 'lab_teardown "$LAB_DIR"' EXIT
+trap 'lab_teardown "$LAB_DIR" "$PROY"' EXIT
 
 test_start "Lab 10 - REST Proxy"
 
@@ -19,7 +24,7 @@ chmod +x bin/*.sh rest-cli/*.sh infra/scripts/*.sh 2>/dev/null
 REST_PORT="${REST_PROXY_PORT:-8082}"
 TOPIC="novatech.lab10.pedidos"
 
-bash bin/start-lab.sh >/dev/null 2>&1
+levantar_lab "$LAB_DIR" || abort_test "no se pudo levantar el entorno del lab"
 wait_for_brokers 3 || abort_test "clúster no subió (3 brokers no healthy en 150s)"
 wait_for_container kafka-rest 120 || abort_test "REST Proxy no llegó a healthy"
 _pass "clúster + REST Proxy arriba"

@@ -15,6 +15,114 @@ test_start() {
     echo -e "\n${BOLD}${CYAN}━━━ TEST E2E · ${_LAB_NAME} ━━━${NC}"
 }
 
+# ── Puertos del e2e ──────────────────────────────────────────
+# Los labs publican al host en 9092 y alrededores, que es lo que ve el
+# alumno y no se cambia. Pero el instructor suele tener SU propio clúster
+# arriba en esos mismos puertos, y entonces el e2e no puede levantar el
+# suyo. Acá se exportan puertos de un rango propio, que los .env de los
+# labs respetan porque declaran sus valores como ${VAR:-defecto}.
+#
+# El alumno nunca ve estos números: solo existen mientras corre un e2e.
+puerto_libre() {  # <puerto>
+    if command -v lsof >/dev/null 2>&1; then
+        ! lsof -nP -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1
+        return $?
+    fi
+    # Sin lsof (Git Bash), se prueba abriendo el puerto.
+    ! (exec 3<>/dev/tcp/127.0.0.1/"$1") 2>/dev/null
+}
+
+# Se verifica EN EL MOMENTO de levantar, no una vez al principio del día.
+# Un puerto libre a las 5 puede no estarlo a las 7.
+exportar_puertos_e2e() {
+    local ocupados='' p
+    for p in "$@"; do
+        if ! puerto_libre "$p"; then
+            ocupados="${ocupados}${p} "
+        fi
+    done
+    if [ -n "$ocupados" ]; then
+        echo -e "${RED}[E2E] Puerto(s) ocupado(s) para la corrida: ${ocupados}${NC}" >&2
+        echo -e "${RED}      El e2e usa un rango propio para no chocar con tu clúster.${NC}" >&2
+        echo -e "${RED}      Liberalos o cambiá el rango en tests/lib-test.sh.${NC}" >&2
+        return 1
+    fi
+    return 0
+}
+
+# Rango del e2e para los labs de brokers. Un solo lugar donde cambiarlo.
+puertos_e2e_brokers() {
+    exportar_puertos_e2e 19092 19093 19094 || return 1
+    BROKER_EXTERNAL_PORT=19092
+    BROKER1_EXTERNAL_PORT=19092
+    BROKER2_EXTERNAL_PORT=19093
+    BROKER3_EXTERNAL_PORT=19094
+    export BROKER_EXTERNAL_PORT BROKER1_EXTERNAL_PORT BROKER2_EXTERNAL_PORT BROKER3_EXTERNAL_PORT
+    return 0
+}
+
+# Nombre de proyecto de compose, propio y exclusivo del e2e. Aísla el
+# despliegue igual que los puertos aíslan la red: sin esto, un down -v
+# alcanza a cualquier cosa que comparta nombre de directorio.
+proyecto_e2e() {  # <numero de lab>
+    printf 'e2e-lab-%s' "$1"
+}
+
+# ── El entorno propio del e2e ────────────────────────────────
+# Los composes de los labs fijan container_name, y Docker exige nombres
+# unicos en toda la maquina sin importar el proyecto. Con -p se aisla el
+# proyecto, NO los nombres: si ya existe un contenedor con ese nombre, el
+# up falla y el e2e termina corriendo sus aserciones contra el cluster
+# ajeno que se llama igual. Paso: tres e2e dieron verde probando un
+# cluster que no era el suyo.
+nombres_libres() {  # <nombre>...
+    local ocupados='' n
+    for n in "$@"; do
+        if docker ps -a --filter "name=^${n}$" --format '{{.Names}}' 2>/dev/null | grep -q "^${n}$"; then
+            ocupados="${ocupados}${n} "
+        fi
+    done
+    if [ -n "$ocupados" ]; then
+        echo -e "${RED}[E2E] Ya existe(n) contenedor(es) con el nombre que usa este lab:${NC}" >&2
+        echo -e "${RED}      ${ocupados}${NC}" >&2
+        echo -e "${RED}      El compose fija container_name, asi que el up fallaria y el test${NC}" >&2
+        echo -e "${RED}      terminaria probando ese cluster ajeno. Se aborta.${NC}" >&2
+        return 1
+    fi
+    return 0
+}
+
+# Levanta el compose SIN silenciar el error. Un e2e que no sabe si levanto
+# algo no es un test: si el up falla, se muere aca con el error a la vista.
+levantar_compose() {  # <compose> <proyecto> [nombres esperados...]
+    local compose="$1" proy="$2"; shift 2
+    if [ $# -gt 0 ]; then
+        nombres_libres "$@" || return 1
+    fi
+    local salida rc=0
+    salida=$(docker compose -f "$compose" -p "$proy" up -d 2>&1) || rc=$?
+    if [ "$rc" -ne 0 ]; then
+        echo -e "${RED}[E2E] El 'docker compose up' fallo (codigo ${rc}). Esto devolvio:${NC}" >&2
+        printf '%s\n' "$salida" >&2
+        return 1
+    fi
+    return 0
+}
+
+# Levanta el lab por su start-lab.sh SIN silenciarlo. Es el mismo defecto
+# que tenia el docker compose up: si el arranque falla y el error se tira,
+# el test sigue y sus aserciones corren contra lo que haya, o contra nada.
+levantar_lab() {  # <lab_dir>
+    local salida rc=0
+    salida=$( cd "$1" && bash bin/start-lab.sh 2>&1 ) || rc=$?
+    if [ "$rc" -ne 0 ]; then
+        echo -e "${RED}[E2E] bin/start-lab.sh fallo (codigo ${rc}). Ultimas lineas:${NC}" >&2
+        printf '%s\n' "$salida" | tail -15 >&2
+        return 1
+    fi
+    return 0
+}
+
 # Marca única por corrida (anti-frágil)
 new_mark() { echo "e2e-$(date +%s)-${RANDOM}"; }
 
@@ -74,29 +182,62 @@ wait_for_container() {  # <name> [timeout_s]
     return 1
 }
 
-# Produce <count> mensajes "<mark>-1..<count>" (auth opcional)
+# Produce <count> mensajes "<mark>-1..<count>" (auth opcional).
+# El stderr del productor NO se tira: si el cliente falla, el conteo de
+# consumo daria 0 y eso se leeria como "no llegaron los mensajes" en vez de
+# como "el productor no pudo escribir". Son dos diagnosticos distintos y el
+# test tiene que distinguirlos. Devuelve el codigo del productor.
 produce_marked() {  # <container> <bootstrap> <topic> <mark> <count> [config_file]
     local ctr="$1" boot="$2" topic="$3" mark="$4" count="$5" cfg="${6:-}" extra="" i
+    local err rc=0
     [ -n "$cfg" ] && extra="--command-config $cfg"
-    for i in $(seq 1 "$count"); do echo "${mark}-${i}"; done | \
+    err=$(for i in $(seq 1 "$count"); do echo "${mark}-${i}"; done | \
         MSYS_NO_PATHCONV=1 docker exec -i -e KAFKA_OPTS= "$ctr" \
         kafka-console-producer --bootstrap-server "$boot" $extra \
-        --command-property acks=all --topic "$topic" 2>/dev/null
+        --command-property acks=all --topic "$topic" 2>&1 >/dev/null) || rc=$?
+    if [ "$rc" -ne 0 ]; then
+        echo -e "${RED}[E2E] El productor fallo (codigo ${rc}). Esto devolvio:${NC}" >&2
+        printf '%s\n' "$err" | head -5 >&2
+        return "$rc"
+    fi
+    # Kafka avisa por stderr sin fallar (deprecaciones, reintentos). Eso no
+    # es un error, pero tampoco se esconde.
+    if [ -n "$err" ]; then
+        printf '%s\n' "$err" | head -3 >&2
+    fi
+    return 0
 }
 
 # Cuenta cuántas de MIS marcas llegaron (ground truth). Imprime el número.
 # El grep '^<mark>-' inmuniza contra warnings en stdout.
+# El stderr del consumidor va a un archivo dentro del contenedor y se
+# revisa: el cliente termina por timeout siempre (asi cuenta), pero un
+# fallo de conexion o de autorizacion tambien daria 0 mensajes. Sin mirar
+# el stderr, "0 porque no hay nada" y "0 porque no pude conectarme" son
+# indistinguibles, y el segundo se leeria como dato.
 consume_count_mark() {  # <container> <bootstrap> <topic> <mark> [timeout_ms] [config_file]
     local ctr="$1" boot="$2" topic="$3" mark="$4" tms="${5:-8000}" cfg="${6:-}" extra=""
+    local salida n err
     [ -n "$cfg" ] && extra="--command-config $cfg"
-    MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= "$ctr" bash -c \
-        "kafka-console-consumer --bootstrap-server $boot $extra --topic $topic --from-beginning --timeout-ms $tms 2>/dev/null | grep -c '^${mark}-'"
+    salida=$(MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= "$ctr" bash -c \
+        "kafka-console-consumer --bootstrap-server $boot $extra --topic $topic --from-beginning --timeout-ms $tms 2>/tmp/e2e-cons.err | grep -c '^${mark}-'; echo '---'; cat /tmp/e2e-cons.err")
+    n=$(printf '%s\n' "$salida" | sed -n '1p')
+    err=$(printf '%s\n' "$salida" | sed -n '/^---$/,$p' | sed '1d')
+    # TimeoutException es como termina siempre y no es un error.
+    if printf '%s\n' "$err" | grep -q 'Exception\|ERROR' && \
+       ! printf '%s\n' "$err" | grep -q 'TimeoutException'; then
+        echo -e "${RED}[E2E] El consumidor reporto un error, el conteo no es confiable:${NC}" >&2
+        printf '%s\n' "$err" | grep 'Exception\|ERROR' | head -3 >&2
+    fi
+    printf '%s\n' "${n:-0}"
 }
 
 # Teardown scoped al lab (usa su reset-lab.sh; down -v solo afecta su proyecto compose).
-lab_teardown() {  # <lab_dir>
+lab_teardown() {  # <lab_dir> [proyecto]
+    local proy="${2:-}"
     ( cd "$1" && ( echo "s" | bash bin/reset-lab.sh >/dev/null 2>&1 || \
-        docker compose -f infra/docker-compose.yml --env-file infra/.env down -v --remove-orphans >/dev/null 2>&1 ) )
+        docker compose -f infra/docker-compose.yml --env-file infra/.env \
+            ${proy:+-p "$proy"} down -v --remove-orphans >/dev/null 2>&1 ) )
 }
 
 # --- Variante build-your-own (labs 01-04) ---
@@ -112,7 +253,18 @@ wait_for_broker_api() {  # <container> <bootstrap> [timeout_s]
     return 1
 }
 
-# Teardown de un despliegue por compose de soluciones (down -v scoped al archivo)
-byo_teardown() {  # <lab_dir> <compose_file_relativo>
-    ( cd "$1" && docker compose -f "$2" down -v --remove-orphans >/dev/null 2>&1 )
+# Teardown de un despliegue por compose de soluciones.
+# OJO: -f elige el ARCHIVO, pero el alcance del down lo da el PROYECTO, y
+# el proyecto sale del nombre del directorio si no se pasa -p. Los cuatro
+# labs de sesiones 1 a 3 levantan desde su carpeta soluciones/, así que sin
+# -p los cuatro son el proyecto "soluciones" y un down -v de uno se lleva
+# puesto cualquier otro clúster que viva en ese mismo proyecto. Pasó: se
+# destruyeron los volúmenes de un clúster ajeno. Por eso va -p siempre.
+byo_teardown() {  # <lab_dir> <compose_file_relativo> <proyecto>
+    local proy="${3:-}"
+    if [ -z "$proy" ]; then
+        echo "[E2E] byo_teardown sin nombre de proyecto. No se baja nada." >&2
+        return 1
+    fi
+    ( cd "$1" && docker compose -f "$2" -p "$proy" down -v --remove-orphans >/dev/null 2>&1 )
 }

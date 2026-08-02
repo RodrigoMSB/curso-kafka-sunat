@@ -1,0 +1,5 @@
+# Capturado con kafka-broker-3 detenido (docker stop kafka-broker-3), 25s despues:  docker exec kafka-broker-1 kafka-metadata-quorum --bootstrap-server kafka-broker-1:29092 describe --replication
+NodeId	DirectoryId           	LogEndOffset	Lag	LastFetchTimestamp	LastCaughtUpTimestamp	Status  	
+2     	AAAAAAAAAAAAAAAAAAAAAA	34977       	0  	1785539165259     	1785539165259        	Leader  	
+1     	AAAAAAAAAAAAAAAAAAAAAA	34977       	0  	1785539164960     	1785539164960        	Follower	
+3     	AAAAAAAAAAAAAAAAAAAAAA	34922       	55 	1785539138284     	1785539137790        	Follower	
