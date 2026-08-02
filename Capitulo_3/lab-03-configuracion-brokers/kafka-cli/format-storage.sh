@@ -26,7 +26,7 @@ source "$DIR_LAB/bin/common.sh"
 flag_desc() {
     case "$1" in
         format)             echo "graba la identidad en el disco del broker y prepara el directorio de metadatos" ;;
-        --cluster-id)       echo "la identidad generada antes. La misma en los tres brokers" ;;
+        --cluster-id)       echo "la identidad generada antes. La misma en todos los brokers del clúster" ;;
         --config)           echo "de dónde saca en qué directorio escribir" ;;
         --ignore-formatted) echo "si ya estaba formateado, no lo vuelve a hacer y no falla" ;;
         *)                  flag_desc_comun "$1" ;;

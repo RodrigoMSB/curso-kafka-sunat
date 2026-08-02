@@ -5,7 +5,7 @@
 # Familia CREA. Su salida ES el resultado: no hay un estado que mirar
 # después, el valor que imprime es lo único que produjo. Por eso el
 # último bloque no describe un estado, explica qué es ese valor y qué
-# pasa si no se usa igual en los tres brokers.
+# pasa si no se usa igual en todos los brokers del clúster.
 #
 # La ficha se dibuja solo en una terminal. Sin terminal sale el UUID
 # pelado y nada más, para que CLUSTER_ID=$(generate-cluster-id.sh)
@@ -62,7 +62,7 @@ ficha_encabezado() {
 # ── Qué es este valor ────────────────────────────────────────
 # No hay estado que diagnosticar: el valor recién nace. Lo que falta es
 # saber qué hacer con él, y sobre todo qué pasa si no se usa igual en
-# los tres brokers.
+# todos los brokers del clúster.
 que_es_este_valor() {
     local cid="$1"
 
@@ -72,8 +72,8 @@ que_es_este_valor() {
     ficha_texto 'almacenamiento de los brokers con este mismo valor.'
 
     ficha_vacia
-    ficha_texto 'Los tres brokers tienen que tener exactamente esa misma cadena. Si alguno tiene otra, no van a formar quórum entre ellos.'
-    ficha_texto 'No la confundas con el directory.id, que identifica el directorio de datos de cada nodo y por eso sí es distinto en cada broker.'
+    ficha_texto 'Todos los brokers del clúster tienen que tener exactamente esa misma cadena. Si alguno tiene otra, no forma quórum con los demás.'
+    ficha_texto 'No debe confundirse con el directory.id, que identifica el directorio de datos de cada nodo y por eso sí es distinto en cada broker.'
 
     ficha_vacia
     ficha_warn 'Si un broker se formatea con una cadena y otro con otra, el segundo arranca y muere con InconsistentClusterIdException.'

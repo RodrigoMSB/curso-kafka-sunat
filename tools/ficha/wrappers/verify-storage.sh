@@ -81,7 +81,7 @@ ficha_encabezado() {
         ficha_campo '.lock'                'el broker vivo marca el directorio como suyo'
     else
         ficha_campo 'Found log directory' 'dónde guarda los datos este broker'
-        ficha_campo 'cluster.id'          'la identidad del clúster. Los tres brokers llevan la misma'
+        ficha_campo 'cluster.id'          'la identidad del clúster. Todos los brokers del clúster llevan la misma'
         ficha_campo 'node.id'             'quién es este broker dentro del clúster'
         ficha_campo 'directory.id'        'identifica este directorio de datos en particular'
         ficha_campo 'version'             'la versión del formato de metadatos en disco'
@@ -132,7 +132,7 @@ diagnostico_storage() {
     fi
     ficha_vacia
     ficha_texto "La identidad del clúster es ${cid}."
-    ficha_texto 'Los tres brokers tienen que tener exactamente esa misma cadena. Si alguno tiene otra, no van a formar quórum entre ellos.'
+    ficha_texto 'Todos los brokers del clúster tienen que tener exactamente esa misma cadena. Si alguno tiene otra, no forma quórum con los demás.'
     if [ -n "$did" ]; then
         ficha_vacia
         ficha_texto "El directory.id ${did} es de este directorio y no del clúster, y por eso es distinto en cada broker. No debe copiarse entre nodos."

@@ -327,7 +327,6 @@ ficha_encabezado() {
     ficha_campo 'Lag'              'lo mismo pero nodo por nodo. Sale de la segunda consulta, así que puede no coincidir con MaxFollowerLag'
     ficha_campo 'CurrentVoters'    'los que votan'
     ficha_campo 'CurrentObservers' 'los que copian pero no votan'
-    ficha_campo 'DirectoryId'      'el identificador del directorio de datos de cada nodo'
 
     ficha_cerrar
 }
@@ -637,8 +636,9 @@ main() {
             fi
             ficha_cruda 'Esto devolvió Kafka con describe --replication' \
                 "$(q_repl_legible "$salida_repl")"
-            ficha_nota_salida 'Se omiten DirectoryId y las marcas de tiempo. Para verlo todo,'
-            ficha_nota_salida 'corre el comando de arriba a mano.'
+            ficha_nota_salida 'Se omiten dos columnas. DirectoryId, que identifica el directorio'
+            ficha_nota_salida 'de datos de cada nodo, y las marcas de tiempo del último contacto.'
+            ficha_nota_salida 'Para verlas, ejecute el comando de arriba a mano.'
         else
             # No se maquilla en columnas lo que no es una tabla.
             ficha_cruda_envuelta 'Kafka no devolvió una tabla. Esto respondió:' \

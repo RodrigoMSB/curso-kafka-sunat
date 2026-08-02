@@ -130,6 +130,8 @@ afirmar_contiene_plano 'verify_no_deja_tarea · el directory.id no se copia' \
     'y por eso es distinto en cada broker. No debe copiarse entre nodos.' "$SALIDA"
 afirmar_no_contiene 'verify_no_deja_tarea · sin el "si ves un meta.properties" viejo' \
     'Si ves un archivo' "$SALIDA"
+afirmar_no_contiene 'verify_no_escribe_el_numero · sin "los tres brokers"' \
+    'tres brokers' "$SALIDA"
 
 # El fallback muestra el comando que corrió DE VERDAD, no el primero.
 T_INFO_RC=1; export T_INFO_RC
@@ -156,12 +158,16 @@ afirmar_igual 'generate_sin_tty · una sola línea' '1' \
 correr kafka-cli/generate-cluster-id.sh 1
 TODO="$TODO
 $SALIDA"
-afirmar_contiene_plano 'generate_explica · la misma cadena en los tres' \
-    'Los tres brokers tienen que tener exactamente esa misma cadena.' "$SALIDA"
+# El numero de brokers NO se escribe: los mismos wrappers corren en el
+# lab-01, que tiene uno, y en los labs 02 a 04, que tienen tres.
+afirmar_contiene_plano 'generate_explica · no escribe el número de brokers' \
+    'Todos los brokers del clúster tienen que tener exactamente esa misma cadena.' "$SALIDA"
+afirmar_no_contiene 'generate_explica · sin "los tres brokers" escrito a mano' \
+    'tres brokers' "$SALIDA"
 afirmar_contiene_plano 'generate_explica · la consecuencia con nombre' \
     'arranca y muere con InconsistentClusterIdException.' "$SALIDA"
 afirmar_contiene_plano 'generate_explica · lo distingue del directory.id' \
-    'No la confundas con el directory.id' "$SALIDA"
+    'No debe confundirse con el directory.id' "$SALIDA"
 
 echo ''
 echo 'format-storage · el aviso va antes de escribir'
