@@ -302,11 +302,22 @@ ficha_nota_warn() {
 # envolver las líneas largas, para que ninguna quede partida por el
 # terminal. Envolver conserva el texto entero.
 #
-# La salida NO se envuelve. Lo que devuelve una herramienta suele venir en
-# columnas, y una tabla envuelta es ilegible. El nombre de archivo cae en
-# el renglón de abajo y deja de alinearse con su tamaño y su fecha. El
-# ancho de 76 rige para la CAJA, que es lo que dibujamos nosotros. Lo que
-# emite el comando se muestra tal cual lo emitió.
+# CUÁNDO SE ENVUELVE Y CUÁNDO NO. Es la distinción que decide cuál de las
+# dos funciones usar.
+#
+#   ficha_cruda           la salida es TABULAR. Se deja tal cual. Envolver
+#                         una tabla la destruye. El nombre de archivo cae al
+#                         renglón de abajo y deja de alinearse con su tamaño
+#                         y su fecha. Ejemplo, un ls -la o la tabla de
+#                         particiones.
+#
+#   ficha_cruda_envuelta  la línea NO tiene columnas que romper. Pares
+#                         clave=valor, mensajes de error, prosa. Ahí no hay
+#                         nada que se desalinee y sin envolver se sale de la
+#                         pantalla. Ejemplo, el "Found metadata" de
+#                         kafka-storage info, que son 114 columnas.
+#
+# El ancho de 76 rige para la CAJA, que es lo que dibujamos nosotros.
 ficha_cruda() {
     local rotulo="$1" texto="$2" l
     # Rótulo vacío significa que el bloque ya viene anunciado por otra cosa,
@@ -316,7 +327,11 @@ ficha_cruda() {
         printf '%s  %s%s\n' "$F_NOTA" "$rotulo" "$F_OFF"
     fi
     printf '%s\n' "$texto" | while IFS= read -r l; do
-        printf '    %s\n' "$l"
+        if [ -z "$l" ]; then
+            echo ''
+        else
+            printf '    %s\n' "$l"
+        fi
     done
 }
 
@@ -329,7 +344,11 @@ ficha_cruda_envuelta() {
         printf '%s  %s%s\n' "$F_NOTA" "$rotulo" "$F_OFF"
     fi
     printf '%s\n' "$texto" | ficha_envolver "$(( FICHA_ANCHO - 4 ))" | while IFS= read -r l; do
-        printf '    %s\n' "$l"
+        if [ -z "$l" ]; then
+            echo ''
+        else
+            printf '    %s\n' "$l"
+        fi
     done
 }
 

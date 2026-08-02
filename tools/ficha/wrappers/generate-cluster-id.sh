@@ -25,7 +25,6 @@ IMAGEN="confluentinc/cp-kafka:8.2.0"
 flag_desc() {
     case "$1" in
         random-uuid) echo "inventa una identidad nueva. No toca ningún clúster ni ningún disco" ;;
-        --rm)        echo "borra el contenedor apenas termina. Es de usar y tirar" ;;
         *)           flag_desc_comun "$1" ;;
     esac
 }

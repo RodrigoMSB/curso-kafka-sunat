@@ -192,7 +192,14 @@ main() {
     fi
 
     ficha_encabezado "$contenedor" "$cayo"
-    ficha_cruda 'Esto devolvió la herramienta' "$salida"
+    if [ "$cayo" -eq 1 ]; then
+        # El ls -la es tabular. Envolverlo desalinea los nombres de archivo.
+        ficha_cruda 'Esto devolvió la herramienta' "$salida"
+    else
+        # kafka-storage info son pares clave=valor en una linea de 114
+        # columnas. No hay columnas que romper y sin envolver se sale.
+        ficha_cruda_envuelta 'Esto devolvió la herramienta' "$salida"
+    fi
     echo ''
     diagnostico_storage "$salida" "$contenedor" "$cayo"
 }

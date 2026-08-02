@@ -134,7 +134,9 @@ main() {
     ficha_cruda '' "$etc"
     echo ''
     paso 4 'versión de Java'
-    ficha_cruda '' "$java"
+    # java -version es prosa, no una tabla. La tercera línea son 89
+    # columnas y no hay nada que se desalinee al envolverla.
+    ficha_cruda_envuelta '' "$java"
     echo ''
 
     n_bin=$(printf '%s\n' "$binarios" | grep -c '^/usr/bin/kafka-') || n_bin=0

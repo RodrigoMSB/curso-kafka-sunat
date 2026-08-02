@@ -93,6 +93,15 @@ instructor sí usa la lib central (DRY).
   puerto. Los puertos de host salen siempre de la variable, con el default de siempre:
   `EXT_PORT="${BROKER1_EXTERNAL_PORT:-9092}"`. **Este es el tipo de defecto que aparece delante de
   treinta personas, no en un test.**
+- **Un wrapper no se da por terminado sin haberlo ejecutado y leído su salida completa**: los tests
+  verifican **lo que decidimos verificar**; la salida real muestra **lo que el alumno va a ver**. No
+  son lo mismo y la diferencia no la cubre ninguna suite. En `inspect-image.sh` aparecieron cinco
+  defectos —el `COMANDO REAL` prometía tres comandos y corrían cuatro, la salida tabular se envolvía
+  y quedaba ilegible, el bloque final contaba como total unos binarios que el propio wrapper había
+  recortado con `head -20`— **con las tres suites en verde**. Mirar la salida es un paso obligatorio,
+  no un extra. Se revisa, como mínimo: que el `COMANDO REAL` liste **todo** lo que se ejecuta, que
+  ninguna cifra del bloque final salga de una salida recortada, que ninguna salida tabular quede
+  envuelta, y que no quede nada suelto sin formato.
 - **Tests negativos que afirman la denegación**: en seguridad, el test PASA cuando la operación
   FALLA. Se lee el **stderr real** del cliente (no el stdout del script del lab, que puede mencionar
   la excepción esperada en su texto de ayuda y dar un falso positivo).
