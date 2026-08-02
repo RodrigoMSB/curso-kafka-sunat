@@ -48,13 +48,19 @@ instructor sí usa la lib central (DRY).
   comparan **valores** (el número de particiones, el id del broker que falta, el lag exacto), nunca la
   presencia de una palabra. Antes de dar un test por bueno se lo rompe a propósito y se confirma que
   se pone rojo.
-- **La restauración de un sabotaje preserva lo que no era parte del sabotaje**: al demostrar que un
-  test se pone rojo se rompe el código a propósito y después se restaura, casi siempre con
-  `git checkout`. Ese checkout se lleva puesto **todo** lo que estuviera sin commitear, incluidos los
-  tests recién escritos. Se cuenta el total de pruebas **antes y después** de cada sabotaje y se
-  verifica que coincida, además de dejar `git diff --stat HEAD` vacío. Ocurrió en el piloto de la
-  ficha: un checkout borró el sexto test y se detectó porque el conteo bajó de 31 a 29, no porque
-  hubiera un control.
+- **Antes de sabotear, el árbol tiene que estar limpio. Se commitea primero y se sabotea después.**
+  Al demostrar que un test se pone rojo se rompe el código a propósito y después se restaura, casi
+  siempre con `git checkout`. Ese checkout se lleva puesto **todo** lo que estuviera sin commitear,
+  incluidos los arreglos y los tests recién escritos que no son parte del sabotaje. El orden es
+  **commit, sabotaje, rojo, restauración**, nunca al revés.
+
+  La verificación del conteo de pruebas antes y después, más un `git diff --stat HEAD` vacío,
+  **confirma que la restauración funcionó; no reemplaza tener el trabajo a salvo antes de romperlo**.
+  Verificar el conteo después llega tarde: el daño ya está hecho y lo único que queda es rehacerlo.
+
+  Pasó dos veces en dos días en el piloto de la ficha. La primera, un checkout borró el sexto test y
+  se detectó porque el conteo bajó de 31 a 29. La segunda, con la regla ya escrita pero sin el orden
+  adentro, se llevó tres arreglos de texto y dos tests del mismo turno.
 - **El estado que se reporta se lee de la salida de un comando, no de una etiqueta**: antes de
   declarar "árbol limpio" o "suite en verde" se corre el comando y se **lee su salida**. Escribir
   `(vacío = limpio)` al lado de un `git status` que lista archivos no es una verificación, es una
