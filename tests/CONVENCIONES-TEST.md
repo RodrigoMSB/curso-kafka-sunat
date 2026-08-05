@@ -111,6 +111,20 @@ instructor sí usa la lib central (DRY).
 - **Tests negativos que afirman la denegación**: en seguridad, el test PASA cuando la operación
   FALLA. Se lee el **stderr real** del cliente (no el stdout del script del lab, que puede mencionar
   la excepción esperada en su texto de ayuda y dar un falso positivo).
+- **Si un test necesita una protección para funcionar, esa protección va en la biblioteca que corren
+  los alumnos, no en el test.** Un test que se blinda a sí mismo y deja expuesto al material da verde
+  mientras el alumno ve algo roto. La suite no está para pasar: está para representar lo que le pasa
+  al alumno.
+
+  *Caso que la origina*: `tests/lab-01.sh` escribía `MSYS_NO_PATHCONV=1` inline en sus `docker exec`
+  desde antes de la SPEC-62, y el `bin/common.sh` de los labs no lo tenía. Las suites estaban en
+  verde mientras, en la VM de Netec —que es la máquina de los alumnos—, `verify-storage.sh` le decía
+  al alumno que su almacenamiento no estaba formateado cuando sí lo estaba. El repo conocía el bug y
+  lo había parchado del lado equivocado.
+
+  La contraparte práctica: cuando una protección se agrega inline a un test, la pregunta obligatoria
+  es **por qué hizo falta ahí**, y si la respuesta es «porque el entorno del alumno también la
+  necesita», la línea baja a la biblioteca del lab y el test deja de ser su único portador.
 
 ---
 
@@ -131,6 +145,9 @@ instructor sí usa la lib central (DRY).
    bucle `until ... [ $W -ge N ]` con `sleep`.
 7. **`-e KAFKA_OPTS=` y `MSYS_NO_PATHCONV=1`** en los `docker exec` que ejecutan herramientas Kafka:
    obligatorio en labs con JMX o seguridad; inofensivo en el resto (se usa siempre por consistencia).
+   **Necesario pero no suficiente**: esta regla protege al test, no al alumno. `MSYS_NO_PATHCONV`
+   tiene que estar además en el `bin/common.sh` del lab, que es lo que se ejecuta en la VM. Ver en
+   §2 la regla de que una protección que un test necesita va en la biblioteca del alumno.
 8. **Estado del arte Kafka 4.2**: `--command-property` (no `--producer-property`) y `--command-config`
    (no `--producer.config`/`--consumer.config`).
 9. **Los e2e no redescubren bugs ya arreglados**: usar los valores correctos (p. ej. `num.replica.fetchers=2`

@@ -1,0 +1,84 @@
+#!/bin/bash
+# ============================================================
+# docker · shim que emula la conversión de rutas de MSYS
+# ============================================================
+# NO es un docker de verdad. Es un envoltorio que se pone delante del
+# docker real en el PATH y reproduce, en macOS y en Linux, la única cosa
+# que Git Bash le hace a los argumentos y que rompe los labs: convertir
+# toda ruta absoluta en una ruta de Windows antes de que docker la vea.
+#
+#   docker exec kafka-broker ls -la /var/lib/kafka/data
+#      →  ls: cannot access 'C:/Program Files/Git/var/lib/kafka/data'
+#
+# Sirve para ver desde macOS un defecto que de otro modo solo aparece en
+# la VM de los alumnos, y para demostrarlo en rojo y en verde sin Windows.
+#
+#   PATH="$(pwd)/tools/msys:$PATH" bash bin/verify-storage.sh kafka-broker
+#
+# Ver tools/msys/README.md: dice qué emula, qué no, y por qué su verde
+# no reemplaza una corrida real en Windows.
+#
+# Portabilidad exigida, macOS bash 3.2. Sin declare -A, sin mapfile,
+# sin grep -P, sin sed -i, sin jq.
+
+set -uo pipefail
+
+# La raíz que MSYS antepone. En la VM de Netec es la instalación de Git.
+MSYS_SHIM_ROOT="${MSYS_SHIM_ROOT:-C:/Program Files/Git}"
+
+DIR_SHIM="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# ── Encontrar el docker de verdad ────────────────────────────
+# Se saca del PATH la carpeta de este shim y se busca de nuevo. Hacerlo
+# así, y no con una ruta escrita a mano, es lo que permite que el shim
+# funcione con Docker Desktop, con Colima o con un binario en /opt.
+PATH_LIMPIO=''
+while IFS= read -r p; do
+    [ -z "$p" ] && continue
+    [ "$p" = "$DIR_SHIM" ] && continue
+    if [ -z "$PATH_LIMPIO" ]; then
+        PATH_LIMPIO="$p"
+    else
+        PATH_LIMPIO="$PATH_LIMPIO:$p"
+    fi
+done <<EOF
+$(printf '%s\n' "$PATH" | tr ':' '\n')
+EOF
+
+DOCKER_REAL="$(PATH="$PATH_LIMPIO" command -v docker 2>/dev/null)"
+if [ -z "$DOCKER_REAL" ]; then
+    echo "[shim msys] no encuentro el docker real fuera de $DIR_SHIM" >&2
+    exit 127
+fi
+
+# ── La conversión ────────────────────────────────────────────
+# MSYS solo mira si MSYS_NO_PATHCONV EXISTE, no su valor. Por eso el
+# chequeo es ${VAR+x} y no ${VAR:-}: con la variable en vacío MSYS
+# tampoco convierte, y un test que la dejara vacía daría un falso verde.
+convertir=1
+if [ -n "${MSYS_NO_PATHCONV+x}" ]; then
+    convertir=0
+fi
+
+# bash 3.2 con set -u revienta al expandir un array vacío, así que el
+# caso sin argumentos se despacha antes de construirlo.
+if [ $# -eq 0 ]; then
+    exec "$DOCKER_REAL"
+fi
+
+args=()
+for a in "$@"; do
+    # Se convierte solo el argumento que empieza con una barra sola.
+    # "//foo" es el escape que MSYS respeta y se deja pasar igual.
+    if [ "$convertir" -eq 1 ] && [ "${a#/}" != "$a" ] && [ "${a#//}" = "$a" ]; then
+        nuevo="${MSYS_SHIM_ROOT}${a}"
+        if [ "${MSYS_SHIM_VERBOSE:-}" = "1" ]; then
+            printf '[shim msys] %s  →  %s\n' "$a" "$nuevo" >&2
+        fi
+        args+=("$nuevo")
+    else
+        args+=("$a")
+    fi
+done
+
+exec "$DOCKER_REAL" "${args[@]}"
