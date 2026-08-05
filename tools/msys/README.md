@@ -108,13 +108,35 @@ máquina real. **Antes de una clase, lo que vale es la corrida en la VM.**
 
 ---
 
-## Deuda conocida
+## Plan pendiente
 
 Al 2026-08-05 la línea `export MSYS_NO_PATHCONV=1` está solo en los `bin/common.sh` de los
-labs **01, 02 y 03** (SPEC-62, acotada a la clase de ese día). Pendiente:
+labs **01, 02 y 03**: la SPEC-62 se acotó a la clase de ese día. En orden:
 
-- Los `common.sh` de los labs **04 al 14**.
-- Barrido del patrón `docker exec|run` con ruta absoluta: `format-storage.sh:141`
-  (verificado en verde en la VM, pero solo en labs 01 y 03) y
-  `Capitulo_5/lab-12-ksqldb/ksql-cli/execute-file.sh:19` (`--file /tmp/statements.sql`,
-  sin verificar).
+### 1 · Barrido de protecciones inline en los 14 `tests/*.sh` — va primero
+
+`MSYS_NO_PATHCONV` estaba parchado en los tests y no en la biblioteca del alumno. **Puede
+haber más.** Se busca toda protección que un test se puso a sí mismo y se pregunta, en cada
+una, si el entorno del alumno también la necesita. Es el punto que puede destapar algo
+grande, y por eso va antes que el resto. Regla en `tests/CONVENCIONES-TEST.md` §2.
+
+### 2 · La línea en los `common.sh` de los labs 04 al 14
+
+### 3 · Barrido del patrón de rutas — son DOS formas, y el shim cubre una sola
+
+`grep` de `docker exec` / `docker run` buscando:
+
+| Forma | Ejemplo | Cómo se detecta |
+|---|---|---|
+| Argumento suelto que empieza con `/` | `ls -la /var/lib/kafka/data` | **El shim la pilla.** |
+| `--flag=/ruta` | `--file=/tmp/statements.sql` | **A ojo.** MSYS convierte lo de después del `=`; el shim solo mira el inicio del argumento completo y la deja pasar en verde. |
+
+Un verde del shim en este barrido **no cierra el punto**: solo cierra la primera forma. La
+segunda hay que leerla.
+
+Puntos ya identificados, ambos de la primera forma:
+
+- `format-storage.sh:141` — verificado en verde en la VM el 2026-08-05, pero solo en los
+  labs 01 y 03.
+- `Capitulo_5/lab-12-ksqldb/ksql-cli/execute-file.sh:19` — `--file /tmp/statements.sql`,
+  sin verificar.

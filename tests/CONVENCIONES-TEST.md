@@ -125,6 +125,18 @@ instructor sí usa la lib central (DRY).
   La contraparte práctica: cuando una protección se agrega inline a un test, la pregunta obligatoria
   es **por qué hizo falta ahí**, y si la respuesta es «porque el entorno del alumno también la
   necesita», la línea baja a la biblioteca del lab y el test deja de ser su único portador.
+- **Un arnés se valida demostrando que puede decir que NO.** Una herramienta que existe para
+  detectar defectos —un shim, un sabotaje, un validador— no queda probada porque encuentre lo que
+  fuimos a buscar. Queda probada cuando se le presentan los casos en que **debe** guardar silencio y
+  los distingue de aquellos en que debe gritar. Se validan las tres respuestas: el caso que dispara,
+  el caso vecino que **no** debe disparar, y el caso que apaga la detección a propósito.
+
+  *Caso que la origina*: el shim de `tools/msys/` nació con la condición del escape `//` invertida.
+  Con ese defecto no habría convertido **ninguna** ruta y todo habría dado verde — una herramienta
+  para detectar falsos verdes que era ella misma un falso verde. No se vio al leer el archivo, se vio
+  al ejecutarlo. Quedó validado con tres casos: convierte `/var/lib/kafka/data`, respeta `//foo`, y
+  **no** convierte con `MSYS_NO_PATHCONV` en vacío. El tercero es el que prueba que sabe decir que
+  no, y es el que faltaba.
 
 ---
 
