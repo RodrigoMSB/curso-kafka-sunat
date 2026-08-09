@@ -33,7 +33,7 @@ if [ "$VIVOS" -eq 3 ]; then ok "los 3 contenedores kafka-broker-{1,2,3} están c
 else bad "solo ${VIVOS}/3 contenedores corriendo" "levanta tu clúster de 3 (Lab 02) o usa soluciones/"; fi
 
 API_OK=0
-if [ "$VIVOS" -gt 0 ] && MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= kafka-broker-1 \
+if [ "$VIVOS" -gt 0 ] && docker exec -e KAFKA_OPTS= kafka-broker-1 \
      kafka-broker-api-versions --bootstrap-server "$BOOT" >/dev/null 2>&1; then
     ok "el broker responde a la API interna"; API_OK=1
 else bad "el broker no responde por el listener interno" "espera a que arranquen o revisa docker logs kafka-broker-1"; fi
@@ -50,12 +50,12 @@ fi
 # 3. Produce/consume efímero por el listener interno
 if [ "$VIVOS" -eq 3 ] && [ "$API_OK" -eq 1 ]; then
     MARK="chk-$(date +%s)-${RANDOM}"
-    MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= kafka-broker-1 kafka-topics \
+    docker exec -e KAFKA_OPTS= kafka-broker-1 kafka-topics \
         --bootstrap-server "$BOOT" --create --topic "$MARK" --partitions 3 --replication-factor 3 >/dev/null 2>&1
     for i in 1 2 3; do echo "${MARK}-${i}"; done | \
-        MSYS_NO_PATHCONV=1 docker exec -i -e KAFKA_OPTS= kafka-broker-1 kafka-console-producer \
+        docker exec -i -e KAFKA_OPTS= kafka-broker-1 kafka-console-producer \
         --bootstrap-server "$BOOT" --command-property acks=all --topic "$MARK" >/dev/null 2>&1
-    GOT=$(MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= kafka-broker-1 bash -c \
+    GOT=$(docker exec -e KAFKA_OPTS= kafka-broker-1 bash -c \
         "kafka-console-consumer --bootstrap-server $BOOT --topic $MARK --from-beginning --timeout-ms 8000 2>/dev/null | grep -c '^${MARK}-'")
     if [ "$GOT" = "3" ]; then ok "produce/consume interno funciona (3/3 marcas)"
     else bad "produce/consume: llegaron ${GOT}/3" "revisa la salud del clúster"; fi

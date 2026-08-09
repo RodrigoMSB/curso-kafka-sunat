@@ -37,7 +37,7 @@ for c in kafka-broker; do docker rm -f "$c" >/dev/null 2>&1 || true; done
 echo -e "${CYAN}[2/3] Reconstruyendo línea base funcional...${NC}"
 docker compose -f "$SOL" up -d >/dev/null 2>&1
 WAITED=0
-until MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= kafka-broker \
+until docker exec -e KAFKA_OPTS= kafka-broker \
         kafka-broker-api-versions --bootstrap-server kafka-broker:29092 >/dev/null 2>&1 || [ "$WAITED" -ge 150 ]; do
     sleep 4; WAITED=$((WAITED+4))
 done

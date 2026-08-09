@@ -28,13 +28,13 @@ if [ "$VIVOS" -eq 3 ]; then ok "los 3 contenedores kafka-broker-{1,2,3} están c
 else bad "solo ${VIVOS}/3 contenedores corriendo" "levanta tu clúster de 3 (Lab 02) o usa soluciones/"; fi
 
 API_OK=0
-if [ "$VIVOS" -gt 0 ] && MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= kafka-broker-1 \
+if [ "$VIVOS" -gt 0 ] && docker exec -e KAFKA_OPTS= kafka-broker-1 \
      kafka-broker-api-versions --bootstrap-server "$BOOT" >/dev/null 2>&1; then
     ok "el broker responde a la API"; API_OK=1
 else bad "el broker no responde" "espera a que arranquen o revisa docker logs kafka-broker-1"; fi
 
 # 2. El properties generado existe
-if [ "$API_OK" -eq 1 ] && MSYS_NO_PATHCONV=1 docker exec kafka-broker-1 bash -c \
+if [ "$API_OK" -eq 1 ] && docker exec kafka-broker-1 bash -c \
      'grep -l process.roles /etc/kafka/*.properties' >/dev/null 2>&1; then
     ok "el server.properties generado existe (contiene process.roles)"
 else
@@ -43,7 +43,7 @@ fi
 
 # 3. Configuración efectiva legible, con orígenes STATIC
 if [ "$API_OK" -eq 1 ]; then
-    CFG=$(MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= kafka-broker-1 kafka-configs \
+    CFG=$(docker exec -e KAFKA_OPTS= kafka-broker-1 kafka-configs \
         --bootstrap-server "$BOOT" --describe --entity-type brokers --entity-name 1 --all 2>/dev/null)
     if echo "$CFG" | grep -q 'STATIC_BROKER_CONFIG'; then
         ok "kafka-configs muestra orígenes (hay STATIC_BROKER_CONFIG)"

@@ -29,16 +29,16 @@ else bad "solo ${VIVOS}/3 contenedores corriendo" "levanta tu clúster de 3 (gu�
 
 # 2. API responde en broker-1
 API_OK=0
-if [ "$VIVOS" -gt 0 ] && MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= kafka-broker-1 \
+if [ "$VIVOS" -gt 0 ] && docker exec -e KAFKA_OPTS= kafka-broker-1 \
      kafka-broker-api-versions --bootstrap-server "$BOOT" >/dev/null 2>&1; then
     ok "el broker responde a la API"; API_OK=1
 else bad "el broker no responde" "espera a que arranquen o revisa docker logs kafka-broker-1"; fi
 
 # 3. Quórum con líder y 3 voters
 if [ "$API_OK" -eq 1 ]; then
-    ST=$(MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= kafka-broker-1 \
+    ST=$(docker exec -e KAFKA_OPTS= kafka-broker-1 \
          kafka-metadata-quorum --bootstrap-server "$BOOT" describe --status 2>/dev/null)
-    REP=$(MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= kafka-broker-1 \
+    REP=$(docker exec -e KAFKA_OPTS= kafka-broker-1 \
          kafka-metadata-quorum --bootstrap-server "$BOOT" describe --replication 2>/dev/null)
     VOTERS=$(echo "$REP" | grep -cE '^[0-9]+[[:space:]]')
     if echo "$ST" | grep -q 'LeaderId' && [ "${VOTERS:-0}" -ge 3 ]; then
@@ -51,12 +51,12 @@ fi
 # 4. Produce/consume efímero (RF=3)
 if [ "$VIVOS" -eq 3 ] && [ "$API_OK" -eq 1 ]; then
     MARK="chk-$(date +%s)-${RANDOM}"
-    MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= kafka-broker-1 kafka-topics \
+    docker exec -e KAFKA_OPTS= kafka-broker-1 kafka-topics \
         --bootstrap-server "$BOOT" --create --topic "$MARK" --partitions 3 --replication-factor 3 >/dev/null 2>&1
     for i in 1 2 3; do echo "${MARK}-${i}"; done | \
-        MSYS_NO_PATHCONV=1 docker exec -i -e KAFKA_OPTS= kafka-broker-1 kafka-console-producer \
+        docker exec -i -e KAFKA_OPTS= kafka-broker-1 kafka-console-producer \
         --bootstrap-server "$BOOT" --command-property acks=all --topic "$MARK" >/dev/null 2>&1
-    GOT=$(MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= kafka-broker-1 bash -c \
+    GOT=$(docker exec -e KAFKA_OPTS= kafka-broker-1 bash -c \
         "kafka-console-consumer --bootstrap-server $BOOT --topic $MARK --from-beginning --timeout-ms 8000 2>/dev/null | grep -c '^${MARK}-'")
     if [ "$GOT" = "3" ]; then ok "produce/consume funciona (3/3 marcas, RF=3)"
     else bad "produce/consume: llegaron ${GOT}/3" "revisa la salud del clúster (guía 02)"; fi

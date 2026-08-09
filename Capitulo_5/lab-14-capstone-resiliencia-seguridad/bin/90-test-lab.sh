@@ -36,7 +36,7 @@ if [ "$VIVOS" -eq 3 ]; then ok "los 3 brokers están healthy"
 else bad "solo ${VIVOS}/3 brokers healthy" "ejecuta bin/start-lab.sh y espera a que termine"; fi
 
 # 2. Listener seguro + admin: listar el tópico confidencial vía SASL_SSL
-if [ "$VIVOS" -gt 0 ] && MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= cli-client kafka-topics \
+if [ "$VIVOS" -gt 0 ] && docker exec -e KAFKA_OPTS= cli-client kafka-topics \
         --bootstrap-server "$BOOT" --command-config "$ADMIN" --list 2>/dev/null | grep -q "^${TOPIC}$"; then
     ok "el listener seguro responde a admin (SASL_SSL) y ve ${TOPIC}"
 else
@@ -44,7 +44,7 @@ else
 fi
 
 # 3. ACLs presentes
-if MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= cli-client kafka-acls \
+if docker exec -e KAFKA_OPTS= cli-client kafka-acls \
         --bootstrap-server "$BOOT" --command-config "$ADMIN" --list 2>/dev/null | grep -q 'User:'; then
     ok "las ACLs están cargadas (list-acls devuelve reglas)"
 else

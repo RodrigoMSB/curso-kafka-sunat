@@ -43,7 +43,7 @@ fi
 
 # 3. Perf corto: 1000 registros → debe reportar records/sec
 if [ "$VIVOS" -eq 3 ]; then
-    OUT=$(MSYS_NO_PATHCONV=1 docker exec kafka-broker-1 kafka-producer-perf-test \
+    OUT=$(docker exec kafka-broker-1 kafka-producer-perf-test \
         --topic "$BENCH" --num-records 1000 --record-size 200 --throughput -1 \
         --producer-props bootstrap.servers="$BOOT" acks=all 2>&1)
     if echo "$OUT" | grep -q 'records/sec'; then ok "producer-perf-test devuelve throughput (records/sec)"

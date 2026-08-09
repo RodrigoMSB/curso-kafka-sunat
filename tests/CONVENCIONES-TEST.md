@@ -138,6 +138,47 @@ instructor sí usa la lib central (DRY).
   **no** convierte con `MSYS_NO_PATHCONV` en vacío. El tercero es el que prueba que sabe decir que
   no, y es el que faltaba.
 
+### La guardia de portabilidad vive en la biblioteca, nunca inline
+
+`export MSYS_NO_PATHCONV=1` vive en `bin/common.sh`, y todo script de `bin/` que invoque
+`docker` carga esa biblioteca. Un `MSYS_NO_PATHCONV=1 docker ...` escrito a mano en cada
+comando funciona hoy y queda huérfano el día que la biblioteca cambie: es el mismo verde
+falso con otra cara.
+
+**Excepción documentada, una sola:** `Capitulo_5/lab-14-capstone-resiliencia-seguridad/bin/generate-certs.sh:68`
+conserva su prefijo inline. Tres razones, y hacen falta las tres:
+
+1. Es el único sitio donde el prefijo es **load-bearing**: pasa `-w /certs` y `-v "$host_certs:/certs"`
+   como argumentos sueltos, que es exactamente lo que MSYS convierte.
+2. Vive dentro de una rama `if [[ "$IS_MSYS" -eq 1 ]]`, con un `else` que corre el mismo
+   `docker run` **sin** el prefijo. El autor trató la plataforma a propósito.
+3. Usa `to_native_path` para el `-v`, o sea que hay más maquinaria de portabilidad alrededor.
+
+Tocarlo sin la VM de Netec de por medio es la clase de cambio que revienta allá y no acá.
+**Un barrido que lo encuentre no debe "arreglarlo".**
+
+*Caso que origina la regla:* la guardia estaba en los 14 `bin/common.sh` (SPEC-64) y ningún
+script de `bin/` cargaba esa biblioteca — puesta y muerta. El vector real no eran las rutas
+de contenedor sino el `docker compose -f "$COMPOSE_FILE"` con ruta absoluta del host, que un
+barrido anterior no vio por buscar sólo `/etc|/var|/opt`.
+
+---
+
+### Un arnés que no puede decir NO no es evidencia
+
+Antes de usar una compuerta como prueba, hay que demostrar que **falla cuando debe fallar**.
+Una compuerta que da el mismo resultado con el defecto presente y ausente no prueba nada,
+por más verde que se vea.
+
+*Caso que la origina (SPEC-66 F3):* se propuso validar la migración de la guardia inline
+corriendo `lab-01/bin/90-test-lab.sh` bajo el shim de `tools/msys/` y esperando
+`conversiones: 0`. Medido: da `0` con la biblioteca cargada **y** `0` con el `source`
+neutralizado, porque ese script no pasa ninguna ruta absoluta como argumento suelto. La
+compuerta se reemplazó por el e2e del lab, que sí prueba lo único en riesgo — que el script
+siga funcionando sin su prefijo.
+
+---
+
 ### Ningún script del curso destruye nada fuera de su propio proyecto compose
 
 Prohibido: `prune` en cualquiera de sus formas, y seleccionar qué destruir con un patrón

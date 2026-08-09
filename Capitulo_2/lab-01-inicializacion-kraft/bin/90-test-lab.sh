@@ -27,7 +27,7 @@ else
 fi
 
 # 2. API del broker
-if MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= kafka-broker \
+if docker exec -e KAFKA_OPTS= kafka-broker \
      kafka-broker-api-versions --bootstrap-server kafka-broker:29092 >/dev/null 2>&1; then
     ok "el broker responde a la API"
 else
@@ -35,7 +35,7 @@ else
 fi
 
 # 3. Storage formateado con cluster.id
-CID=$(MSYS_NO_PATHCONV=1 docker exec kafka-broker bash -c \
+CID=$(docker exec kafka-broker bash -c \
       "grep -h 'cluster.id' /var/lib/kafka/data/meta.properties 2>/dev/null | head -1" 2>/dev/null)
 if [ -n "$CID" ]; then
     ok "storage formateado (${CID})"
@@ -44,7 +44,7 @@ else
 fi
 
 # 4. Quórum de 1 nodo responde
-if MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= kafka-broker \
+if docker exec -e KAFKA_OPTS= kafka-broker \
      kafka-metadata-quorum --bootstrap-server kafka-broker:29092 describe --status 2>/dev/null | grep -q 'LeaderId'; then
     ok "el quórum KRaft (1 nodo) tiene líder"
 else
