@@ -391,3 +391,59 @@ FICHA_FLAGS="$(dirname "${BASH_SOURCE[0]}")/flags.sh"
 if [ -f "$FICHA_FLAGS" ]; then
     source "$FICHA_FLAGS"
 fi
+
+# ── Familia operativa ────────────────────────────────────────
+# La ficha de LECCIÓN explica un comando para que el alumno lo entienda:
+# se lee en modo estudio y puede permitirse quince líneas. La OPERATIVA
+# es otra cosa. La corre alguien que está por destruir algo, o que ya
+# rompió el lab y está apurado, y su trabajo es que esa persona sepa qué
+# conserva y qué pierde ANTES de apretar enter -- no enseñarle nada.
+#
+# De ahí el techo de 10 líneas: no es estética, es que una pantalla de
+# advertencia larga no se lee. Cuatro bloques fijos y se acabó.
+#
+# No es un segundo motor: usa la misma fontanería (ficha_activa,
+# ficha_abrir/medio/cerrar, ficha_bloque) que la familia de lección. Dos
+# implementaciones del ancho visible serían el mismo pecado que las
+# guardias inline que la SPEC-66 vino a sacar.
+#
+#   ficha_op <titulo> <que_hace> <conserva> <destruye> <cuando>
+#
+# El bloque DESTRUYE nombra el proyecto compose al que se limita, que es
+# el contrato heredado del F5: nada se destruye fuera del propio proyecto.
+ficha_op() {
+    ficha_activa || return 0
+    ficha_init_color
+
+    local titulo="$1" hace="$2" conserva="$3" destruye="$4" cuando="$5"
+
+    ficha_abrir "$titulo"
+    ficha_bloque "${F_FLAG}QUÉ HACE${F_OFF}  ${F_FLECHA}→${F_OFF} " 'QUÉ HACE  → ' \
+                 "$hace" "$F_EXPL" 4
+    ficha_bloque "${F_BIN}CONSERVA${F_OFF}  ${F_FLECHA}→${F_OFF} " 'CONSERVA  → ' \
+                 "$conserva" "$F_EXPL" 4
+    ficha_bloque "${F_WARN}DESTRUYE${F_OFF}  ${F_FLECHA}→${F_OFF} " 'DESTRUYE  → ' \
+                 "$destruye" "$F_WARN" 4
+    ficha_bloque "${F_NOTA}CUÁNDO${F_OFF}    ${F_FLECHA}→${F_OFF} " 'CUÁNDO    → ' \
+                 "$cuando" "$F_NOTA" 4
+    ficha_cerrar
+}
+
+# Encabezado del validador (90-test-lab.sh). Mismo techo, mismo marco,
+# pero su contenido es la lista de lo que ese lab verifica -- que es
+# distinta en cada uno. Se pasa una línea por chequeo.
+#
+#   ficha_op_verifica <titulo> <chequeo>...
+ficha_op_verifica() {
+    ficha_activa || return 0
+    ficha_init_color
+
+    local titulo="$1"; shift
+    local c
+
+    ficha_abrir "$titulo"
+    for c in "$@"; do
+        ficha_bloque "${F_FLECHA}·${F_OFF} " '· ' "$c" "$F_EXPL" 2
+    done
+    ficha_cerrar
+}
