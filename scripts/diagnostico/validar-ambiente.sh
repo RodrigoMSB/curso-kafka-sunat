@@ -24,9 +24,6 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 SCRIPT_VERSION="1.0.0"
 LAB_TIMEOUT_SECS=600
 
-# Lista hardcoded de containers conocidos del curso (para limpieza forzada)
-KNOWN_CONTAINER_PATTERN='^(kafka-broker-|kafbat-ui|cli-client|gps-producer|control-center|schema-registry|kafka-connect|ksqldb-server|ksqldb-cli|prometheus|grafana|debezium|postgres)'
-
 # ─── Colores ───
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -36,7 +33,6 @@ BOLD='\033[1m'
 NC='\033[0m'
 
 # ─── Variables runtime ───
-SKIP_CLEANUP=0
 ONLY_LAB=""
 FROM_LAB=""
 TO_LAB=""
@@ -54,7 +50,6 @@ Opciones:
     --lab N               Valida solo lab-N (ej: --lab 05)
     --from N              Valida desde lab-N hasta lab-12
     --to N                Valida desde lab-01 hasta lab-N
-    --skip-cleanup        No ejecuta docker volume prune al final de cada lab
     --help                Muestra este mensaje y sale
 
 Lab 03 siempre se marca SKIP (lab manual: el alumno construye su propio cluster).
@@ -64,7 +59,6 @@ Ejemplos:
     validar-ambiente.sh --lab 05
     validar-ambiente.sh --from 06
     validar-ambiente.sh --to 04
-    validar-ambiente.sh --skip-cleanup
 
 Tiempo estimado: ~30-50 minutos para los 12 labs.
 
@@ -106,10 +100,6 @@ while [[ $# -gt 0 ]]; do
             fi
             TO_LAB=$(printf "%02d" "$2")
             shift 2
-            ;;
-        --skip-cleanup)
-            SKIP_CLEANUP=1
-            shift
             ;;
         *)
             echo "ERROR: opción desconocida: $1" >&2
@@ -200,14 +190,23 @@ echo "Labs a probar: ${#SELECTED_LABS[@]}"
 [[ -z "$TIMEOUT_CMD" ]] && echo -e "${YELLOW}Aviso: 'timeout' no disponible — los labs pueden colgar indefinidamente${NC}"
 echo ""
 
-# ─── Helper: cleanup containers conocidos ───
-cleanup_known_containers() {
-    local containers
-    containers=$(docker ps -a --format '{{.Names}}' 2>/dev/null | grep -E "$KNOWN_CONTAINER_PATTERN" || true)
-    if [[ -n "$containers" ]]; then
-        # shellcheck disable=SC2086
-        echo "$containers" | xargs docker rm -f >/dev/null 2>&1 || true
-    fi
+# ─── Helper: baja lo que levantó ESTE lab, y nada más ───
+# Acá había un `docker ps -a | grep <patrón> | xargs docker rm -f`. El patrón
+# terminaba en `postgres`, así que alcanzaba cualquier contenedor de la máquina
+# llamado `postgres-algo` —corriendo o parado, de cualquier proyecto— y también
+# `grafana*`, `prometheus*` y `schema-registry*`. Un patrón no delimita el curso:
+# delimita nombres que alguien supuso únicos. En la Mac del PO, once contenedores
+# ajenos se salvaban sólo por el ancla `^` del regex.
+#
+# El alcance ahora lo da el proyecto compose del lab, que es propio y único en
+# los catorce (`infra/.env` en los labs 05-14, `name:` del compose en los 01-04).
+# `down` sin `-f` resuelve los recursos por etiqueta de proyecto, así que no
+# necesita el archivo y no puede alcanzar nada de fuera.
+# Ver la regla en tests/CONVENCIONES-TEST.md.
+bajar_proyecto_del_lab() {  # <proyecto>
+    local proy="${1:-}"
+    [[ -n "$proy" ]] || return 0
+    docker compose -p "$proy" down -v --remove-orphans >/dev/null 2>&1 || true
 }
 
 # ─── Helper: ejecuta un comando con timeout si está disponible ───
@@ -237,6 +236,10 @@ for lab_path in "${SELECTED_LABS[@]}"; do
     INDEX=$((INDEX + 1))
     lab_name=$(basename "$lab_path")
     lab_num=$(echo "$lab_name" | sed -E 's/^lab-([0-9]+)-.*/\1/')
+    # Proyecto compose del lab: es la frontera de lo que este script puede
+    # destruir. Coincide con el COMPOSE_PROJECT_NAME de su infra/.env (labs
+    # 05-14) y con el `name:` de su compose (labs 01-04).
+    lab_proy="novatech-lab${lab_num}"
     log_file="$LOGS_DIR/${lab_name}.log"
 
     printf "${CYAN}[%d/%d]${NC} Probando ${BOLD}%s${NC}... " "$INDEX" "$TOTAL" "$lab_name"
@@ -263,8 +266,12 @@ for lab_path in "${SELECTED_LABS[@]}"; do
         continue
     fi
 
-    # Pre-cleanup: matar containers de labs anteriores
-    cleanup_known_containers
+    # Pre-cleanup: baja restos de una corrida anterior DE ESTE MISMO lab.
+    # Ya no se matan los contenedores de otros labs: si uno quedó arriba y su
+    # container_name choca, el start-lab.sh de este lab falla y se ve en el
+    # log. Fallar a la vista es preferible a destruir algo que no es de este
+    # lab — que es de lo que trata esta protección.
+    bajar_proyecto_del_lab "$lab_proy"
 
     # Ejecutar start-lab.sh
     start_ts=$(date +%s)
@@ -292,17 +299,25 @@ for lab_path in "${SELECTED_LABS[@]}"; do
         REPORT_LINES+=("[$lab_num] $lab_name $(printf '%*s' $((40 - ${#lab_name})) '') FAIL  (rc=$rc, log: ${lab_name}.log)")
     fi
 
-    # Stop-lab + cleanup forzado
-    stop_script="$lab_path/bin/stop-lab.sh"
-    if [[ -f "$stop_script" ]]; then
-        bash "$stop_script" >> "$log_file" 2>&1 || true
+    # Reset-lab + bajada del proyecto. Antes acá iba stop-lab.sh, que hace
+    # `docker compose stop`: no elimina contenedores ni volúmenes, así que la
+    # corrida de los 14 los acumulaba. reset-lab.sh hace `down -v
+    # --remove-orphans` sobre el proyecto del lab, que es lo que corresponde
+    # entre laboratorio y laboratorio. Los labs 01-04 no lo tienen (el alumno
+    # construye su clúster a mano) y el `if` los salta, igual que antes.
+    reset_script="$lab_path/bin/reset-lab.sh"
+    if [[ -f "$reset_script" ]]; then
+        bash "$reset_script" >> "$log_file" 2>&1 || true
     fi
-    cleanup_known_containers
+    bajar_proyecto_del_lab "$lab_proy"
 
-    # docker volume prune (a menos que --skip-cleanup)
-    if [[ $SKIP_CLEANUP -eq 0 ]]; then
-        docker volume prune -f >/dev/null 2>&1 || true
-    fi
+    # Sin limpieza global de volúmenes. Antes había acá un `docker volume prune
+    # -f`, que no acepta alcance de proyecto: borraba TODO volumen sin usar de la
+    # máquina. En la Mac del PO alcanzaba 187 de 216 volúmenes, de una docena de
+    # proyectos ajenos al curso, en silencio y con el default activado. Los
+    # volúmenes de cada lab los baja el `down -v` de su propio stop-lab.sh, que
+    # sí está acotado al proyecto. Si algún lab deja volúmenes residuales, el
+    # arreglo va en SU stop-lab.sh, no en un barrido global que lo compense.
 
     # Pausa entre labs
     sleep 5

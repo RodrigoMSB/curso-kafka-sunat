@@ -234,5 +234,4 @@ volumes:
 
 networks:
   default:
-    name: novatech-lab10-net
     driver: bridge

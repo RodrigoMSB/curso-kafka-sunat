@@ -6,7 +6,6 @@
 networks:
   novatech-network:
     driver: bridge
-    name: novatech-network
 
 volumes:
   kafka-broker-1-data:

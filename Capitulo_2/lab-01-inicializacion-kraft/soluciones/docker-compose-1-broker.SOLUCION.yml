@@ -1,5 +1,8 @@
 # NovaTech Logistics - Lab 01 / Etapa 1: Un solo broker - SOLUCIÓN
 
+# Proyecto compose propio: delimita qué puede borrar un down -v
+name: novatech-lab01
+
 services:
   kafka-broker:
     image: confluentinc/cp-kafka:8.2.0

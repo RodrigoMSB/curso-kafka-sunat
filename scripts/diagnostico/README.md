@@ -51,7 +51,6 @@ cd Capitulo_3/lab-05-operacion-topicos
 | `--lab N` | Valida solo `lab-NN` (ej: `--lab 05`) |
 | `--from N` | Valida desde `lab-NN` hasta `lab-12` (ej: `--from 06`) |
 | `--to N` | Valida desde `lab-01` hasta `lab-NN` (ej: `--to 04`) |
-| `--skip-cleanup` | No ejecuta `docker volume prune` al final de cada lab (útil para debug) |
 | `--help` | Muestra la ayuda y sale |
 
 ### Comportamiento por lab
@@ -63,8 +62,13 @@ Para cada lab seleccionado:
 3. Captura exit code y tiempo de ejecución.
 4. Ejecuta `bin/stop-lab.sh` (best-effort, sin abortar si falla).
 5. Limpieza forzada de containers conocidos.
-6. `docker volume prune -f` (a menos que `--skip-cleanup`).
-7. Pausa de 5 segundos antes del próximo lab.
+6. Pausa de 5 segundos antes del próximo lab.
+
+> **No hay limpieza global de volúmenes.** Los volúmenes de cada lab los baja el
+> `down -v` de su propio `stop-lab.sh`, acotado a su proyecto compose. Un
+> `docker volume prune` alcanzaría todo volumen sin usar de la máquina, incluidos
+> los de proyectos ajenos al curso, y por eso está prohibido en este repositorio
+> (ver `tests/CONVENCIONES-TEST.md`).
 
 **Lab 03 siempre se marca SKIP** porque es un lab manual donde el alumno construye su propio cluster (no hay `start-lab.sh` automatizable).
 
@@ -159,13 +163,6 @@ El script es seguro de ejecutar varias veces seguidas:
 
 - Cada ejecución crea un directorio de logs **nuevo** con timestamp (no pisa anteriores).
 - Limpia containers conocidos antes y después de cada lab.
-- `docker volume prune` evita acumular volúmenes huérfanos entre runs.
-
-Si querés mantener todo entre ejecuciones para debug:
-
-```bash
-./scripts/diagnostico/validar-ambiente.sh --skip-cleanup
-```
 
 ---
 

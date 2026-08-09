@@ -138,6 +138,35 @@ instructor sí usa la lib central (DRY).
   **no** convierte con `MSYS_NO_PATHCONV` en vacío. El tercero es el que prueba que sabe decir que
   no, y es el que faltaba.
 
+### Ningún script del curso destruye nada fuera de su propio proyecto compose
+
+Prohibido: `prune` en cualquiera de sus formas, y seleccionar qué destruir con un patrón
+sobre `docker ps`. Un patrón no delimita el curso: delimita nombres que alguien supuso
+únicos.
+
+Lo que se destruye se nombra, o se acota con `-p <proyecto>`. Y se dice en pantalla qué se
+destruyó.
+
+*Caso que la origina:* `validar-ambiente.sh:304` habría borrado **187 de los 216 volúmenes**
+de la máquina del PO —de una docena de proyectos ajenos al curso— en silencio y con el
+default activado. Y `:209` destruía contenedores ajenos que matcheasen `postgres`, `grafana`
+o `prometheus`; once contenedores del PO se salvaban sólo por el ancla `^` del regex.
+`docker rm -f` alcanza también contenedores **parados**.
+
+Consecuencias operativas de la regla:
+
+- Cada lab tiene **proyecto compose propio y único**: `novatech-labNN`, declarado en su
+  `infra/.env` (labs 05–14) o con `name:` de nivel raíz en su compose (labs 01–04, para que
+  viaje con la plantilla cuando el alumno la copia a `mi-cluster/`).
+- Las redes **no llevan `name:` literal**. Compose las deriva del proyecto, así que la
+  frontera la garantiza Docker y no una convención que alguien tiene que sincronizar a mano.
+- Entre laboratorio y laboratorio se usa `reset-lab.sh` (`down -v --remove-orphans`), no
+  `stop-lab.sh` (`stop`, que no elimina nada).
+- Si un lab deja residuos, el arreglo va **en su propio `stop-lab.sh`/`reset-lab.sh`**, nunca
+  en un barrido global que lo compense por fuera.
+- Si un `container_name` ajeno bloquea el arranque, el lab **falla a la vista**. Fallar
+  ruidoso es preferible a destruir algo que no es de este lab.
+
 ---
 
 ## 3. Reglas de implementación

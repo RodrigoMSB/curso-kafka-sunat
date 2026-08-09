@@ -1,5 +1,8 @@
 # NovaTech Logistics - Lab 04 / Etapa 2: Tres brokers con quorum KRaft - SOLUCIÓN
 
+# Proyecto compose propio: delimita qué puede borrar un down -v
+name: novatech-lab04
+
 services:
   kafka-broker-1:
     image: confluentinc/cp-kafka:8.2.0

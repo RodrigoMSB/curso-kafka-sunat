@@ -220,5 +220,4 @@ volumes:
 
 networks:
   default:
-    name: novatech-lab12-net
     driver: bridge
