@@ -37,24 +37,10 @@ for p in $OTROS; do
 done
 
 # ── 2. Conflictos de nombre, por etiqueta y en pantalla ─────
-for c in $CONTENEDORES; do
-    EXISTE=$(docker ps -a --filter "name=^${c}$" --format '{{.Names}}' 2>/dev/null | head -1)
-    [ -z "$EXISTE" ] && continue
-    DUENIO=$(docker inspect "$c" --format '{{index .Config.Labels "com.docker.compose.project"}}' 2>/dev/null || true)
-    case "$DUENIO" in
-        novatech-lab*)
-            echo -e "${YELLOW}[start-lab] botando ${c} (proyecto ${DUENIO})${NC}"
-            docker rm -f "$c" >/dev/null 2>&1 || true
-            ;;
-        *)
-            echo -e "${RED}[start-lab] el nombre '${c}' lo tiene un contenedor que NO es del curso.${NC}" >&2
-            echo -e "${RED}            proyecto compose: ${DUENIO:-<sin etiqueta>}${NC}" >&2
-            echo -e "${RED}            No se toca nada ajeno. Resolvelo a mano y volve a ejecutar:${NC}" >&2
-            echo -e "${RED}              docker rm -f ${c}    # solo si ese contenedor es descartable${NC}" >&2
-            exit 1
-            ;;
-    esac
-done
+# El contrato vive en bin/common.sh: solo se bota lo etiquetado
+# novatech-lab*, cada remocion se imprime, y un nombre tomado por algo
+# ajeno al curso no se toca (tests/CONVENCIONES-TEST.md).
+botar_contenedores_del_curso "start-lab" $CONTENEDORES || exit 1
 
 # ── 3. Levantar la solucion de referencia ───────────────────
 echo -e "${YELLOW}[start-lab] levantando ${PROYECTO} desde soluciones/docker-compose-3-brokers.SOLUCION.yml${NC}"

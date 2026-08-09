@@ -61,9 +61,7 @@ set -a; source "$ENV_FILE"; set +a
 
 echo -e "${YELLOW}[1/5] Levantando contenedores (3 brokers + REST Proxy + Kafbat)...${NC}"
 # Cleanup defensivo de contenedores por nombre canónico (cross-lab).
-for c in kafka-broker-1 kafka-broker-2 kafka-broker-3 kafka-rest kafbat-ui; do
-    docker rm -f "$c" 2>/dev/null || true
-done
+botar_contenedores_del_curso "start-lab" kafka-broker-1 kafka-broker-2 kafka-broker-3 kafka-rest kafbat-ui || exit 1
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down -v --remove-orphans 2>/dev/null || true
 
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d

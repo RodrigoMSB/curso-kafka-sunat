@@ -27,9 +27,7 @@ echo -e "${YELLOW}[NovaTech] Eliminando contenedores, volúmenes y redes del lab
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --profile scale down -v --remove-orphans 2>/dev/null || true
 
 # Cleanup defensivo de contenedores por nombre canónico (cross-lab).
-for c in kafka-broker-1 kafka-broker-2 kafka-broker-3 kafka-broker-4 kafbat-ui; do
-    docker rm -f "$c" 2>/dev/null || true
-done
+botar_contenedores_del_curso "reset-lab" kafka-broker-1 kafka-broker-2 kafka-broker-3 kafka-broker-4 kafbat-ui || exit 1
 
 echo -e "${GREEN}✓ Laboratorio reiniciado. Todo limpio.${NC}"
 echo -e "${CYAN}  Para empezar de nuevo: bin/start-lab.sh${NC}"

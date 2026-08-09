@@ -70,3 +70,40 @@ FICHA_LIB="$(dirname "${BASH_SOURCE[0]}")/ficha.sh"
 if [ -f "$FICHA_LIB" ]; then
     source "$FICHA_LIB"
 fi
+
+# ── Destruccion nombrada, en pantalla, y solo de lo del curso ─
+# Los composes fijan container_name (deuda declarada), asi que dos labs no
+# conviven: al cambiar de lab, el nombre choca con "Conflict: container name
+# already in use". Antes esto se resolvia con un `docker rm -f` a ciegas sobre
+# una lista literal. En la VM del alumno daba igual; en la maquina del
+# instructor esos nombres pueden ser de otro proyecto.
+#
+# El contrato (tests/CONVENCIONES-TEST.md):
+#   - solo se remueve lo etiquetado com.docker.compose.project=novatech-lab*
+#   - cada remocion se imprime, con su proyecto
+#   - un nombre tomado por algo ajeno NO se toca: se dice quien lo tiene y se
+#     falla con instruccion. Un conflicto con algo de afuera se resuelve a mano.
+# Devuelve 1 si encontro un duenio ajeno.
+botar_contenedores_del_curso() {  # <etiqueta> <contenedor>...
+    local quien="$1"; shift
+    local c existe duenio ajeno=0
+    for c in "$@"; do
+        existe=$(docker ps -a --filter "name=^${c}$" --format "{{.Names}}" 2>/dev/null | head -1)
+        [ -z "$existe" ] && continue
+        duenio=$(docker inspect "$c" --format "{{index .Config.Labels \"com.docker.compose.project\"}}" 2>/dev/null || true)
+        case "$duenio" in
+            novatech-lab*)
+                echo -e "${YELLOW}[${quien}] botando ${c} (proyecto ${duenio})${NC}"
+                docker rm -f "$c" >/dev/null 2>&1 || true
+                ;;
+            *)
+                echo -e "${RED}[${quien}] el nombre '${c}' lo tiene un contenedor que NO es del curso.${NC}" >&2
+                echo -e "${RED}          proyecto compose: ${duenio:-<sin etiqueta>}${NC}" >&2
+                echo -e "${RED}          No se toca nada ajeno. Resolvelo a mano y volve a ejecutar:${NC}" >&2
+                echo -e "${RED}            docker rm -f ${c}    # solo si ese contenedor es descartable${NC}" >&2
+                ajeno=1
+                ;;
+        esac
+    done
+    return "$ajeno"
+}

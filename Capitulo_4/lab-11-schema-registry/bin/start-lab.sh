@@ -45,9 +45,7 @@ if [ "$DOCKER_MEM_GB" -lt 5 ]; then
 fi
 
 echo -e "${YELLOW}[1/5] Levantando contenedores del clúster NovaTech Lab 11...${NC}"
-for c in kafka-broker-1 kafka-broker-2 kafka-broker-3 kafbat-ui gps-producer; do
-    docker rm -f "$c" 2>/dev/null || true
-done
+botar_contenedores_del_curso "start-lab" kafka-broker-1 kafka-broker-2 kafka-broker-3 kafbat-ui gps-producer || exit 1
 docker compose -f "$COMPOSE_FILE" down -v --remove-orphans 2>/dev/null || true
 
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d

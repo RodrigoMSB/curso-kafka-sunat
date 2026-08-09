@@ -64,9 +64,7 @@ echo -e "${YELLOW}[1/5] Levantando contenedores del clúster NovaTech (3 brokers
 #     colisionan ("Conflict: container name already in use").
 # (2) docker compose down -v --remove-orphans del proyecto actual (con profile
 #     scale para alcanzar también a kafka-broker-4 si quedó arriba).
-for c in kafka-broker-1 kafka-broker-2 kafka-broker-3 kafka-broker-4 kafbat-ui; do
-    docker rm -f "$c" 2>/dev/null || true
-done
+botar_contenedores_del_curso "start-lab" kafka-broker-1 kafka-broker-2 kafka-broker-3 kafka-broker-4 kafbat-ui || exit 1
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --profile scale down -v --remove-orphans 2>/dev/null || true
 
 # Arranca SOLO 3 brokers + kafbat (broker-4 va por profile, no aquí).
