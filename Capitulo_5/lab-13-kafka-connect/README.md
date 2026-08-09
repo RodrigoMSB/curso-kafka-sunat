@@ -35,7 +35,7 @@ Tu misión: levantar Kafka Connect en modo distributed, configurar un JDBC Sourc
 | Docker Desktop | v4.x |
 | RAM Docker | 6 GB |
 | Disco libre | 10 GB |
-| Puertos libres | 9092, 9093, 9094, 8090, 5432, 8083 |
+| Puertos libres | 9092, 9093, 9094, 8090, 15432, 8083 |
 | Otro clúster Kafka detenido | Sí |
 | Acceso a internet | Sí (descarga plugin JDBC al primer arranque) |
 
@@ -60,7 +60,7 @@ Luego abre `guia/01-arquitectura-connect.md`.
 |---|---|---|
 | Kafbat UI | http://localhost:8090 | Vista general del clúster |
 | Kafka Connect REST | http://localhost:8083 | Crear/listar/eliminar connectors |
-| PostgreSQL | localhost:5432 | DB origen y destino (user `novatech`) |
+| PostgreSQL | localhost:15432 | DB origen y destino (user `novatech`). Dentro de la red de Docker sigue siendo `postgres:5432` |
 
 ---
 

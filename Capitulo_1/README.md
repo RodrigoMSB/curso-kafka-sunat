@@ -71,7 +71,7 @@ deja un reporte en `scripts/diagnostico/logs/`.
 
 - [ ] `./validar-todo.sh --solo-preflight` termina en `PREFLIGHT OK`
 - [ ] Docker Desktop corriendo, con al menos **8 GB de RAM** asignados
-- [ ] Puertos `9092-9095`, `8081`, `8082`, `8088`, `8090` y `5432` libres en tu máquina
+- [ ] Puertos `9092-9095`, `8081`, `8082`, `8088`, `8090` y `15432` libres en tu máquina
 - [ ] Sabes explicar, con tus palabras, qué rol cumple KRaft y por qué el curso no usa ZooKeeper
 
 ---

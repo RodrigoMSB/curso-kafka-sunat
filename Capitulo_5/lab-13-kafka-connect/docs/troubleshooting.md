@@ -94,14 +94,14 @@ Si falla, revisar configuración de Docker Desktop > Settings > Resources > Netw
 
 ---
 
-## Síntoma 6: Conflicto de puertos (5432, 8083, etc.)
+## Síntoma 6: Conflicto de puertos (15432, 8083, etc.)
 
 **Causa**: tienes PostgreSQL local corriendo o un Lab anterior ocupando puertos.
 
 **Diagnóstico**:
 ```bash
-docker ps | grep -E '5432|8083|9092|9093|9094|8090'
-lsof -i :5432
+docker ps | grep -E '15432|8083|9092|9093|9094|8090'
+lsof -i :15432
 lsof -i :8083
 ```
 

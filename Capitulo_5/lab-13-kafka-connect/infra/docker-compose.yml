@@ -150,7 +150,10 @@ services:
     hostname: postgres
     container_name: postgres
     ports:
-      - "5432:5432"
+      # Lado host en 15432: el 5432 suele estar ocupado por un postgres de
+      # desarrollo en la maquina del instructor. El lado del contenedor
+      # sigue en 5432 y por eso la red interna no cambia.
+      - "15432:5432"
     environment:
       POSTGRES_USER: novatech
       POSTGRES_PASSWORD: novatech_secret
