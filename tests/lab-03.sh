@@ -36,7 +36,12 @@ CFG=$(MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= kafka-broker-1 kafka-configs
 assert_contains "$CFG" "STATIC_BROKER_CONFIG" "kafka-configs reporta orígenes STATIC_BROKER_CONFIG"
 assert_contains "$CFG" "min.insync.replicas" "la config efectiva incluye min.insync.replicas"
 
-bash bin/90-test-lab.sh >/dev/null 2>&1
-assert_success $? "el 90 del alumno aprueba sobre la solución viva"
+# La salida del validador del alumno NO se tira: si el 90 aprueba diciendo
+# algo falso, o falla, el e2e tiene que mostrarlo. Era el ultimo vector de
+# verde con material roto (SPEC-66 F1).
+SALIDA_90=$(bash bin/90-test-lab.sh 2>&1); RC90=$?
+printf '%s\n' "$SALIDA_90"
+assert_success "$RC90" "el 90 del alumno aprueba sobre la solución viva"
+assert_contains "$SALIDA_90" "LAB EN BUEN ESTADO" "el 90 imprime su linea de conteo (se lee, no se asume)"
 
 test_end; exit $?

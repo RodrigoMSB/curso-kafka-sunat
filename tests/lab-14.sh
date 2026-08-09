@@ -88,9 +88,13 @@ wait_for_brokers 3 || abort_test "clúster no volvió a 3 brokers tras run-capst
 # segundos en atender ops de admin/ACL aunque Docker ya reporte healthy: reintento acotado.
 NINETY=1; W=0
 while [ "$W" -lt 40 ]; do
-    if bash bin/90-test-lab.sh >/dev/null 2>&1; then NINETY=0; break; fi
+    SALIDA_90=$(bash bin/90-test-lab.sh 2>&1); RC90=$?
+    if [ "$RC90" -eq 0 ]; then NINETY=0; break; fi
     sleep 6; W=$((W+6))
 done
+# Salga por exito o por agotar los reintentos, se imprime el ultimo intento.
+printf '%s\n' "$SALIDA_90"
 assert_eq 0 "$NINETY" "el validador del alumno (90) aprueba sobre el lab vivo"
+assert_contains "$SALIDA_90" "LAB EN BUEN ESTADO" "el 90 imprime su linea de conteo (se lee, no se asume)"
 
 test_end; exit $?

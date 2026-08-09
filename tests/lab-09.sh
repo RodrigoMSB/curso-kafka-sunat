@@ -51,7 +51,12 @@ GOT=$(docker exec kafka-broker-1 bash -c \
 assert_ge "$GOT" 10 "ProductorApp produjo >=10 pedidos verificados por consumo ($GOT)"
 
 # El 90 del alumno también debe aprobar sobre el clúster vivo
-bash bin/90-test-lab.sh >/dev/null 2>&1
-assert_success $? "el validador del alumno (90) aprueba sobre el lab vivo"
+# La salida del validador del alumno NO se tira: si el 90 aprueba diciendo
+# algo falso, o falla, el e2e tiene que mostrarlo. Era el ultimo vector de
+# verde con material roto (SPEC-66 F1).
+SALIDA_90=$(bash bin/90-test-lab.sh 2>&1); RC90=$?
+printf '%s\n' "$SALIDA_90"
+assert_success "$RC90" "el validador del alumno (90) aprueba sobre el lab vivo"
+assert_contains "$SALIDA_90" "LAB EN BUEN ESTADO" "el 90 imprime su linea de conteo (se lee, no se asume)"
 
 test_end; exit $?
