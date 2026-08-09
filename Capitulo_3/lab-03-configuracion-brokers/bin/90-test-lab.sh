@@ -19,6 +19,12 @@ ok()  { OK=$((OK+1));  echo -e "  ${GREEN}✓${NC} $1"; }
 bad() { BAD=$((BAD+1)); echo -e "  ${RED}✗${NC} $1"; echo -e "    ${YELLOW}→ $2${NC}"; }
 BOOT="kafka-broker-1:29092"
 
+ficha_op_verifica 'QUÉ VA A VERIFICAR' \
+    'los 3 contenedores kafka-broker-{1,2,3} están corriendo' \
+    'el broker responde a la API' \
+    'el server.properties generado existe y declara process.roles' \
+    'kafka-configs muestra el origen de cada propiedad' \
+
 echo -e "${BOLD}Validador del Lab 03 — configuración de brokers${NC}"
 
 # 1. Los 3 contenedores + API

@@ -23,6 +23,12 @@ if [ ! -f "$COMPOSE_FILE" ]; then
     exit 0
 fi
 
+ficha_op 'DETENER TU CLÚSTER' \
+    'Apaga los contenedores de tu clúster sin borrar nada' \
+    'tus datos, tus tópicos y tu docker-compose.yml de mi-cluster/' \
+    "nada: solo detiene los contenedores del proyecto novatech-lab03" \
+    'cuando terminas por hoy y quieres liberarle memoria a Docker'
+
 echo -e "${YELLOW}Deteniendo tu clúster...${NC}"
 cd "${LAB_DIR}/mi-cluster"
 docker compose down

@@ -22,6 +22,12 @@ for a in "$@"; do
     [ "$a" = "--completo" ] && COMPLETO=si
 done
 
+ficha_op "RECUPERACIÓN DEL LAB 01" \
+    'Reemplaza tu estado actual por la solución de referencia, ya funcionando' \
+    'tu docker-compose.yml de mi-cluster/ y tus reportes: no se tocan' \
+    "los contenedores y volúmenes de novatech-lab01 que estén levantados" \
+    'cuando te trabaste y necesitas seguir la clase ahora'
+
 echo -e "${BOLD}${YELLOW}Recuperación del Lab 01${NC}"
 echo -e "Esto ${RED}reemplaza tu estado actual${NC} por uno funcional de referencia."
 if [ "$AUTO" != "si" ]; then

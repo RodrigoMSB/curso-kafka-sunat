@@ -19,6 +19,12 @@ ok()  { OK=$((OK+1));  echo -e "  ${GREEN}✓${NC} $1"; }
 bad() { BAD=$((BAD+1)); echo -e "  ${RED}✗${NC} $1"; echo -e "    ${YELLOW}→ $2${NC}"; }
 BOOT="kafka-broker-1:29092"
 
+ficha_op_verifica 'QUÉ VA A VERIFICAR' \
+    'los 3 contenedores kafka-broker-{1,2,3} están corriendo' \
+    'el broker responde a la API' \
+    'el quórum KRaft tiene líder y sus 3 voters' \
+    'produce y consume funcionan con RF=3' \
+
 echo -e "${BOLD}Validador del Lab 02 — clúster de 3 nodos con quórum${NC}"
 
 # 1. Los 3 contenedores

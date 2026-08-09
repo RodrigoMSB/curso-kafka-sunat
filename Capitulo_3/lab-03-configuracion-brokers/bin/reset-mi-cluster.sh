@@ -18,6 +18,12 @@ NC='\033[0m'
 LAB_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 COMPOSE_FILE="${LAB_DIR}/mi-cluster/docker-compose.yml"
 
+ficha_op 'RESET DE TU CLÚSTER' \
+    'Apaga tu clúster y borra sus volúmenes: lo devuelve a cero' \
+    'tu docker-compose.yml de mi-cluster/, la guía y tus reportes' \
+    "los contenedores y volúmenes de novatech-lab03: pierdes tus tópicos y mensajes" \
+    'cuando tu clúster quedó en un estado que no sabes desarmar'
+
 echo -e "${RED}⚠  Este comando ELIMINA todos los datos de tu clúster.${NC}"
 echo -n "¿Estás seguro? (escribe 'si' para continuar): "
 read CONFIRM

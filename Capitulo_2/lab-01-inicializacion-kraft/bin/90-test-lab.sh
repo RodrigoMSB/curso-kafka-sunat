@@ -17,6 +17,12 @@ OK=0; BAD=0
 ok()  { OK=$((OK+1));  echo -e "  ${GREEN}✓${NC} $1"; }
 bad() { BAD=$((BAD+1)); echo -e "  ${RED}✗${NC} $1"; echo -e "    ${YELLOW}→ $2${NC}"; }
 
+ficha_op_verifica 'QUÉ VA A VERIFICAR' \
+    'el contenedor kafka-broker está corriendo' \
+    'el broker responde a la API' \
+    'el storage quedó formateado, con su cluster.id' \
+    'el quórum KRaft de 1 nodo tiene líder' \
+
 echo -e "${BOLD}Validador del Lab 01 — tu primer broker KRaft${NC}"
 
 # 1. Contenedor (el broker único del lab se llama kafka-broker)

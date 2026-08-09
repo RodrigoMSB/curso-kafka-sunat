@@ -24,6 +24,12 @@ BOOT="kafka-broker-1:29092"
 # con un cluster ya levantado, y este validador tiene que seguirlo.
 EXT_PORT="${BROKER1_EXTERNAL_PORT:-9092}"
 
+ficha_op_verifica 'QUÉ VA A VERIFICAR' \
+    'los 3 contenedores kafka-broker-{1,2,3} están corriendo' \
+    'el broker responde a la API interna' \
+    'el listener EXTERNAL responde desde el host' \
+    'produce y consume funcionan por el listener interno' \
+
 echo -e "${BOLD}Validador del Lab 04 — listeners y advertised.listeners${NC}"
 
 # 1. Los 3 contenedores + API interna
