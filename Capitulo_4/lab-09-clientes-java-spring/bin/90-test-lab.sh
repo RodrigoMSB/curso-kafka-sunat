@@ -7,6 +7,13 @@
 # ============================================================
 set -uo pipefail
 
+# La biblioteca del lab, primero: exporta MSYS_NO_PATHCONV, sin la cual
+# Git Bash convierte toda ruta absoluta en ruta de Windows antes de que
+# docker la vea -- incluido el "-f <ruta>/docker-compose.yml" de mas abajo.
+# La guardia vive en la biblioteca, nunca inline (tests/CONVENCIONES-TEST.md).
+# shellcheck source=/dev/null
+source "$(dirname "$0")/common.sh"
+
 GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
 OK=0; BAD=0
 ok()  { OK=$((OK+1));  echo -e "  ${GREEN}✓${NC} $1"; }
