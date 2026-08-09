@@ -7,6 +7,15 @@
 #   source "$(dirname "$0")/../bin/common.sh"    # desde kafka-cli/
 # ============================================================
 
+# ── Rutas absolutas en Git Bash ──
+# MSYS traduce cualquier argumento que empiece con / a una ruta de Windows
+# antes de que docker lo vea, y "/var/lib/kafka/data" le llega al contenedor
+# como "C:/Program Files/Git/var/lib/kafka/data". El comando falla, el
+# wrapper se cae a su camino alternativo y termina afirmando que el
+# almacenamiento no está formateado cuando sí lo está. MSYS solo mira si la
+# variable existe, no su valor. Fuera de Windows nadie la lee.
+export MSYS_NO_PATHCONV=1
+
 # ── Colores ──
 GREEN='\033[0;32m'
 RED='\033[0;31m'
