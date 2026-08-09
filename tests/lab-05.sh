@@ -33,13 +33,15 @@ ETOPIC="${MARK}"   # new_mark ya devuelve 'e2e-<ts>-<rand>'
 
 # Crear tópico efímero con 3 particiones, RF=3
 KT --create --topic "$ETOPIC" --partitions 3 --replication-factor 3 >/dev/null 2>&1
-P=$(KT --describe --topic "$ETOPIC" 2>/dev/null | grep -cE 'Partition: [0-9]+')
-assert_eq 3 "$P" "tópico efímero creado con 3 particiones ($ETOPIC)"
+medir KT --describe --topic "$ETOPIC"
+P=$(printf '%s\n' "$MEDIDA" | grep -cE 'Partition: [0-9]+')
+assert_conteo_eq 3 "$P" "tópico efímero creado con 3 particiones ($ETOPIC)"
 
 # Aumentar particiones a 6
 KT --alter --topic "$ETOPIC" --partitions 6 >/dev/null 2>&1
-P2=$(KT --describe --topic "$ETOPIC" 2>/dev/null | grep -cE 'Partition: [0-9]+')
-assert_eq 6 "$P2" "particiones aumentadas de 3 a 6"
+medir KT --describe --topic "$ETOPIC"
+P2=$(printf '%s\n' "$MEDIDA" | grep -cE 'Partition: [0-9]+')
+assert_conteo_eq 6 "$P2" "particiones aumentadas de 3 a 6"
 
 # Borrar el tópico efímero
 KT --delete --topic "$ETOPIC" >/dev/null 2>&1

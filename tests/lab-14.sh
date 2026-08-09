@@ -36,9 +36,12 @@ prod() {  # <start> <end>
         --command-property acks=all --topic "$TOPIC" 2>/dev/null
 }
 # Contar MIS marcas leídas como admin (ground truth)
+# Deja el conteo en MEDIDA y el diagnostico en DIAG_CONTEO. En un lab con
+# TLS+SASL, un 0 puede ser "no hay mensajes" o "el handshake fallo": el rojo
+# tiene que distinguirlos.
 count_admin() {
-    MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= cli-client bash -c \
-        "kafka-console-consumer --bootstrap-server $BOOT --command-config $ADMIN --topic $TOPIC --from-beginning --timeout-ms 8000 2>/dev/null | grep -c '^${MARK}-'"
+    medir env MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= cli-client bash -c \
+        "kafka-console-consumer --bootstrap-server $BOOT --command-config $ADMIN --topic $TOPIC --from-beginning --timeout-ms 8000 | grep -c '^${MARK}-'"
 }
 # Menor tamaño de ISR entre las particiones del tópico
 isr_min() {
@@ -56,7 +59,8 @@ MARK="$(new_mark)"
 
 # 1. POSITIVO: app1 produce 5, admin lee 5
 prod 1 5
-assert_eq 5 "$(count_admin)" "positivo: admin lee las 5 marcas producidas por app1"
+count_admin   # sin $(...): en subshell se perderia DIAG_CONTEO
+assert_conteo_eq 5 "$MEDIDA" "positivo: admin lee las 5 marcas producidas por app1"
 
 # 2. NEGATIVO (la joya): app2 NO puede leer confidencial. Se lee el stderr REAL
 #    del consumidor (no el stdout del script del lab, que incluye la palabra en su ayuda).
@@ -75,7 +79,8 @@ assert_eq "yes" "$RED_OK" "el ISR se reduce a <=2 tras caer un broker (min ISR=$
 prod 6 10   # producción DURANTE el fallo (ISR=2 >= min.insync=2, sin downtime)
 bash kafka-cli/recover-broker.sh 3 >/dev/null 2>&1
 wait_for_brokers 3 || abort_test "broker-3 no se recuperó"
-assert_eq 10 "$(count_admin)" "failover sin pérdida: 10/10 marcas presentes tras recuperar"
+count_admin
+assert_conteo_eq 10 "$MEDIDA" "failover sin pérdida: 10/10 marcas presentes tras recuperar"
 
 # 4. run-capstone.sh corre entero y reporta 20
 CAPOUT=$(bash bin/run-capstone.sh 2>&1); CAPRC=$?

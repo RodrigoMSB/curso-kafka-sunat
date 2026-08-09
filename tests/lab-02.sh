@@ -32,11 +32,12 @@ _pass "clúster de 3 nodos arriba y respondiendo"
 # Quórum con líder y 3 voters
 ST=$(MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= kafka-broker-1 \
      kafka-metadata-quorum --bootstrap-server "$BOOT" describe --status 2>/dev/null)
-REP=$(MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= kafka-broker-1 \
-     kafka-metadata-quorum --bootstrap-server "$BOOT" describe --replication 2>/dev/null)
+medir env MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= kafka-broker-1 \
+     kafka-metadata-quorum --bootstrap-server "$BOOT" describe --replication
+REP="$MEDIDA"
 assert_contains "$ST" "LeaderId" "quórum KRaft con líder"
 VOTERS=$(echo "$REP" | grep -cE '^[0-9]+[[:space:]]')
-assert_ge "$VOTERS" 3 "el quórum tiene 3 voters ($VOTERS)"
+assert_conteo_ge 3 "$VOTERS" "el quórum tiene 3 voters ($VOTERS)"
 
 # Tópico RF=3 creado ANTES del fallo
 MARK="$(new_mark)"
@@ -58,9 +59,10 @@ ST2=$(MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= kafka-broker-1 \
 assert_contains "$ST2" "LeaderId" "tras caer un nodo, el quórum sigue con líder (2/3)"
 
 prod 4 6 "$BOOT_SURV"   # producción DURANTE el fallo
-GOT=$(MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= kafka-broker-1 bash -c \
-    "kafka-console-consumer --bootstrap-server $BOOT_SURV --topic $MARK --from-beginning --timeout-ms 8000 2>/dev/null | grep -c '^${MARK}-'")
-assert_eq 6 "$GOT" "produce/consume sigue con un nodo caído (6/6 marcas)"
+medir env MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= kafka-broker-1 bash -c \
+    "kafka-console-consumer --bootstrap-server $BOOT_SURV --topic $MARK --from-beginning --timeout-ms 8000 | grep -c '^${MARK}-'"
+GOT="$MEDIDA"
+assert_conteo_eq 6 "$GOT" "produce/consume sigue con un nodo caído (6/6 marcas)"
 
 # Recuperación
 docker start kafka-broker-3 >/dev/null 2>&1

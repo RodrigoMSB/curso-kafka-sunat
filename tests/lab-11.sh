@@ -42,10 +42,11 @@ SUBJECTS=$(curl -sf "http://localhost:${SR_PORT}/subjects" 2>/dev/null || true)
 assert_contains "$SUBJECTS" "$SUBJECT" "el schema ${SUBJECT} quedó registrado tras producir Avro"
 
 # 3. Consumir Avro deserializado (consumer con timeout; consume-avro.sh es interactivo)
-GOT=$(docker exec -e SCHEMA_REGISTRY_LOG4J_OPTS="-Dlog4j2.configurationFile=/etc/cp-base-java/log4j2.yaml" \
+medir docker exec -e SCHEMA_REGISTRY_LOG4J_OPTS="-Dlog4j2.configurationFile=/etc/cp-base-java/log4j2.yaml" \
     schema-registry bash -c \
-    "kafka-avro-console-consumer --bootstrap-server kafka-broker-1:29092 --topic $TOPIC --from-beginning --timeout-ms 10000 --property schema.registry.url=http://schema-registry:8081 2>/dev/null | grep -c cliente_id")
-assert_ge "$GOT" 1 "consumo Avro deserializado devuelve registros ($GOT)"
+    "kafka-avro-console-consumer --bootstrap-server kafka-broker-1:29092 --topic $TOPIC --from-beginning --timeout-ms 10000 --property schema.registry.url=http://schema-registry:8081 | grep -c cliente_id"
+GOT="$MEDIDA"
+assert_conteo_ge 1 "$GOT" "consumo Avro deserializado devuelve registros ($GOT)"
 
 # El 90 del alumno también debe aprobar sobre el lab vivo
 # La salida del validador del alumno NO se tira: si el 90 aprueba diciendo

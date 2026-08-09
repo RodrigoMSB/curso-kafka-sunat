@@ -47,13 +47,18 @@ sleep 3
 # 3. Connector y task en RUNNING (poll hasta 90s)
 W=0
 until [ "$(running_count)" -ge 2 ] || [ "$W" -ge 90 ]; do sleep 5; W=$((W+5)); done
-RC=$(running_count)
-assert_ge "$RC" 2 "connector y task en estado RUNNING (${RC} RUNNING)"
+# El poll de arriba usa running_count() a secas; para la asercion se vuelve a
+# medir mostrando el diagnostico: un 0 por "Connect no responde" y un 0 por
+# "el connector no arranco" son dos problemas distintos.
+medir curl -sf --max-time 8 "${CONNECT}/connectors/${CONN}/status"
+RC=$(printf '%s' "$MEDIDA" | grep -o '"state":"RUNNING"' | grep -c . || true)
+assert_conteo_ge 2 "$RC" "connector y task en estado RUNNING (${RC} RUNNING)"
 
 # 4. El tópico destino recibe registros desde postgres
-GOT=$(docker exec kafka-broker-1 bash -c \
-    "kafka-console-consumer --bootstrap-server kafka-broker-1:29092 --topic $DEST_TOPIC --from-beginning --timeout-ms 20000 2>/dev/null | grep -c ." )
-assert_ge "$GOT" 1 "el tópico ${DEST_TOPIC} recibió registros del source ($GOT)"
+medir docker exec kafka-broker-1 bash -c \
+    "kafka-console-consumer --bootstrap-server kafka-broker-1:29092 --topic $DEST_TOPIC --from-beginning --timeout-ms 20000 | grep -c ."
+GOT="$MEDIDA"
+assert_conteo_ge 1 "$GOT" "el tópico ${DEST_TOPIC} recibió registros del source ($GOT)"
 
 # El 90 del alumno también debe aprobar sobre el lab vivo
 # La salida del validador del alumno NO se tira: si el 90 aprueba diciendo

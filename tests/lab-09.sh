@@ -46,9 +46,10 @@ assert_success $? "cliente-spring compila (mvn compile)"
 # Interop: ProductorApp (Java) produce 10 pedidos al tópico; se cuentan por consumo
 mvn -q -f cliente-java/pom.xml exec:java \
     -Dexec.mainClass=com.novatech.kafka.ProductorApp -Dexec.args=10 >/dev/null 2>&1
-GOT=$(docker exec kafka-broker-1 bash -c \
-    "kafka-console-consumer --bootstrap-server $BOOT --topic $TOPIC --from-beginning --timeout-ms 10000 2>/dev/null | grep -c ." )
-assert_ge "$GOT" 10 "ProductorApp produjo >=10 pedidos verificados por consumo ($GOT)"
+medir docker exec kafka-broker-1 bash -c \
+    "kafka-console-consumer --bootstrap-server $BOOT --topic $TOPIC --from-beginning --timeout-ms 10000 | grep -c ."
+GOT="$MEDIDA"
+assert_conteo_ge 10 "$GOT" "ProductorApp produjo >=10 pedidos verificados por consumo ($GOT)"
 
 # El 90 del alumno también debe aprobar sobre el clúster vivo
 # La salida del validador del alumno NO se tira: si el 90 aprueba diciendo

@@ -129,6 +129,42 @@ new_mark() { echo "e2e-$(date +%s)-${RANDOM}"; }
 _pass() { _PASS=$((_PASS+1)); echo -e "  ${GREEN}✓${NC} $1"; }
 _fail() { _FAIL=$((_FAIL+1)); _FAILURES+=("$1 $2"); echo -e "  ${RED}✗${NC} $1  ${RED}$2${NC}"; }
 
+# ── Un conteo que no se pudo tomar NO es cero ────────────────
+# Los conteos del harness daban 0 tanto cuando "no hay" como cuando "no pude
+# preguntar", porque el stderr del comando iba a /dev/null. El rojo salia como
+# actual='0' y no decia nada: en clase eso es un instructor debuggeando a
+# ciegas. Mismo criterio que consume_count_mark(): TimeoutException es el fin
+# normal de un consumidor con --timeout-ms; cualquier otra excepcion, un
+# "Connection refused" o un exit code de error significan que la medicion no
+# es confiable, y entonces el rojo dice QUE no se pudo hacer.
+#
+# medir() deja el stdout en MEDIDA y el diagnostico en DIAG_CONTEO. No se usa
+# $(...) porque una asignacion en subshell no propagaria DIAG_CONTEO.
+MEDIDA=""
+DIAG_CONTEO=""
+medir() {  # <comando...>
+    local err rc=0 e
+    err="$(mktemp -t e2emedir)"
+    MEDIDA=$("$@" 2>"$err"); rc=$?
+    e=$(cat "$err" 2>/dev/null); rm -f "$err"
+    DIAG_CONTEO=""
+    if [ "$rc" -ne 0 ]; then
+        DIAG_CONTEO="el comando de medicion fallo (exit=${rc}): $(printf '%s' "$e" | tr '\n' ' ' | cut -c1-200)"
+    elif printf '%s' "$e" | grep -qE 'Exception|ERROR|Connection refused|No such container|Cannot connect|is not running' \
+      && ! printf '%s' "$e" | grep -q 'TimeoutException'; then
+        DIAG_CONTEO="$(printf '%s' "$e" | grep -E 'Exception|ERROR|Connection refused|No such container|Cannot connect|is not running' | head -1 | cut -c1-200)"
+    fi
+}
+
+assert_conteo_eq() {  # <esperado> <valor> <mensaje>
+    if [ -n "$DIAG_CONTEO" ]; then _fail "$3" "(no se pudo medir → ${DIAG_CONTEO})"; return; fi
+    assert_eq "$1" "$2" "$3"
+}
+assert_conteo_ge() {  # <minimo> <valor> <mensaje>
+    if [ -n "$DIAG_CONTEO" ]; then _fail "$3" "(no se pudo medir → ${DIAG_CONTEO})"; return; fi
+    assert_ge "$2" "$1" "$3"
+}
+
 assert_eq()       { if [ "$1" = "$2" ]; then _pass "$3"; else _fail "$3" "(esperado='$1' actual='$2')"; fi; }
 assert_ge()       { if [ "$1" -ge "$2" ] 2>/dev/null; then _pass "$3"; else _fail "$3" "(actual='$1' < min='$2')"; fi; }
 assert_contains() { if echo "$1" | grep -qF -- "$2"; then _pass "$3"; else _fail "$3" "(no contiene '$2')"; fi; }
