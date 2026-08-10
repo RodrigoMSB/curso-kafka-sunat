@@ -41,13 +41,27 @@ Este script:
 docker run --rm confluentinc/cp-kafka:8.2.0 cat /etc/kafka/server.properties | head -50
 ```
 
+Ahí encuentras `process.roles` y `listeners`. Pero no todo: `head -50` corta el
+archivo a la mitad, y hay propiedades importantes más abajo. `log.dirs` es una de
+ellas — vive en la línea 73.
+
+Cuando buscas **una** propiedad en un archivo largo, no lo leas entero: pregúntale
+por ella.
+
+```bash
+docker run --rm confluentinc/cp-kafka:8.2.0 sh -c "grep '^log.dirs' /etc/kafka/server.properties"
+```
+
+El `^` ancla la búsqueda al principio de la línea, así no aparecen los comentarios
+que mencionan `log.dirs` de paso.
+
 ### Anota
 
-| Pregunta | Tu respuesta |
-|----------|-------------|
-| ¿Qué `process.roles` están definidos por defecto? | |
-| ¿En qué puerto escucha por defecto? | |
-| ¿Dónde guarda los logs? | |
+| Pregunta | Con qué comando la respondes | Tu respuesta |
+|----------|------------------------------|-------------|
+| ¿Qué `process.roles` están definidos por defecto? | el `head -50` | |
+| ¿En qué puerto escucha por defecto? | el `head -50` | |
+| ¿Dónde guarda los logs? | el `grep` | |
 
 ---
 
