@@ -25,6 +25,12 @@ BOOT="kafka-broker-1:9092"
 ADMIN="/etc/kafka/client-properties/admin.properties"
 TOPIC="novatech.lab12.confidencial"
 
+ficha_op_verifica 'QUÉ VA A VERIFICAR' \
+    'los 3 brokers están healthy' \
+    'el listener seguro SASL_SSL responde al admin y ve el confidencial' \
+    'las ACLs están cargadas (kafka-acls --list devuelve reglas)' \
+    'el material PKI está en infra/certs (ca.crt + keystores)' \
+
 echo -e "${BOLD}Validador del Lab 14 — estado actual${NC}"
 
 # 1. Brokers

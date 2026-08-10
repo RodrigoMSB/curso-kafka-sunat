@@ -25,6 +25,11 @@ set -a; source infra/.env 2>/dev/null; set +a
 CONNECT="http://localhost:8083"
 CONN="novatech-source-pedidos"
 
+ficha_op_verifica 'QUÉ VA A VERIFICAR' \
+    'los 3 brokers están healthy' \
+    'Kafka Connect responde /connectors' \
+    'si el connector novatech-source-pedidos existe, y en qué estado' \
+
 echo -e "${BOLD}Validador del Lab 13 — estado actual${NC}"
 
 # 1. Brokers

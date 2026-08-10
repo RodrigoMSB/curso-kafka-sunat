@@ -24,6 +24,11 @@ set -a; source infra/.env 2>/dev/null; set +a
 BOOT="kafka-broker-1:29092"
 BENCH="novatech.tuning.bench"   # lo crea start-lab (init-lab06-topics.sh)
 
+ficha_op_verifica 'QUÉ VA A VERIFICAR' \
+    'los 3 brokers están healthy' \
+    'el tópico de bench novatech.tuning.bench existe' \
+    'producer-perf-test devuelve throughput, corriendo 1000 registros de prueba que quedan escritos en el bench' \
+
 echo -e "${BOLD}Validador del Lab 07 — estado actual${NC}"
 
 # 1. Brokers

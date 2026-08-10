@@ -22,6 +22,11 @@ LAB_DIR="$(cd "$(dirname "$0")/.." && pwd)"; cd "$LAB_DIR"
 set -a; source infra/.env 2>/dev/null; set +a
 KSQL="http://localhost:8088"
 
+ficha_op_verifica 'QUÉ VA A VERIFICAR' \
+    'los 3 brokers están healthy' \
+    'el servidor ksqlDB responde /info' \
+    'SHOW STREAMS responde' \
+
 echo -e "${BOLD}Validador del Lab 12 — estado actual${NC}"
 
 # 1. Brokers

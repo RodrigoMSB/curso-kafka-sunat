@@ -23,6 +23,12 @@ set -a; source infra/.env 2>/dev/null; set +a
 BOOT="kafka-broker-1:29092"
 DEMO_TOPIC="novatech.fleet.gps"   # lo crea el contenedor gps-producer al arrancar
 
+ficha_op_verifica 'QUÉ VA A VERIFICAR' \
+    'los 3 brokers están healthy' \
+    'kafka-topics responde y cuántos tópicos hay en el clúster' \
+    'el tópico demo novatech.fleet.gps existe' \
+    'kafka-topics --describe devuelve las particiones de ese tópico' \
+
 echo -e "${BOLD}Validador del Lab 05 — estado actual${NC}"
 
 # 1. Brokers

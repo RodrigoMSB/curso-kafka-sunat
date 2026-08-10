@@ -25,6 +25,11 @@ set -a; source infra/.env 2>/dev/null; set +a
 SR_PORT="8081"
 SUBJECT="novatech.lab10.pedidos-value"
 
+ficha_op_verifica 'QUÉ VA A VERIFICAR' \
+    'los 3 brokers están healthy' \
+    'Schema Registry responde /subjects' \
+    'si el subject novatech.lab10.pedidos-value ya está registrado' \
+
 echo -e "${BOLD}Validador del Lab 11 — estado actual${NC}"
 
 # 1. Brokers

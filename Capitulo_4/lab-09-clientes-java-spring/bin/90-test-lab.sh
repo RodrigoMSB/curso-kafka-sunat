@@ -25,6 +25,11 @@ set -a; source infra/.env 2>/dev/null; set +a
 BOOT="kafka-broker-1:29092"
 TOPIC="novatech.lab09.pedidos"
 
+ficha_op_verifica 'QUÉ VA A VERIFICAR' \
+    'los 3 brokers están healthy' \
+    'el tópico novatech.lab09.pedidos existe' \
+    'si cliente-java y cliente-spring ya están compilados' \
+
 echo -e "${BOLD}Validador del Lab 09 — estado actual${NC}"
 
 # 1. Brokers

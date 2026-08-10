@@ -25,6 +25,11 @@ set -a; source infra/.env 2>/dev/null; set +a
 # el TOPIC_NAME del .env no se usa para este flujo.
 TOPIC="novatech.fleet.events"
 
+ficha_op_verifica 'QUÉ VA A VERIFICAR' \
+    'los 3 brokers están healthy' \
+    'el tópico novatech.fleet.events existe' \
+    'produce y consume 3 mensajes de prueba, que quedan en el tópico' \
+
 echo -e "${BOLD}Validador del Lab 06 — estado actual${NC}"
 
 # 1. Brokers

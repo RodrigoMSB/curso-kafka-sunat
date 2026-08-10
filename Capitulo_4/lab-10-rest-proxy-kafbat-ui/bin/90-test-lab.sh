@@ -24,6 +24,12 @@ REST_PORT="${REST_PROXY_PORT:-8082}"
 UI_PORT="${KAFBAT_UI_PORT:-8090}"
 TOPIC="novatech.lab10.pedidos"
 
+ficha_op_verifica 'QUÉ VA A VERIFICAR' \
+    'los 3 brokers están healthy' \
+    'el REST Proxy responde /topics' \
+    'el tópico novatech.lab10.pedidos es visible vía REST' \
+    'kafbat UI responde UP en /actuator/health' \
+
 echo -e "${BOLD}Validador del Lab 10 — estado actual${NC}"
 
 # 1. Brokers
