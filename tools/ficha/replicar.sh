@@ -27,7 +27,17 @@ RAIZ="$(cd "$DIR_CANON/../.." && pwd)"
 # Función con case en vez de array asociativo, que bash 3.2 no soporta.
 # Cada línea es "<destino relativo a la raíz>".
 
-# Labs que llevan el motor. Son los que tienen algún wrapper con ficha.
+# Labs que llevan el motor. Antes eran los que tenían algún wrapper con ficha;
+# desde la SPEC-70 son los CATORCE, porque la ficha operativa vive en los
+# scripts de bin/ (stop, reset, start, 95) y esos existen en todos. Los labs
+# 06, 09, 10 y 14 no tienen wrappers de lección y aun así necesitan el motor:
+# sin él, sus fichas mueren en `ficha_op: command not found` y el script sale
+# con 127.
+#
+# Esta lista mueve SOLO ficha.sh, flags.sh y el enganche de common.sh. Los
+# wrappers viajan por sus propias listas (labs_describe_topic, labs_list_topics,
+# labs_verify_storage, labs_kafka_cli_01_04), así que ampliar esta no arrastra
+# un wrapper a un lab que no tiene kafka-cli/ -- los labs 09 y 10 no lo tienen.
 labs_con_motor() {
     cat <<'MAPA'
 Capitulo_2/lab-01-inicializacion-kraft
@@ -35,11 +45,15 @@ Capitulo_2/lab-02-validacion-quorum-resiliencia
 Capitulo_3/lab-03-configuracion-brokers
 Capitulo_3/lab-04-multibroker-advertised-listeners
 Capitulo_3/lab-05-operacion-topicos
+Capitulo_3/lab-06-produccion-consumo-cli
 Capitulo_3/lab-07-pruebas-rendimiento
 Capitulo_3/lab-08-brokers-en-caliente
+Capitulo_4/lab-09-clientes-java-spring
+Capitulo_4/lab-10-rest-proxy-kafbat-ui
 Capitulo_4/lab-11-schema-registry
 Capitulo_5/lab-12-ksqldb
 Capitulo_5/lab-13-kafka-connect
+Capitulo_5/lab-14-capstone-resiliencia-seguridad
 MAPA
 }
 

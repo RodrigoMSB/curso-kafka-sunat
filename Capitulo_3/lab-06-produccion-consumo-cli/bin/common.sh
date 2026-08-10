@@ -89,3 +89,11 @@ botar_contenedores_del_curso() {  # <etiqueta> <contenedor>...
     done
     return "$ajeno"
 }
+
+# ── Motor de ficha didáctica ──
+# Se importa si está presente. El `if` es a propósito: si el lab viaja
+# suelto sin ficha.sh, los wrappers viejos siguen funcionando igual.
+FICHA_LIB="$(dirname "${BASH_SOURCE[0]}")/ficha.sh"
+if [ -f "$FICHA_LIB" ]; then
+    source "$FICHA_LIB"
+fi
