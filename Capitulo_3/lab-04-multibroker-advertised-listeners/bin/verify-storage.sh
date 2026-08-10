@@ -157,8 +157,20 @@ diagnostico_sin_contenedor() {
 # ── Programa principal ───────────────────────────────────────
 main() {
     if [ $# -lt 1 ]; then
+        # El ejemplo sale del entorno, no de un nombre escrito a mano. El lab 01
+        # tiene un solo broker y se llama "kafka-broker"; del 02 en adelante son
+        # "kafka-broker-1..3". Un ejemplo fijo es invalido en la mitad de los
+        # labs, y el alumno lo copia del propio script y se come un error en su
+        # primer comando del curso. Si no hay nada corriendo no se inventa un
+        # nombre: se dice como averiguarlo.
+        local sugerido=''
+        sugerido=$(find_alive_kafka_container 2>/dev/null) || true
         echo "Uso: $0 <NOMBRE_CONTAINER>" >&2
-        echo "Ejemplo: $0 kafka-broker-1" >&2
+        if [ -n "$sugerido" ]; then
+            echo "Ejemplo: $0 ${sugerido}" >&2
+        else
+            echo "No hay brokers corriendo. Levanta tu lab y mira los nombres con: docker ps" >&2
+        fi
         exit 1
     fi
     local contenedor="$1"
