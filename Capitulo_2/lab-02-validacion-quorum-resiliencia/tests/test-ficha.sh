@@ -339,9 +339,19 @@ afirmar_igual 'formato · el borde derecho de la ficha siempre en la misma colum
 N_ANSI=$(printf '%s\n' "$TODAS" | grep -c "$(printf '\033')") || N_ANSI=0
 afirmar_igual 'formato · cero códigos ANSI sin TTY' '0' "$N_ANSI"
 
+# La regla protege la PROSA QUE SE DIBUJA, que es la que lee el alumno. Un
+# comentario de código en castellano correcto no es prosa dibujada, y hasta la
+# SPEC-70 esta regla lo marcaba igual: los tres comentarios que explican el
+# techo de 10 líneas de la familia operativa la pusieron en rojo sin que
+# cambiara un solo byte de lo que ve el alumno.
+#
+# Es el mismo defecto de auto-detección que esta casa ya resolvió dos veces
+# —el preflight marcaba el comentario que declaraba la regla—, así que el
+# criterio no se inventa acá: es el de test-lee.sh:237, 'grep -cv ": *#"',
+# que descarta la línea cuyo contenido arranca en '#'.
 DOSPUNTOS=$(grep -n ': ' "$DIR_LAB/bin/ficha.sh" "$DIR_LAB/bin/check-quorum.sh" \
-    | grep -v 'col\[' | grep -v 'UnknownHostException' | wc -l | tr -d ' ')
-afirmar_igual 'formato · cero dos puntos en prosa' '0' "$DOSPUNTOS"
+    | grep -v 'col\[' | grep -v 'UnknownHostException' | grep -cv ': *#')
+afirmar_igual 'formato · cero dos puntos en prosa dibujada' '0' "$DOSPUNTOS"
 
 # La medición rápida de ancho se hace dentro de bash. Se compara contra la
 # lenta y obvia sobre cada línea real que produce el wrapper, con acentos,
