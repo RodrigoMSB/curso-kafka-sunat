@@ -10,6 +10,26 @@ Tu clúster de 3 nodos del Lab 02, corriendo.
 
 ## Contexto
 
+Este lab tiene una sola idea: **la configuración de tu broker pasa por tres
+etapas, y en cada una tiene otra forma.**
+
+```
+┌─ 1 · LO QUE ESCRIBES ─────────────────────────────────────────────────┐
+│  docker-compose.yml            KAFKA_NODE_ID: 1                       │
+└───────────────────────────────────────────────────────────────────────┘
+              ↓   la imagen traduce al arrancar
+┌─ 2 · LO QUE SE TRADUJO ───────────────────────────────────────────────┐
+│  /etc/kafka/kafka.properties   node.id=1                              │
+└───────────────────────────────────────────────────────────────────────┘
+              ↓   el broker lo carga
+┌─ 3 · LO QUE EL BROKER USA ────────────────────────────────────────────┐
+│  en memoria, con su origen:    node.id=1  ·  STATIC_BROKER_CONFIG     │
+│  STATIC lo escribiste tú  ·  DEFAULT de fábrica  ·  DYNAMIC en vivo   │
+└───────────────────────────────────────────────────────────────────────┘
+```
+
+**Las etapas 1 y 2 se leen en archivos; la etapa 3 se le pregunta al clúster.**
+
 En la imagen de Confluent no editas `server.properties` a mano: declaras variables `KAFKA_*` en tu compose y la imagen las **traduce** a propiedades al arrancar. La regla del mapeo: quitar el prefijo `KAFKA_`, pasar a minúsculas y cambiar `_` por `.`.
 
 | Variable de entorno | Propiedad resultante |
