@@ -44,6 +44,12 @@ if [ "$DOCKER_MEM_GB" -lt 5 ]; then
     echo -e "${YELLOW}[ADVERTENCIA] Docker tiene ${DOCKER_MEM_GB} GB de RAM. Se recomiendan al menos 6 GB.${NC}"
 fi
 
+ficha_op "INICIAR EL LAB 11" \
+    'Deja el lab en su estado inicial y levanta el clúster desde cero' \
+    'la guía, tu reporte de plantillas/ y todo archivo del lab en disco' \
+    "contenedores y volúmenes de novatech-lab11, y contenedores de otros labs novatech-lab*" \
+    'al empezar el lab, o para volver a un arranque limpio'
+
 echo -e "${YELLOW}[1/5] Levantando contenedores del clúster NovaTech Lab 11...${NC}"
 botar_contenedores_del_curso "start-lab" kafka-broker-1 kafka-broker-2 kafka-broker-3 kafbat-ui gps-producer || exit 1
 docker compose -f "$COMPOSE_FILE" down -v --remove-orphans 2>/dev/null || true

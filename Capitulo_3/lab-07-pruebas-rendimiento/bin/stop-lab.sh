@@ -21,6 +21,12 @@ NC='\033[0m'
 LAB_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 COMPOSE_FILE="${LAB_DIR}/infra/docker-compose.yml"
 
+ficha_op "DETENER EL LAB 07" \
+    'Apaga los contenedores del lab. No borra nada' \
+    'tus tópicos y mensajes en los volúmenes de Docker, y el material del lab' \
+    "nada: solo detiene los contenedores de novatech-lab07" \
+    'cuando terminas por hoy y quieres liberarle memoria a Docker'
+
 echo -e "${YELLOW}[NovaTech] Deteniendo contenedores del clúster...${NC}"
 docker compose -f "$COMPOSE_FILE" stop
 

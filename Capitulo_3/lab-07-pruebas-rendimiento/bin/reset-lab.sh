@@ -23,12 +23,12 @@ NC='\033[0m'
 LAB_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 COMPOSE_FILE="${LAB_DIR}/infra/docker-compose.yml"
 
-echo -e "${RED}${BOLD}╔══════════════════════════════════════════════════════╗${NC}"
-echo -e "${RED}${BOLD}║  ADVERTENCIA: Esta acción eliminará:                ║${NC}"
-echo -e "${RED}${BOLD}║  - Todos los contenedores del laboratorio           ║${NC}"
-echo -e "${RED}${BOLD}║  - Todos los volúmenes de datos (mensajes Kafka)    ║${NC}"
-echo -e "${RED}${BOLD}║  - Las redes de Docker creadas                      ║${NC}"
-echo -e "${RED}${BOLD}╚══════════════════════════════════════════════════════╝${NC}"
+ficha_op "RESET DEL LAB 07" \
+    'Elimina contenedores, volúmenes y redes del lab: lo devuelve a cero' \
+    'la guía, tu reporte de plantillas/ y todo archivo del lab en disco' \
+    "los volúmenes de novatech-lab07: pierdes tus tópicos y los mensajes de Kafka" \
+    'cuando el lab quedó en un estado que no sabes desarmar'
+
 echo ""
 
 read -r -p "¿Estás seguro de que deseas reiniciar el laboratorio? (s/N): " CONFIRM

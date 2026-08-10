@@ -22,6 +22,15 @@ LAB_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 COMPOSE_FILE="${LAB_DIR}/infra/docker-compose.yml"
 ENV_FILE="${LAB_DIR}/infra/.env"
 
+ficha_op "RESET DEL LAB 09" \
+    'Elimina contenedores, volúmenes y redes del lab: lo devuelve a cero' \
+    'la guía, tu reporte de plantillas/ y todo archivo del lab en disco' \
+    "los volúmenes de novatech-lab09 con tus tópicos y mensajes, y contenedores de otros labs novatech-lab*" \
+    'cuando el lab quedó en un estado que no sabes desarmar'
+if ficha_activa; then
+    ficha_nota_warn 'Este script NO pide confirmación: borra al ejecutarse.'
+fi
+
 echo -e "${YELLOW}[NovaTech] Eliminando contenedores, volúmenes y redes del laboratorio...${NC}"
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down -v --remove-orphans 2>/dev/null || true
 

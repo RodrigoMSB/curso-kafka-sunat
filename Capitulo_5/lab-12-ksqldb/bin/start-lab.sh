@@ -50,6 +50,12 @@ if [ "$DOCKER_MEM_GB" -lt 5 ]; then
     echo -e "${YELLOW}[ADVERTENCIA] Docker tiene ${DOCKER_MEM_GB} GB de RAM. Se recomiendan al menos 6 GB.${NC}"
 fi
 
+ficha_op "INICIAR EL LAB 12" \
+    'Deja el lab en su estado inicial y levanta el clúster desde cero' \
+    'la guía, tu reporte de plantillas/ y todo archivo del lab en disco' \
+    "contenedores y volúmenes de novatech-lab12, y contenedores de otros labs novatech-lab*" \
+    'al empezar el lab, o para volver a un arranque limpio'
+
 echo -e "${YELLOW}[1/7] Levantando contenedores del clúster NovaTech Lab 12...${NC}"
 # Cleanup defensivo:
 # (1) Force-remove contenedores con nombres canónicos compartidos (cross-lab):

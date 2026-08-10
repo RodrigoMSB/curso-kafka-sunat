@@ -59,6 +59,12 @@ fi
 # Carga las variables del .env (puertos, tópico)
 set -a; source "$ENV_FILE"; set +a
 
+ficha_op "INICIAR EL LAB 10" \
+    'Deja el lab en su estado inicial y levanta el clúster desde cero' \
+    'la guía, tu reporte de plantillas/ y todo archivo del lab en disco' \
+    "contenedores y volúmenes de novatech-lab10, y contenedores de otros labs novatech-lab*" \
+    'al empezar el lab, o para volver a un arranque limpio'
+
 echo -e "${YELLOW}[1/5] Levantando contenedores (3 brokers + REST Proxy + Kafbat)...${NC}"
 # Cleanup defensivo de contenedores por nombre canónico (cross-lab).
 botar_contenedores_del_curso "start-lab" kafka-broker-1 kafka-broker-2 kafka-broker-3 kafka-rest kafbat-ui || exit 1

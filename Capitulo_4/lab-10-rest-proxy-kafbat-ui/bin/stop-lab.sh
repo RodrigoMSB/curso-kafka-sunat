@@ -22,6 +22,12 @@ LAB_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 COMPOSE_FILE="${LAB_DIR}/infra/docker-compose.yml"
 ENV_FILE="${LAB_DIR}/infra/.env"
 
+ficha_op "DETENER EL LAB 10" \
+    'Apaga los contenedores del lab. No borra nada' \
+    'tus tópicos y mensajes en los volúmenes de Docker, y el material del lab' \
+    "nada: solo detiene los contenedores de novatech-lab10" \
+    'cuando terminas por hoy y quieres liberarle memoria a Docker'
+
 echo -e "${YELLOW}[NovaTech] Deteniendo el laboratorio (se conservan los volúmenes)...${NC}"
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" stop
 

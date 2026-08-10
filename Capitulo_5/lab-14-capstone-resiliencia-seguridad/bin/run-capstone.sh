@@ -7,6 +7,12 @@ BOOT_SURV="kafka-broker-1:9092,kafka-broker-2:9093"   # sin broker-3 (el que cae
 ADMIN="/etc/kafka/client-properties/admin.properties"
 TOPIC="novatech.lab12.confidencial"
 
+ficha_op_verifica 'QUÉ VA A HACER ESTA CORRIDA' \
+    'produce 10 pedidos autenticados sobre el canal seguro' \
+    'tumba kafka-broker-3 a propósito: la caída es parte del ejercicio' \
+    'produce 10 más con el broker caído, y después lo recupera' \
+    'verifica que los 20 estén, sin pérdida. Tarda unos dos minutos'
+
 paso() { echo -e "\n${BOLD}${CYAN}━━━ $1 ━━━${NC}"; }
 producir() {  # $1=desde $2=hasta $3=bootstrap
     for i in $(seq "$1" "$2"); do echo "pedido-capstone-$i"; done | \

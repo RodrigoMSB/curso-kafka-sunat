@@ -22,6 +22,12 @@ for a in "$@"; do
     [ "$a" = "--completo" ] && COMPLETO=si
 done
 
+ficha_op "RECUPERACIÓN DEL LAB 06" \
+    'Reemplaza tu estado actual por uno funcional, para que sigas la clase' \
+    'la guía y tu reporte de plantillas/: no se tocan' \
+    "los contenedores y volúmenes de novatech-lab06 que estén levantados" \
+    'cuando te trabaste y necesitas seguir ahora'
+
 echo -e "${BOLD}${YELLOW}Recuperación del Lab 06${NC}"
 echo -e "Esto ${RED}reemplaza tu estado actual${NC} por uno funcional de referencia."
 if [ "$AUTO" != "si" ]; then

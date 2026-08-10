@@ -55,6 +55,12 @@ if [ "$DOCKER_MEM_GB" -lt 5 ]; then
     echo -e "${YELLOW}  Se recomiendan al menos 6 GB para este laboratorio.${NC}"
 fi
 
+ficha_op "INICIAR EL LAB 05" \
+    'Deja el lab en su estado inicial y levanta el clúster desde cero' \
+    'la guía, tu reporte de plantillas/ y todo archivo del lab en disco' \
+    "contenedores y volúmenes de novatech-lab05, y contenedores de otros labs novatech-lab*" \
+    'al empezar el lab, o para volver a un arranque limpio'
+
 echo -e "${YELLOW}[1/4] Levantando contenedores del clúster NovaTech...${NC}"
 # Cleanup defensivo:
 # (1) Force-remove contenedores con nombres canónicos compartidos (cross-lab):

@@ -50,6 +50,12 @@ if [ "$DOCKER_MEM_GB" -lt 5 ]; then
     echo -e "${YELLOW}[ADVERTENCIA] Docker tiene ${DOCKER_MEM_GB} GB. Se recomiendan 6 GB.${NC}"
 fi
 
+ficha_op "INICIAR EL LAB 14" \
+    'Genera los certificados TLS, levanta el clúster seguro y carga tópicos y ACLs' \
+    'los certificados que ya existan: solo genera los que falten' \
+    "nada de otros labs: este arranque no bota contenedores ajenos" \
+    'al empezar el lab, y para reanudarlo después de un stop'
+
 echo -e "${YELLOW}[1/6] Generando certificados TLS (si no existen)...${NC}"
 bash "$(dirname "$0")/generate-certs.sh"
 
