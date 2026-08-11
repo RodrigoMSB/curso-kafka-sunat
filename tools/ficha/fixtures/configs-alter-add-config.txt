@@ -1,0 +1,5 @@
+# Capturado del lab 05 levantado con bin/start-lab.sh (Kafka 8.2.0-ccs, 3 brokers KRaft). Salida completa del wrapper, con sus propias lineas:  kafka-cli/alter-topic-config.sh novatech.lab05.demo --add compression.type=zstd
+[Alter Topic Config] novatech.lab05.demo - AGREGAR/MODIFICAR
+  compression.type=zstd
+Completed updating config for topic novatech.lab05.demo.
+  ✓ Configs aplicadas

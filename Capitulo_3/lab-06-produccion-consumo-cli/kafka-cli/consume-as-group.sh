@@ -45,6 +45,7 @@ fi
 # Solo con TTY. Al tuberiar sale nada más que lo de Kafka.
 flag_desc() {
     case "$1" in
+        --topic)         echo "de qué tópico se lee" ;;
         --group)         echo "el grupo al que te unes. Kafka reparte las particiones entre sus miembros y a cada mensaje lo lee uno solo" ;;
         print.key)       echo "imprime también la clave de cada mensaje, no solo el valor" ;;
         key.separator)   echo "con qué carácter se separan clave y valor en pantalla" ;;

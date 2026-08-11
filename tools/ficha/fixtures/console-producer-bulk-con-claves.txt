@@ -1,0 +1,6 @@
+# Capturado del lab 05 levantado con bin/start-lab.sh (Kafka 8.2.0-ccs, 3 brokers KRaft). Salida completa del wrapper, con sus propias lineas:  kafka-cli/produce-bulk.sh novatech.lab05.demo 50 --key-pattern NVT
+[Produce Bulk] 50 mensajes -> novatech.lab05.demo
+  Patrón de clave: NVT-N
+────────────────────────────────────────────────────────
+Warning: --property is deprecated and will be removed in a future version. Use --reader-property instead.
+  ✓ 50 mensajes publicados en 2s (~25 msg/seg)

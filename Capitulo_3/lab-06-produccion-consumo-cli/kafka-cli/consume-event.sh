@@ -40,6 +40,7 @@ done
 # Solo con TTY. Al tuberiar sale nada más que lo de Kafka.
 flag_desc() {
     case "$1" in
+        --topic)          echo "de qué tópico se lee" ;;
         --from-beginning) echo "empieza por el mensaje más viejo que el tópico conserva. Sin él, solo verás lo que llegue de ahora en adelante" ;;
         print.key)        echo "imprime también la clave de cada mensaje, no solo el valor" ;;
         key.separator)    echo "con qué carácter se separan clave y valor en pantalla" ;;

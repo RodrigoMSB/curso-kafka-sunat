@@ -48,6 +48,47 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# ── Ficha didáctica ──────────────────────────────────────────
+# Solo con TTY. Al tuberiar sale nada más que lo de Kafka.
+flag_desc() {
+    case "$1" in
+        --topic)              echo "cómo se va a llamar el tópico nuevo" ;;
+        --create)             echo "crea el tópico. Si ya existe, falla, salvo que le pongas --if-not-exists" ;;
+        --partitions)         echo "en cuántos pedazos se parte. Es lo que permite repartir el trabajo entre consumidores, y solo se puede subir después" ;;
+        --replication-factor) echo "cuántas copias de cada pedazo se guardan en brokers distintos. Con 3, aguantas perder uno" ;;
+        --if-not-exists)      echo "no falla si el tópico ya estaba. Útil en scripts que se corren dos veces" ;;
+        --config)             echo "una configuración propia del tópico, que pisa la del broker" ;;
+        *)                    flag_desc_comun "$1" ;;
+    esac
+}
+
+if ficha_activa; then
+    ficha_init_color
+    ficha_abrir 'QUÉ VAMOS A HACER'
+    ficha_texto "Crear el tópico ${TOPIC} con ${PARTITIONS} particiones y ${RF} copias de cada una, que es la decisión más difícil de cambiar después"
+    ficha_medio 'COMANDO REAL'
+    ficha_comando "kafka-topics --bootstrap-server $BOOTSTRAP --create \\"
+    ficha_comando "    --topic $TOPIC --partitions $PARTITIONS --replication-factor $RF"
+    ficha_medio 'DESGLOSE'
+    ficha_flag '--bootstrap-server'   "$BOOTSTRAP"  ''
+    ficha_flag '--create'             ''            ''
+    ficha_flag '--topic'              "$TOPIC"      ''
+    ficha_flag '--partitions'         "$PARTITIONS" ''
+    ficha_flag '--replication-factor' "$RF"         ''
+    [ -n "$IF_NOT_EXISTS" ] && ficha_flag '--if-not-exists' '' ''
+    if [ ${#CONFIGS[@]} -gt 0 ]; then
+        for ((i=0; i<${#CONFIGS[@]}; i+=2)); do
+            ficha_flag '--config' "${CONFIGS[i+1]}" '--config'
+        done
+    fi
+    ficha_medio 'CÓMO SE LEE LA SALIDA'
+    ficha_texto 'Una línea, "Created topic <nombre>", y nada más. Si además ves un WARNING sobre puntos y guiones bajos, es Kafka avisando que un nombre que mezcla ambos puede chocar en sus métricas. El tópico se crea igual.'
+    ficha_cerrar
+    ficha_nota "En el lab corre dentro del contenedor con docker exec ${BROKER}"
+    ficha_nota 'En tu servidor, kafka-topics está en el PATH y no hace falta docker.'
+    echo ''
+fi
+
 echo -e "${CYAN}[Create Topic] ${TOPIC}${NC}"
 echo "  Particiones:        ${PARTITIONS}"
 echo "  Replication factor: ${RF}"

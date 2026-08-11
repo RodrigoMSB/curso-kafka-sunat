@@ -1,0 +1,11 @@
+# Capturado del lab 13 levantado con bin/start-lab.sh mas connect-cli/create-source.sh y create-sink.sh (Kafka 8.2.0-ccs + PostgreSQL). Salida completa del wrapper:  kafka-cli/consume-pedidos.sh, cortado a los pocos segundos. El campo monto sale en base64 porque es NUMERIC en SQL
+[Consume Pedidos] Tópico: novatech.lab09.pedidos
+  Presiona Ctrl+C para detener
+────────────────────────────────────────────────────────
+Option --property is deprecated and will be removed in a future version. Use --formatter-property instead.
+{"id":1,"cliente_id":1001,"producto":"Caja de bananos premium","cantidad":50,"monto":"ExLQ","estado":"pendiente","creado_en":1786414277735}
+{"id":2,"cliente_id":1002,"producto":"Pallet de cajas reforzadas","cantidad":20,"monto":"AIfNoA==","estado":"pendiente","creado_en":1786414277735}
+{"id":3,"cliente_id":1003,"producto":"Etiquetas RFID x1000","cantidad":1,"monto":"RKog","estado":"pendiente","creado_en":1786414277735}
+{"id":4,"cliente_id":1004,"producto":"Cinta adhesiva industrial 50m","cantidad":100,"monto":"C3Gw","estado":"pendiente","creado_en":1786414277735}
+{"id":5,"cliente_id":1005,"producto":"Stretch film 500m","cantidad":30,"monto":"G3dA","estado":"pendiente","creado_en":1786414277735}
+{"id":6,"cliente_id":3001,"producto":"Pallet reforzado","cantidad":5,"monto":"JiWg","estado":"pendiente","creado_en":1786414323550}

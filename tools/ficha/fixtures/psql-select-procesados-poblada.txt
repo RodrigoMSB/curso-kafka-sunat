@@ -1,0 +1,9 @@
+# Capturado del lab 13 levantado con bin/start-lab.sh mas connect-cli/create-source.sh y create-sink.sh (Kafka 8.2.0-ccs + PostgreSQL). Salida completa del wrapper:  kafka-cli/verificar-tabla-procesados.sh, despues de que el Sink bajara dos eventos
+[Verificar Tabla] pedidos_procesados
+────────────────────────────────────────────────────────
+ id | cliente_id |           producto           |  estado   |        procesado_en        
+----+------------+------------------------------+-----------+----------------------------
+  7 |       1001 | Pedido procesado en 22:16:06 | procesado | 2026-08-11 02:16:07.027308
+  6 |       1001 | Pedido procesado en 22:15:38 | procesado | 2026-08-11 02:15:59.002725
+(2 rows)
+

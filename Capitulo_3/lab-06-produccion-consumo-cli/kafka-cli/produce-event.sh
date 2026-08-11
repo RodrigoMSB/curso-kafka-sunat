@@ -38,6 +38,7 @@ fi
 # Solo con TTY. Al tuberiar sale nada más que lo de Kafka.
 flag_desc() {
     case "$1" in
+        --topic)       echo "a qué tópico se escribe el mensaje" ;;
         parse.key)     echo "el productor parte cada línea en clave y valor. Sin esto, la línea entera es el valor y la clave va vacía" ;;
         key.separator) echo "por qué carácter la parte. Aquí, todo lo anterior al primer ':' es la clave" ;;
         *)             flag_desc_comun "$1" ;;

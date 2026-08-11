@@ -1,0 +1,10 @@
+# Capturado del lab 05 levantado con bin/start-lab.sh (Kafka 8.2.0-ccs, 3 brokers KRaft). Salida completa del wrapper, con sus propias lineas:  kafka-cli/create-topic.sh novatech.lab05.demo --partitions 6 --rf 3 --config retention.ms=3600000
+[Create Topic] novatech.lab05.demo
+  Particiones:        6
+  Replication factor: 3
+  Configs personalizadas:
+    retention.ms=3600000
+────────────────────────────────────────────────────────
+WARNING: Due to limitations in metric names, topics with a period ('.') or underscore ('_') could collide. To avoid issues it is best to use either, but not both.
+Created topic novatech.lab05.demo.
+  ✓ Tópico novatech.lab05.demo creado

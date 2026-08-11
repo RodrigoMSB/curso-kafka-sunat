@@ -18,6 +18,34 @@ MENSAJE=$(cat <<EOF
 EOF
 )
 
+# ── Ficha didáctica ──────────────────────────────────────────
+# Solo con TTY. Al tuberiar sale nada más que lo de Kafka.
+flag_desc() {
+    case "$1" in
+        --topic) echo "a qué tópico se escribe. De aquí lo lee el connector Sink para bajarlo a SQL" ;;
+        *)       flag_desc_comun "$1" ;;
+    esac
+}
+
+if ficha_activa; then
+    ficha_init_color
+    ficha_abrir 'QUÉ VAMOS A HACER'
+    ficha_texto "Publicar un evento en ${TOPIC} para que el connector JDBC Sink lo baje solo a la tabla pedidos_procesados. Es el camino inverso al del Source."
+    ficha_medio 'COMANDO REAL'
+    ficha_comando 'echo "$MENSAJE" | kafka-console-producer \'
+    ficha_comando "    --bootstrap-server $BOOTSTRAP --topic $TOPIC"
+    ficha_medio 'DESGLOSE'
+    ficha_flag '--bootstrap-server' "$BOOTSTRAP" ''
+    ficha_flag '--topic'            "$TOPIC"     ''
+    ficha_medio 'CÓMO SE LEE LA SALIDA'
+    ficha_texto 'El productor no imprime nada cuando le va bien.'
+    ficha_texto 'Lo que hay que mirar es el mensaje que mandamos, que lleva dos partes. En "schema" va el tipo de cada campo y en "payload" los valores. El Sink necesita el schema para saber a qué columna SQL y de qué tipo va cada dato, y por eso el JSON se ve tan largo para tan pocos valores.'
+    ficha_cerrar
+    ficha_nota "En el lab corre dentro del contenedor con docker exec ${BROKER}"
+    ficha_nota 'En tu servidor, kafka-console-producer está en el PATH y no hace falta docker.'
+    echo ''
+fi
+
 echo -e "${CYAN}[Publicar Procesado] -> ${TOPIC}${NC}"
 echo "  Pedido ID: ${PEDIDO_ID}"
 echo ""
