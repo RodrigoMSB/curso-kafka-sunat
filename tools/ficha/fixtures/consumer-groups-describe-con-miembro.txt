@@ -1,0 +1,9 @@
+# Capturado del lab 06 levantado con bin/start-lab.sh (Kafka 8.2.0-ccs, 3 brokers KRaft, topico novatech.fleet.events con 6 particiones y RF=3, grupo dashboard creado consumiendo con --group):  docker exec kafka-broker-1 kafka-consumer-groups --bootstrap-server kafka-broker-1:29092 --describe --group dashboard   (con un kafka-console-consumer conectado)
+
+GROUP           TOPIC                 PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID                                           HOST            CLIENT-ID
+dashboard       novatech.fleet.events 0          1               1               0               console-consumer-3101ae35-4bc5-4f63-954e-056614c8bf25 /172.20.0.2     console-consumer
+dashboard       novatech.fleet.events 1          0               0               0               console-consumer-3101ae35-4bc5-4f63-954e-056614c8bf25 /172.20.0.2     console-consumer
+dashboard       novatech.fleet.events 2          3               3               0               console-consumer-3101ae35-4bc5-4f63-954e-056614c8bf25 /172.20.0.2     console-consumer
+dashboard       novatech.fleet.events 3          1               1               0               console-consumer-3101ae35-4bc5-4f63-954e-056614c8bf25 /172.20.0.2     console-consumer
+dashboard       novatech.fleet.events 4          2               2               0               console-consumer-3101ae35-4bc5-4f63-954e-056614c8bf25 /172.20.0.2     console-consumer
+dashboard       novatech.fleet.events 5          0               0               0               console-consumer-3101ae35-4bc5-4f63-954e-056614c8bf25 /172.20.0.2     console-consumer

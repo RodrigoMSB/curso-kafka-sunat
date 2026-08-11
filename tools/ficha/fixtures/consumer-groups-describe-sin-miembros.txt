@@ -1,0 +1,11 @@
+# Capturado del lab 06 levantado con bin/start-lab.sh (Kafka 8.2.0-ccs, 3 brokers KRaft, topico novatech.fleet.events con 6 particiones y RF=3, grupo dashboard creado consumiendo con --group):  docker exec kafka-broker-1 kafka-consumer-groups --bootstrap-server kafka-broker-1:29092 --describe --group dashboard   (sin consumidores conectados)
+
+Consumer group 'dashboard' has no active members.
+
+GROUP           TOPIC                 PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID     HOST            CLIENT-ID
+dashboard       novatech.fleet.events 0          1               1               0               -               -               -
+dashboard       novatech.fleet.events 1          0               0               0               -               -               -
+dashboard       novatech.fleet.events 2          3               3               0               -               -               -
+dashboard       novatech.fleet.events 3          1               1               0               -               -               -
+dashboard       novatech.fleet.events 4          2               2               0               -               -               -
+dashboard       novatech.fleet.events 5          0               0               0               -               -               -

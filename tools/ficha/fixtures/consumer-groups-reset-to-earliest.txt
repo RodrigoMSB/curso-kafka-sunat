@@ -1,0 +1,12 @@
+# Capturado del lab 06 levantado con bin/start-lab.sh (Kafka 8.2.0-ccs, 3 brokers KRaft, topico novatech.fleet.events con 6 particiones y RF=3, grupo dashboard creado consumiendo con --group):  kafka-cli/reset-group.sh dashboard, que ejecuta kafka-consumer-groups --reset-offsets --group dashboard --topic novatech.fleet.events --to-earliest --execute
+[1;33m[Reset Group] grupo=dashboard -> --to-earliest[0m
+[1;33m  Asegúrate de que no haya consumidores activos en este grupo.[0m
+────────────────────────────────────────────────────────
+
+GROUP           TOPIC                 PARTITION  NEW-OFFSET
+dashboard       novatech.fleet.events 1          0
+dashboard       novatech.fleet.events 2          0
+dashboard       novatech.fleet.events 0          0
+dashboard       novatech.fleet.events 5          0
+dashboard       novatech.fleet.events 3          0
+dashboard       novatech.fleet.events 4          0

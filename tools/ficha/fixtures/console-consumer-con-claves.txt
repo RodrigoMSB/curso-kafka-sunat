@@ -1,0 +1,9 @@
+# Capturado del lab 06 levantado con bin/start-lab.sh (Kafka 8.2.0-ccs, 3 brokers KRaft, topico novatech.fleet.events con 6 particiones y RF=3, grupo dashboard creado consumiendo con --group):  docker exec kafka-broker-1 kafka-console-consumer --bootstrap-server kafka-broker-1:29092 --topic novatech.fleet.events --from-beginning --timeout-ms 5000 --property print.key=true --property key.separator=:
+Option --property is deprecated and will be removed in a future version. Use --formatter-property instead.
+NVT-1001:status:STOPPED
+null:evento-2
+null:evento-3
+null:evento-1
+null:evento-5
+null:vehicle:NVT-1001 status:MOVING
+null:evento-4

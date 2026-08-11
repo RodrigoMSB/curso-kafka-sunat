@@ -1,0 +1,2 @@
+# Capturado del lab 06 levantado con bin/start-lab.sh (Kafka 8.2.0-ccs, 3 brokers KRaft, topico novatech.fleet.events con 6 particiones y RF=3, grupo dashboard creado consumiendo con --group):  docker exec kafka-broker-1 kafka-consumer-groups --bootstrap-server kafka-broker-1:29092 --list
+dashboard
