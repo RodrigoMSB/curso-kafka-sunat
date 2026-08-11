@@ -1,0 +1,3 @@
+# Capturado del lab 14 levantado con bin/start-lab.sh (Kafka 8.2.0-ccs con TLS+SASL_SSL+ACLs, ejecutado dentro del contenedor cli-client). Salida completa del wrapper:  kafka-cli/verify-no-loss.sh, contando por el listener seguro con credenciales de admin
+[Verificación sin pérdida] Contando mensajes en novatech.lab12.confidencial...
+  Total de mensajes leídos: 2

@@ -1,0 +1,21 @@
+# Capturado del lab 14 levantado con bin/start-lab.sh (Kafka 8.2.0-ccs con TLS+SASL_SSL+ACLs, ejecutado dentro del contenedor cli-client). Salida completa del wrapper:  kafka-cli/list-acls.sh
+[List ACLs] Todas las reglas de autorización
+────────────────────────────────────────────────────────
+Current ACLs for resource `ResourcePattern(resourceType=TOPIC, name=novatech.lab12.publico, patternType=LITERAL)`:
+	(principal=User:app1, host=*, operation=CREATE, permissionType=ALLOW)
+	(principal=User:app2, host=*, operation=READ, permissionType=ALLOW)
+	(principal=User:app1, host=*, operation=READ, permissionType=ALLOW)
+	(principal=User:app2, host=*, operation=DESCRIBE, permissionType=ALLOW)
+	(principal=User:app1, host=*, operation=DESCRIBE, permissionType=ALLOW)
+	(principal=User:app1, host=*, operation=WRITE, permissionType=ALLOW)
+
+Current ACLs for resource `ResourcePattern(resourceType=TOPIC, name=novatech.lab12.confidencial, patternType=LITERAL)`:
+	(principal=User:app1, host=*, operation=CREATE, permissionType=ALLOW)
+	(principal=User:app1, host=*, operation=READ, permissionType=ALLOW)
+	(principal=User:app1, host=*, operation=DESCRIBE, permissionType=ALLOW)
+	(principal=User:app1, host=*, operation=WRITE, permissionType=ALLOW)
+
+Current ACLs for resource `ResourcePattern(resourceType=GROUP, name=*, patternType=LITERAL)`:
+	(principal=User:app2, host=*, operation=READ, permissionType=ALLOW)
+	(principal=User:app1, host=*, operation=READ, permissionType=ALLOW)
+

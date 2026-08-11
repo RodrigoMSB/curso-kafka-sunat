@@ -1,0 +1,13 @@
+# Capturado del lab 14 levantado con bin/start-lab.sh (Kafka 8.2.0-ccs con TLS+SASL_SSL+ACLs, ejecutado dentro del contenedor cli-client). Salida completa del wrapper:  kafka-cli/consume-confidencial-app2.sh, prueba negativa. El TOPIC_AUTHORIZATION_FAILED es el resultado correcto
+[Test denial] app2 intenta consumir topic confidencial...
+  Esto DEBE fallar con 'TopicAuthorizationException' o similar.
+─────────────────────────────────────────────────────
+Option --consumer.config is deprecated and will be removed in a future version. Use --command-config instead.
+[2026-08-11 15:42:42,811] WARN [Consumer clientId=console-consumer, groupId=console-consumer-4407] The metadata response from the cluster reported a recoverable issue with correlation id 2 : {novatech.lab12.confidencial=TOPIC_AUTHORIZATION_FAILED} (org.apache.kafka.clients.NetworkClient)
+[2026-08-11 15:42:42,821] ERROR [Consumer clientId=console-consumer, groupId=console-consumer-4407] Topic authorization failed for topics [novatech.lab12.confidencial] (org.apache.kafka.clients.Metadata)
+[2026-08-11 15:42:42,823] ERROR Error processing message, terminating consumer process:  (org.apache.kafka.tools.consumer.ConsoleConsumer)
+org.apache.kafka.common.errors.TopicAuthorizationException: Not authorized to access topics: [novatech.lab12.confidencial]
+Processed a total of 0 messages
+─────────────────────────────────────────────────────
+[Resultado esperado] error tipo 'Not authorized' / 'TopicAuthorizationException'.
+Eso PRUEBA que las ACLs funcionan: app2 NO puede leer confidencial.
