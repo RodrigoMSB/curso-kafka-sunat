@@ -1,0 +1,13 @@
+# Capturado del lab 11 levantado con bin/start-lab.sh (Kafka 8.2.0-ccs + cp-schema-registry). Salida completa del wrapper:  kafka-cli/consume-avro.sh novatech.lab10.pedidos, cortado a los 12s. Avro binario devuelto como JSON gracias al Registry
+[Consume Avro] Tópico: novatech.lab10.pedidos
+  Presiona Ctrl+C para detener
+────────────────────────────────────────────────────────
+Option --property is deprecated and will be removed in a future version. Use --formatter-property instead.
+{"id":77,"cliente_id":1001,"producto":"Caja","cantidad":1,"monto":100.0,"estado":"pendiente"}
+{"id":2,"cliente_id":1010,"producto":"Pallet","cantidad":5,"monto":12000.0,"estado":"enviado"}
+{"id":2,"cliente_id":1029,"producto":"Etiquetas RFID","cantidad":14,"monto":22149.0,"estado":"pendiente"}
+{"id":1,"cliente_id":1078,"producto":"Papel kraft","cantidad":96,"monto":19716.0,"estado":"enviado"}
+{"id":3,"cliente_id":1047,"producto":"Stretch film","cantidad":74,"monto":4696.0,"estado":"en_proceso"}
+{"id":1,"cliente_id":1001,"producto":"Caja premium","cantidad":10,"monto":25000.0,"estado":"pendiente"}
+{"id":77,"cliente_id":1001,"producto":"Caja","cantidad":1,"monto":100.0,"estado":"pendiente"}
+{"id":4,"cliente_id":1085,"producto":"Caja bananos","cantidad":81,"monto":32391.0,"estado":"entregado"}

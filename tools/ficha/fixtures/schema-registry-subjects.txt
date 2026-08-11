@@ -1,0 +1,2 @@
+# Capturado del lab 11 levantado con bin/start-lab.sh (Kafka 8.2.0-ccs + cp-schema-registry). Salida completa del wrapper:  curl -sf http://localhost:8081/subjects, despues de publicar pedidos y clientes
+["novatech.lab10.clientes-key","novatech.lab10.clientes-value","novatech.lab10.pedidos-value"]

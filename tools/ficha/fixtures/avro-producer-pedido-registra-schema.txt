@@ -1,0 +1,5 @@
+# Capturado del lab 11 levantado con bin/start-lab.sh (Kafka 8.2.0-ccs + cp-schema-registry). Salida completa del wrapper:  kafka-cli/produce-pedido-avro.sh 1 1001 'Caja premium' 10 25000.00 pendiente
+[Produce Pedido Avro] -> novatech.lab10.pedidos
+  ID: 1 | Cliente: 1001 | Producto: Caja premium
+Warning: --property is deprecated and will be removed in a future version. Use --reader-property instead.
+  ✓ Pedido publicado

@@ -1,0 +1,24 @@
+# Capturado del lab 11 levantado con bin/start-lab.sh (Kafka 8.2.0-ccs + cp-schema-registry). Salida completa del wrapper:  kafka-cli/produce-clientes-seed.sh, que delega cinco veces en produce-cliente-avro.sh
+[Produce Clientes Seed] Generando 5 clientes...
+[Produce Cliente Avro] -> novatech.lab10.clientes
+  ID: 1001 | Nombre: NovaCorp | Tipo: VIP | Ciudad: Santiago
+Warning: --property is deprecated and will be removed in a future version. Use --reader-property instead.
+  ✓ Cliente publicado
+[Produce Cliente Avro] -> novatech.lab10.clientes
+  ID: 1010 | Nombre: LogisticaSur | Tipo: VIP | Ciudad: Concepción
+Warning: --property is deprecated and will be removed in a future version. Use --reader-property instead.
+  ✓ Cliente publicado
+[Produce Cliente Avro] -> novatech.lab10.clientes
+  ID: 1017 | Nombre: AndesExport | Tipo: ESTANDAR | Ciudad: Valparaíso
+Warning: --property is deprecated and will be removed in a future version. Use --reader-property instead.
+  ✓ Cliente publicado
+[Produce Cliente Avro] -> novatech.lab10.clientes
+  ID: 1055 | Nombre: PacificoCargo | Tipo: VIP | Ciudad: Antofagasta
+Warning: --property is deprecated and will be removed in a future version. Use --reader-property instead.
+  ✓ Cliente publicado
+[Produce Cliente Avro] -> novatech.lab10.clientes
+  ID: 1098 | Nombre: PatagoniaTrade | Tipo: NUEVO | Ciudad: Punta Arenas
+Warning: --property is deprecated and will be removed in a future version. Use --reader-property instead.
+  ✓ Cliente publicado
+  ✓ 5 clientes seed publicados
+Estos IDs (1001, 1010, 1017, 1055, 1098) se usarán para los JOINs.
