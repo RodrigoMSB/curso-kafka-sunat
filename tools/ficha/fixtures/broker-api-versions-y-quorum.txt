@@ -1,0 +1,15 @@
+# Capturado del lab 08 levantado con bin/start-lab.sh (Kafka 8.2.0-ccs, 3 brokers KRaft mas kafka-broker-4 agregado con kafka-cli/add-broker.sh). Salida completa del wrapper:  kafka-cli/list-brokers.sh
+[Brokers registrados en el clúster]
+kafka-broker-1:29092
+kafka-broker-2:29093
+kafka-broker-3:29094
+
+[Metadata del clúster]
+ClusterId:              
+LeaderId:               2
+LeaderEpoch:            1
+HighWatermark:          77
+MaxFollowerLag:         0
+MaxFollowerLagTimeMs:   229
+CurrentVoters:          [{"id": 1, "endpoints": ["CONTROLLER://kafka-broker-1:39092"]}, {"id": 2, "endpoints": ["CONTROLLER://kafka-broker-2:39093"]}, {"id": 3, "endpoints": ["CONTROLLER://kafka-broker-3:39094"]}]
+CurrentObservers:       []

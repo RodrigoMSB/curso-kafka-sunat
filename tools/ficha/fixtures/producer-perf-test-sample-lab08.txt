@@ -1,0 +1,5 @@
+# Capturado del lab 08 levantado con bin/start-lab.sh (Kafka 8.2.0-ccs, 3 brokers KRaft mas kafka-broker-4 agregado con kafka-cli/add-broker.sh). Salida completa del wrapper:  kafka-cli/produce-sample.sh novatech.lab08.pedidos 2000
+[Sample] Produciendo 2000 mensajes en novatech.lab08.pedidos...
+Option --producer-props has been deprecated and will be removed in a future version. Use --command-property instead.
+2000 records sent, 7575.757576 records/sec (1.85 MB/sec), 25.56 ms avg latency, 214.00 ms max latency, 25 ms 50th, 39 ms 95th, 41 ms 99th, 41 ms 99.9th.
+✓ Mensajes producidos

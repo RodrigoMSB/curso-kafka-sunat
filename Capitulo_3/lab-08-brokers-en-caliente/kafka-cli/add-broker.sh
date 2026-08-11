@@ -5,6 +5,16 @@ LAB_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 COMPOSE_FILE="${LAB_DIR}/infra/docker-compose.yml"
 ENV_FILE="${LAB_DIR}/infra/.env"
 
+# ── Ficha operativa ──────────────────────────────────────────
+# Este wrapper no ejecuta ningún comando de Kafka: levanta un contenedor con
+# docker compose. No hay flags de Kafka que desglosar ni salida de Kafka que
+# leer, así que le corresponde la familia operativa y no la de lección.
+ficha_op 'AGREGAR UN BROKER AL CLÚSTER' \
+    'Levanta kafka-broker-4 con el perfil scale de compose y espera a que quede healthy y unido al quórum' \
+    'los 3 brokers que ya estaban y todos sus datos. Ninguna partición se mueve sola al entrar el nuevo' \
+    'nada. Solo suma un contenedor al proyecto novatech-lab08' \
+    'cuando quieres ampliar el clúster. El broker entra vacío, y repartirle carga es el paso siguiente con reassign-partitions.sh'
+
 echo -e "${YELLOW}[Add] Levantando kafka-broker-4 (broker-only)...${NC}"
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --profile scale up -d kafka-broker-4
 

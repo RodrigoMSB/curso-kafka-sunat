@@ -1,0 +1,4 @@
+# Capturado del lab 08 levantado con bin/start-lab.sh (Kafka 8.2.0-ccs, 3 brokers KRaft mas kafka-broker-4 agregado con kafka-cli/add-broker.sh). Salida completa del wrapper:  kafka-cli/describe-broker-config.sh 1, despues de fijar log.cleaner.threads=2. Se ve la cadena de synonyms
+[Config broker 1]
+Dynamic configs for broker 1 are:
+  log.cleaner.threads=2 sensitive=false synonyms={DYNAMIC_BROKER_CONFIG:log.cleaner.threads=2, DEFAULT_CONFIG:log.cleaner.threads=1}

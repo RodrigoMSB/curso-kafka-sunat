@@ -1,0 +1,25 @@
+# Capturado del lab 08 levantado con bin/start-lab.sh (Kafka 8.2.0-ccs, 3 brokers KRaft mas kafka-broker-4 agregado con kafka-cli/add-broker.sh). Salida completa del wrapper:  kafka-cli/reassign-partitions.sh novatech.lab08.pedidos 1,2,3,4. Se ven las tres fases y el 'Clearing throttles' del --verify
+[Reasignación] novatech.lab08.pedidos → brokers 1,2,3,4
+Generando plan...
+Plan propuesto:
+{"version":1,"partitions":[{"topic":"novatech.lab08.pedidos","partition":0,"replicas":[1,2,3],"log_dirs":["any","any","any"]},{"topic":"novatech.lab08.pedidos","partition":1,"replicas":[2,3,4],"log_dirs":["any","any","any"]},{"topic":"novatech.lab08.pedidos","partition":2,"replicas":[3,4,1],"log_dirs":["any","any","any"]},{"topic":"novatech.lab08.pedidos","partition":3,"replicas":[4,1,2],"log_dirs":["any","any","any"]},{"topic":"novatech.lab08.pedidos","partition":4,"replicas":[2,4,1],"log_dirs":["any","any","any"]},{"topic":"novatech.lab08.pedidos","partition":5,"replicas":[4,1,3],"log_dirs":["any","any","any"]}]}
+
+Ejecutando...
+Current partition replica assignment
+
+{"version":1,"partitions":[{"topic":"novatech.lab08.pedidos","partition":0,"replicas":[1,2,3],"log_dirs":["/var/lib/kafka/data","/var/lib/kafka/data","/var/lib/kafka/data"]},{"topic":"novatech.lab08.pedidos","partition":1,"replicas":[2,3,1],"log_dirs":["/var/lib/kafka/data","/var/lib/kafka/data","/var/lib/kafka/data"]},{"topic":"novatech.lab08.pedidos","partition":2,"replicas":[3,1,2],"log_dirs":["/var/lib/kafka/data","/var/lib/kafka/data","/var/lib/kafka/data"]},{"topic":"novatech.lab08.pedidos","partition":3,"replicas":[3,1,2],"log_dirs":["/var/lib/kafka/data","/var/lib/kafka/data","/var/lib/kafka/data"]},{"topic":"novatech.lab08.pedidos","partition":4,"replicas":[1,2,3],"log_dirs":["/var/lib/kafka/data","/var/lib/kafka/data","/var/lib/kafka/data"]},{"topic":"novatech.lab08.pedidos","partition":5,"replicas":[2,3,1],"log_dirs":["/var/lib/kafka/data","/var/lib/kafka/data","/var/lib/kafka/data"]}]}
+
+Save this to use as the --reassignment-json-file option during rollback
+Successfully started partition reassignments for novatech.lab08.pedidos-0,novatech.lab08.pedidos-1,novatech.lab08.pedidos-2,novatech.lab08.pedidos-3,novatech.lab08.pedidos-4,novatech.lab08.pedidos-5
+Verificando (espera unos segundos)...
+Status of partition reassignment:
+Reassignment of partition novatech.lab08.pedidos-0 is completed.
+Reassignment of partition novatech.lab08.pedidos-1 is completed.
+Reassignment of partition novatech.lab08.pedidos-2 is completed.
+Reassignment of partition novatech.lab08.pedidos-3 is completed.
+Reassignment of partition novatech.lab08.pedidos-4 is completed.
+Reassignment of partition novatech.lab08.pedidos-5 is completed.
+
+Clearing broker-level throttles on brokers 1,2,3,4
+Clearing topic-level throttles on topic novatech.lab08.pedidos
+✓ Reasignación lanzada

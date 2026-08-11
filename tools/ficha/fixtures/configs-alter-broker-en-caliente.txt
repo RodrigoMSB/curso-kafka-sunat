@@ -1,0 +1,4 @@
+# Capturado del lab 08 levantado con bin/start-lab.sh (Kafka 8.2.0-ccs, 3 brokers KRaft mas kafka-broker-4 agregado con kafka-cli/add-broker.sh). Salida completa del wrapper:  kafka-cli/alter-broker-config.sh 1 log.cleaner.threads=2
+[Alter] broker=1 log.cleaner.threads=2
+Completed updating config for broker 1.
+✓ Configuración aplicada en caliente (sin reinicio)
