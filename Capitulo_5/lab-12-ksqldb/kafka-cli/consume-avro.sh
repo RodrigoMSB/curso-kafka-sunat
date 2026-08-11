@@ -7,6 +7,10 @@ source "$(dirname "$0")/../bin/common.sh"
 TOPIC="${1:?Uso: $0 <topic>}"
 
 # ── Ficha didáctica ──────────────────────────────────────────
+# Este archivo es CANÓNICO: vive en tools/ficha/wrappers/ y se replica por
+# hash a los labs 11 y 12, que lo tienen idéntico byte a byte. Entró al mapa
+# en la SPEC-71, cuando el arreglo del -it borró la única diferencia que
+# tenía con su par -- y esa diferencia era un bug, no una decisión.
 # Solo con TTY. Al tuberiar sale nada más que lo de Kafka.
 flag_desc() {
     case "$1" in

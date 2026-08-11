@@ -103,7 +103,7 @@ labs_kafka_cli_01_04() {
 
 # Los dos wrappers de Avro que los labs 11 y 12 tienen IDENTICOS byte a byte.
 # Entran al canonico desde la SPEC-71. Los otros tres que comparten nombre
-# (consume-avro, produce-cliente-avro, produce-flood-pedidos) NO entran: su
+# (produce-cliente-avro, produce-flood-pedidos) NO entran: su
 # texto difiere a proposito, porque cada lab explica la clave Avro por la razon
 # de su propio tema, y unificarlos borraria esa explicacion.
 labs_avro_11_12() {
@@ -263,6 +263,14 @@ EOF
         [ -z "$lab" ] && continue
         "$accion" "$DIR_CANON/wrappers/produce-clientes-seed.sh" \
                   "$RAIZ/$lab/kafka-cli/produce-clientes-seed.sh"
+    done <<EOF
+$(labs_avro_11_12)
+EOF
+
+    while IFS= read -r lab; do
+        [ -z "$lab" ] && continue
+        "$accion" "$DIR_CANON/wrappers/consume-avro.sh" \
+                  "$RAIZ/$lab/kafka-cli/consume-avro.sh"
     done <<EOF
 $(labs_avro_11_12)
 EOF
