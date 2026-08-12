@@ -83,7 +83,7 @@ docker ps
 > **Si ves error tipo `Cluster ID is required`**: significa que el broker no encontró meta.properties. La imagen Confluent normalmente formatea solo la primera vez si pasas CLUSTER_ID por env, pero si falla, ejecuta:
 >
 > ```bash
-> docker exec kafka-broker kafka-storage format \
+> MSYS_NO_PATHCONV=1 docker exec kafka-broker kafka-storage format \
 >     --cluster-id <TU_CLUSTER_ID> \
 >     --config /etc/kafka/kafka.properties \
 >     --ignore-formatted

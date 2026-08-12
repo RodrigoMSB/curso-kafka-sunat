@@ -47,7 +47,7 @@ Verificar que `TLS_KEYSTORE_PASSWORD` (en `infra/.env`) coincide con el usado en
 
 **Diagnóstico**:
 ```bash
-docker exec kafka-broker-1 cat /etc/kafka/jaas/kafka_server_jaas.conf
+MSYS_NO_PATHCONV=1 docker exec kafka-broker-1 cat /etc/kafka/jaas/kafka_server_jaas.conf
 ```
 
 Si no existe → revisar `volumes:` en docker-compose.
@@ -68,7 +68,7 @@ Si no existe → revisar `volumes:` en docker-compose.
 
 **Diagnóstico**:
 ```bash
-docker exec kafka-broker-1 cat /etc/kafka/jaas/kafka_server_jaas.conf
+MSYS_NO_PATHCONV=1 docker exec kafka-broker-1 cat /etc/kafka/jaas/kafka_server_jaas.conf
 cat infra/client-properties/app1.properties
 ```
 
@@ -87,12 +87,12 @@ kafka-cli/list-acls.sh
 
 Si la lista está vacía:
 ```bash
-docker exec -e KAFKA_OPTS= cli-client /etc/kafka/scripts/init-lab12-acls.sh
+MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= cli-client /etc/kafka/scripts/init-lab12-acls.sh
 ```
 
 **Si init-lab12-acls.sh falla**: revisar que `cli-client` tenga acceso a las properties del admin:
 ```bash
-docker exec cli-client ls -la /etc/kafka/client-properties/
+MSYS_NO_PATHCONV=1 docker exec cli-client ls -la /etc/kafka/client-properties/
 ```
 
 ---
@@ -138,7 +138,7 @@ ssl.endpoint.identification.algorithm=
 
 **Diagnóstico**:
 ```bash
-docker exec -e KAFKA_OPTS= cli-client kafka-topics \
+MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= cli-client kafka-topics \
   --bootstrap-server kafka-broker-1:9092 \
   --command-config /etc/kafka/client-properties/admin.properties \
   --describe --topic novatech.lab12.publico

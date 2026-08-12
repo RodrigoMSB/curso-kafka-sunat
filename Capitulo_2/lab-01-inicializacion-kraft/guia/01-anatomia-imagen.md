@@ -37,8 +37,13 @@ Este script:
 
 ## Actividad 2: Explorar el server.properties de ejemplo
 
+> **Si usas Git Bash en Windows:** `MSYS_NO_PATHCONV=1` le dice a Git Bash que no toque
+> las rutas de este comando. Sin él, Windows convierte `/etc/kafka/...` —que es una ruta
+> **dentro del contenedor**— en una ruta de tu disco, y el comando falla. En Linux o macOS
+> el prefijo no hace nada y no molesta.
+
 ```bash
-docker run --rm confluentinc/cp-kafka:8.2.0 cat /etc/kafka/server.properties | head -50
+MSYS_NO_PATHCONV=1 docker run --rm confluentinc/cp-kafka:8.2.0 cat /etc/kafka/server.properties | head -50
 ```
 
 Ahí encuentras `process.roles` y `listeners`. Pero no todo: `head -50` corta el

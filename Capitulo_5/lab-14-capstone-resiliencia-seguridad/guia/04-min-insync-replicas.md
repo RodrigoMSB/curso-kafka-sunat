@@ -57,8 +57,13 @@ Pareciera más seguro decir "RF=3, min.ISR=3". Pero:
 
 Verifica que el topic `novatech.lab12.publico` esté en estado sano:
 
+> **Si usas Git Bash en Windows:** `MSYS_NO_PATHCONV=1` le dice a Git Bash que no toque
+> las rutas de este comando. Sin él, Windows convierte `/etc/kafka/...` —que es una ruta
+> **dentro del contenedor**— en una ruta de tu disco, y el comando falla. En Linux o macOS
+> el prefijo no hace nada y no molesta.
+
 ```bash
-docker exec -e KAFKA_OPTS= cli-client kafka-topics \
+MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= cli-client kafka-topics \
   --bootstrap-server kafka-broker-1:9092 \
   --command-config /etc/kafka/client-properties/admin.properties \
   --describe --topic novatech.lab12.publico
@@ -94,7 +99,7 @@ sleep 5
 Verifica el topic:
 
 ```bash
-docker exec -e KAFKA_OPTS= cli-client kafka-topics \
+MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= cli-client kafka-topics \
   --bootstrap-server kafka-broker-1:9092 \
   --command-config /etc/kafka/client-properties/admin.properties \
   --describe --topic novatech.lab12.publico
@@ -153,7 +158,7 @@ sleep 30
 Espera a que los brokers reincorporen y verifica:
 
 ```bash
-docker exec -e KAFKA_OPTS= cli-client kafka-topics \
+MSYS_NO_PATHCONV=1 docker exec -e KAFKA_OPTS= cli-client kafka-topics \
   --bootstrap-server kafka-broker-1:9092 \
   --command-config /etc/kafka/client-properties/admin.properties \
   --describe --topic novatech.lab12.publico

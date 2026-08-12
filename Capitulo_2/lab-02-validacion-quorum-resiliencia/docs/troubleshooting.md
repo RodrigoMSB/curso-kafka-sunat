@@ -28,11 +28,16 @@ docker ps | grep -E '9092|9093|9094'
 **Causa probable**: distintos CLUSTER_ID o distintos QUORUM_VOTERS entre los brokers.
 
 **Solución**:
+> **Si usas Git Bash en Windows:** `MSYS_NO_PATHCONV=1` le dice a Git Bash que no toque
+> las rutas de este comando. Sin él, Windows convierte `/var/lib/kafka/...` —que es una ruta
+> **dentro del contenedor**— en una ruta de tu disco, y el comando falla. En Linux o macOS
+> el prefijo no hace nada y no molesta.
+
 ```bash
 # Verificar que los 3 brokers tienen el MISMO CLUSTER_ID
 for i in 1 2 3; do
     echo "=== broker-$i ==="
-    docker exec kafka-broker-$i cat /var/lib/kafka/data/meta.properties 2>/dev/null | grep cluster.id
+    MSYS_NO_PATHCONV=1 docker exec kafka-broker-$i cat /var/lib/kafka/data/meta.properties 2>/dev/null | grep cluster.id
 done
 ```
 

@@ -32,7 +32,7 @@ ERROR No cluster ID found
 
 **Solución**:
 ```bash
-docker exec <NOMBRE_CONTAINER> kafka-storage format \
+MSYS_NO_PATHCONV=1 docker exec <NOMBRE_CONTAINER> kafka-storage format \
     --cluster-id <TU_CLUSTER_ID> \
     --config /etc/kafka/kafka.properties \
     --ignore-formatted
