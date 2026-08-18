@@ -34,10 +34,35 @@ NC='\033[0m'
 
 # ── Identidad del lab ──
 LAB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-COMPOSE_FILE="${LAB_DIR}/infra/docker-compose.yml"
-ENV_FILE="${LAB_DIR}/infra/.env"
+DIR_INFRA="${LAB_DIR}/infra"
+ENV_FILE="${DIR_INFRA}/.env"
 CONTENEDOR="kafka-rhel"
 PROYECTO="novatech-lab08b"
+
+# ── Invocar docker compose sin pasarle rutas absolutas ──
+# En Git Bash, `pwd` devuelve /c/KAFKA/... y ese formato NO le sirve a
+# docker.exe, que es un binario de Windows: lo resuelve contra la raiz del
+# disco y produce C:\c\KAFKA\..., una ruta que no existe. El sintoma medido
+# en la VM de Netec fue:
+#
+#   couldn't find env file: C:\c\KAFKA\curso-kafka-sunat\...\infra\.env
+#
+# MSYS_NO_PATHCONV=1 no cubre esto y no es su trabajo: esa guardia impide que
+# MSYS traduzca rutas que deben llegar intactas AL CONTENEDOR (/etc/kafka/...,
+# /var/lib/kafka/data). Aqui el problema es al reves -- una ruta del HOST que
+# docker.exe tiene que entender.
+#
+# La solucion es no darle ninguna: se entra al directorio y se usan nombres
+# relativos. El `cd` es un builtin de bash, asi que la ruta absoluta se
+# resuelve dentro del shell y nunca cruza a docker.exe. El subshell mantiene
+# el cambio de directorio local a esta funcion.
+#
+# Tambien se saca el `-f`: dentro de infra/, compose encuentra su
+# docker-compose.yml solo. El `-p` explicito se queda, porque el alcance de un
+# `down -v` lo da el proyecto (tests/CONVENCIONES-TEST.md).
+compose() {  # <subcomando de docker compose>...
+    ( cd "$DIR_INFRA" && docker compose --env-file .env -p "$PROYECTO" "$@" )
+}
 
 # Rutas DENTRO del contenedor. Viven en variables y no sueltas en cada
 # comando por dos razones: se escriben una sola vez, y ninguna linea de

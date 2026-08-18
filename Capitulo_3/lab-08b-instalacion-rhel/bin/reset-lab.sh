@@ -22,8 +22,7 @@ echo ""
 # El alcance del `down -v` lo da el PROYECTO, no el archivo: por eso el -p
 # explicito (tests/CONVENCIONES-TEST.md). Sin el, el proyecto sale del nombre
 # del directorio y puede alcanzar volumenes que no son de este lab.
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" -p "$PROYECTO" \
-    down -v --remove-orphans
+compose down -v --remove-orphans
 
 echo ""
 echo -e "${GREEN}✓ Lab 08b reiniciado. La imagen se conserva: el proximo arranque no${NC}"

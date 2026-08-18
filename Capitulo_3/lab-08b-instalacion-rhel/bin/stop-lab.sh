@@ -20,7 +20,7 @@ echo -e "${CYAN}  DESTRUYE:    nada. Solo detiene ${CONTENEDOR}.${NC}"
 echo -e "${CYAN}  CUANDO:      cuando terminas por hoy y quieres liberarle memoria a Docker.${NC}"
 echo ""
 
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" -p "$PROYECTO" stop
+compose stop
 
 echo -e "${GREEN}✓ Laboratorio detenido.${NC}"
 echo -e "${CYAN}  Para reanudar: bin/start-lab.sh${NC}"

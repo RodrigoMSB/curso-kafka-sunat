@@ -64,14 +64,13 @@ if [ "$MODO" = "reanudar" ]; then
     echo -e "${CYAN}      Para volver al servidor recien instalado: bin/reset-lab.sh${NC}"
     echo ""
     echo -e "${YELLOW}[2/3] Encendiendo el servidor...${NC}"
-    docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" -p "$PROYECTO" start
+    compose start
 else
     echo -e "${YELLOW}[1/3] Preparando el terreno...${NC}"
     # Solo llega aqui si NO hay un contenedor nuestro. Si el nombre lo tiene
     # algo ajeno, esta funcion lo dice y aborta sin tocarlo.
     botar_contenedores_del_curso "start-lab" "$CONTENEDOR" || exit 1
-    docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" -p "$PROYECTO" \
-        down --remove-orphans >/dev/null 2>&1 || true
+    compose down --remove-orphans >/dev/null 2>&1 || true
 
     echo ""
     echo -e "${YELLOW}[2/3] Construyendo el servidor RHEL 9 e instalando Kafka con yum...${NC}"
@@ -80,7 +79,7 @@ else
     echo ""
     # El `up` nunca se silencia: si falla, el error tiene que verse
     # (tests/CONVENCIONES-TEST.md).
-    docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" -p "$PROYECTO" up -d --build
+    compose up -d --build
 fi
 
 echo ""
