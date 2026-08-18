@@ -32,7 +32,7 @@ if ficha_activa; then
 fi
 
 echo -e "${YELLOW}[NovaTech] Eliminando contenedores, volúmenes y redes del laboratorio...${NC}"
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down -v --remove-orphans 2>/dev/null || true
+compose down -v --remove-orphans 2>/dev/null || true
 
 # Cleanup defensivo de contenedores por nombre canónico (cross-lab).
 botar_contenedores_del_curso "reset-lab" kafka-broker-1 kafka-broker-2 kafka-broker-3 kafka-rest kafbat-ui || exit 1

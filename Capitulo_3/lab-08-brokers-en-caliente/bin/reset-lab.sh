@@ -33,7 +33,7 @@ fi
 
 echo -e "${YELLOW}[NovaTech] Eliminando contenedores, volúmenes y redes del laboratorio...${NC}"
 # --profile scale para alcanzar también a kafka-broker-4.
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --profile scale down -v --remove-orphans 2>/dev/null || true
+compose --profile scale down -v --remove-orphans 2>/dev/null || true
 
 # Cleanup defensivo de contenedores por nombre canónico (cross-lab).
 botar_contenedores_del_curso "reset-lab" kafka-broker-1 kafka-broker-2 kafka-broker-3 kafka-broker-4 kafbat-ui || exit 1

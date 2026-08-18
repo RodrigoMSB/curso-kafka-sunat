@@ -29,7 +29,7 @@ ficha_op "DETENER EL LAB 09" \
     'cuando terminas por hoy y quieres liberarle memoria a Docker'
 
 echo -e "${YELLOW}[NovaTech] Deteniendo el laboratorio (se conservan los volúmenes)...${NC}"
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" stop
+compose stop
 
 echo -e "${GREEN}✓ Laboratorio detenido.${NC}"
 echo -e "${CYAN}  Para reanudar: bin/start-lab.sh${NC}"

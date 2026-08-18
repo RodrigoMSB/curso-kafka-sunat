@@ -24,6 +24,36 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m'
 
+# ── Invocar docker compose sin pasarle rutas absolutas ──
+# En Git Bash, `pwd` devuelve /c/KAFKA/... y ese formato NO le sirve a
+# docker.exe, que es un binario de Windows: lo resuelve contra la raiz del
+# disco y produce C:\c\KAFKA\..., una ruta que no existe. El sintoma medido
+# en la VM de Netec fue:
+#
+#   couldn't find env file: C:\c\KAFKA\curso-kafka-sunat\...\infra\.env
+#
+# Ojo, porque son DOS problemas opuestos y este archivo necesita los dos:
+# MSYS_NO_PATHCONV=1 (arriba) protege las rutas que deben llegar intactas AL
+# CONTENEDOR, como /var/lib/kafka/data. Aqui el problema es al reves -- una
+# ruta del HOST que docker.exe tiene que entender -- y esa misma variable lo
+# empeora, porque impide la traduccion. Ya estaba dicho en el repo, en la
+# cabecera de lab-14/bin/generate-certs.sh, y nunca habia llegado hasta aqui.
+#
+# La solucion es no darle ninguna ruta: se entra al directorio y se usan
+# nombres relativos. El `cd` es un builtin de bash, asi que la ruta absoluta
+# se resuelve dentro del shell y nunca cruza a docker.exe. El subshell
+# mantiene el cambio de directorio local a esta funcion.
+#
+# El -f se va: dentro de infra/, compose encuentra su docker-compose.yml solo.
+# El -p pasa a ser explicito: hoy el nombre del proyecto sale del .env y las
+# cuatro formas resuelven igual (medido), pero el alcance de un `down -v` lo
+# da el proyecto y eso no se deja implicito (tests/CONVENCIONES-TEST.md).
+DIR_INFRA="$(cd "$(dirname "${BASH_SOURCE[0]}")/../infra" && pwd)"
+PROYECTO="$(grep '^COMPOSE_PROJECT_NAME=' "$DIR_INFRA/.env" 2>/dev/null | cut -d= -f2 | tr -d ' \r')"
+compose() {  # <subcomando de docker compose>...
+    ( cd "$DIR_INFRA" && docker compose --env-file .env -p "$PROYECTO" "$@" )
+}
+
 # ── Detectar un broker disponible ──
 # Recorre los brokers del 1 al 3 y devuelve el nombre del primero
 # que está corriendo. Si ninguno está vivo, retorna 1.

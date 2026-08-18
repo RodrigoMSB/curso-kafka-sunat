@@ -30,7 +30,7 @@ ficha_op "DETENER EL LAB 08" \
 
 echo -e "${YELLOW}[NovaTech] Deteniendo el laboratorio (se conservan los volúmenes)...${NC}"
 # --profile scale para alcanzar también a kafka-broker-4 si quedó arriba.
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --profile scale stop
+compose --profile scale stop
 
 echo -e "${GREEN}✓ Laboratorio detenido.${NC}"
 echo -e "${CYAN}  Para reanudar: bin/start-lab.sh${NC}"

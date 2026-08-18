@@ -16,7 +16,7 @@ ficha_op 'AGREGAR UN BROKER AL CLÚSTER' \
     'cuando quieres ampliar el clúster. El broker entra vacío, y repartirle carga es el paso siguiente con reassign-partitions.sh'
 
 echo -e "${YELLOW}[Add] Levantando kafka-broker-4 (broker-only)...${NC}"
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" --profile scale up -d kafka-broker-4
+compose --profile scale up -d kafka-broker-4
 
 echo -e "${YELLOW}Esperando a que el broker-4 esté operativo...${NC}"
 for i in $(seq 1 24); do

@@ -68,9 +68,9 @@ ficha_op "INICIAR EL LAB 09" \
 echo -e "${YELLOW}[1/4] Levantando contenedores (3 brokers + Kafbat)...${NC}"
 # Cleanup defensivo de contenedores por nombre canónico (cross-lab).
 botar_contenedores_del_curso "start-lab" kafka-broker-1 kafka-broker-2 kafka-broker-3 kafbat-ui || exit 1
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down -v --remove-orphans 2>/dev/null || true
+compose down -v --remove-orphans 2>/dev/null || true
 
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d
+compose up -d
 
 echo ""
 echo -e "${YELLOW}[2/4] Esperando a que los 3 brokers estén operativos...${NC}"
@@ -93,7 +93,7 @@ while [ "$BROKERS_READY" -lt 3 ] && [ "$ELAPSED" -lt "$TIMEOUT" ]; do
 done
 if [ "$BROKERS_READY" -lt 3 ]; then
     echo -e "${RED}[ERROR] Timeout: solo ${BROKERS_READY}/3 brokers operativos después de ${TIMEOUT}s${NC}"
-    echo -e "${RED}  Revisa los logs con: docker compose -f ${COMPOSE_FILE} logs${NC}"
+    echo -e "${RED}  Revisa los logs con: cd infra && docker compose logs${NC}"
     exit 1
 fi
 echo -e "${GREEN}  ✓ 3/3 brokers operativos${NC}"
