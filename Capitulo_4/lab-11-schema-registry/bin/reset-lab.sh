@@ -40,7 +40,7 @@ fi
 
 echo ""
 echo -e "${YELLOW}[NovaTech] Eliminando contenedores, volúmenes y redes...${NC}"
-docker compose -f "$COMPOSE_FILE" down -v --remove-orphans
+compose down -v --remove-orphans
 
 echo ""
 echo -e "${GREEN}[OK] Laboratorio reiniciado completamente.${NC}"

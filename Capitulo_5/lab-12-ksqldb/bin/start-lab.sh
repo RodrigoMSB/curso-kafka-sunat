@@ -64,9 +64,9 @@ echo -e "${YELLOW}[1/7] Levantando contenedores del clúster NovaTech Lab 12...$
 #     colisionan ("Conflict: container name already in use").
 # (2) docker compose down -v --remove-orphans del proyecto actual.
 botar_contenedores_del_curso "start-lab" kafka-broker-1 kafka-broker-2 kafka-broker-3 kafbat-ui gps-producer || exit 1
-docker compose -f "$COMPOSE_FILE" down -v --remove-orphans 2>/dev/null || true
+compose down -v --remove-orphans 2>/dev/null || true
 
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d
+compose up -d
 
 echo ""
 echo -e "${YELLOW}[2/7] Esperando a que los 3 brokers estén operativos...${NC}"

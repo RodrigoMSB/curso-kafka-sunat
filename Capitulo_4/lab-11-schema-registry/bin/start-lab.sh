@@ -52,9 +52,9 @@ ficha_op "INICIAR EL LAB 11" \
 
 echo -e "${YELLOW}[1/5] Levantando contenedores del clúster NovaTech Lab 11...${NC}"
 botar_contenedores_del_curso "start-lab" kafka-broker-1 kafka-broker-2 kafka-broker-3 kafbat-ui gps-producer || exit 1
-docker compose -f "$COMPOSE_FILE" down -v --remove-orphans 2>/dev/null || true
+compose down -v --remove-orphans 2>/dev/null || true
 
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d
+compose up -d
 
 echo ""
 echo -e "${YELLOW}[2/5] Esperando a que los 3 brokers estén operativos...${NC}"

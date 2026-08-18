@@ -61,7 +61,7 @@ bash "$(dirname "$0")/generate-certs.sh"
 
 echo ""
 echo -e "${YELLOW}[2/6] Levantando contenedores del clúster NovaTech Lab 14...${NC}"
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d
+compose up -d
 
 echo ""
 echo -e "${YELLOW}[3/6] Esperando a que los 3 brokers estén operativos...${NC}"

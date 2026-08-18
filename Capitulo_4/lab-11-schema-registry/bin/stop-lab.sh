@@ -23,15 +23,17 @@ COMPOSE_FILE="${LAB_DIR}/infra/docker-compose.yml"
 
 ficha_op "DETENER EL LAB 11" \
     'Apaga los contenedores del lab. No borra nada' \
-    'tus tópicos y mensajes en los volúmenes de Docker, y el material del lab' \
+    'el material del lab en disco, y los volúmenes mientras el lab siga detenido' \
     "nada: solo detiene los contenedores de novatech-lab11" \
     'cuando terminas por hoy y quieres liberarle memoria a Docker'
 
 echo -e "${YELLOW}[NovaTech] Deteniendo contenedores del clúster...${NC}"
-docker compose -f "$COMPOSE_FILE" stop
+compose stop
 
 echo ""
 echo -e "${GREEN}[OK] Clúster NovaTech detenido correctamente.${NC}"
-echo -e "${YELLOW}  Los datos se han preservado en los volúmenes de Docker.${NC}"
-echo -e "${YELLOW}  Para reanudar, ejecuta: bin/start-lab.sh${NC}"
-echo -e "${YELLOW}  Para eliminar todo (incluyendo datos): bin/reset-lab.sh${NC}"
+echo -e "${CYAN}  Los volúmenes siguen ahí mientras el lab esté detenido.${NC}"
+echo -e "${YELLOW}  Ojo al reanudar: bin/start-lab.sh reconstruye el laboratorio desde cero,${NC}"
+echo -e "${YELLOW}  así que los tópicos y mensajes que creaste no sobreviven. El lab vuelve${NC}"
+echo -e "${YELLOW}  a sembrar los suyos. Si creaste algo propio, anótalo antes.${NC}"
+echo -e "${CYAN}  Para borrar todo ahora: bin/reset-lab.sh${NC}"

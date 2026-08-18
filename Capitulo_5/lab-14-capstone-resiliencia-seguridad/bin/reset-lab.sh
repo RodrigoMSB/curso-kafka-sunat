@@ -38,7 +38,7 @@ fi
 
 echo ""
 echo -e "${YELLOW}[NovaTech] Eliminando contenedores, volúmenes y redes...${NC}"
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" down -v --remove-orphans
+compose down -v --remove-orphans
 
 echo ""
 echo -e "${YELLOW}[NovaTech] Limpiando certificados TLS en ${CERTS_DIR}...${NC}"
