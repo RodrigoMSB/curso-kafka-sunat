@@ -54,6 +54,34 @@ compose() {  # <subcomando de docker compose>...
     ( cd "$DIR_INFRA" && docker compose --env-file .env -p "$PROYECTO" "$@" )
 }
 
+# ── Convertir una ruta del host a formato nativo ──
+# Copiada TAL CUAL de Capitulo_5/lab-14-capstone-resiliencia-seguridad/bin/
+# generate-certs.sh:39, donde vive el original. No es una variante: es la misma
+# funcion. Se copia porque los labs de este curso son autocontenidos --el
+# alumno tiene que poder llevarse una carpeta y que funcione sola-- y por eso
+# botar_contenedores_del_curso() tambien esta duplicada en los quince
+# common.sh. Lo que NO existe todavia es un origen canonico que impida que las
+# copias diverjan.
+#
+# Para que sirve: hay comandos que no se arreglan con el helper compose(), como
+# `docker cp <ruta del host> <contenedor>:<ruta>`. De un montaje o de un origen
+# de copia no se sale entrando al directorio: la ruta del host tiene que
+# llegarle a docker.exe en un formato que entienda. Eso es lo que hace cygpath.
+#
+# Helper portable: convierte un path POSIX a su formato nativo del sistema.
+# - En Git Bash/MSYS/Cygwin: cygpath -w (`/c/foo/bar` -> `C:\foo\bar`)
+# - En macOS/Linux: pasa tal cual
+to_native_path() {
+    case "$(uname -s)" in
+        MINGW*|MSYS*|CYGWIN*)
+            cygpath -w "$1"
+            ;;
+        *)
+            echo "$1"
+            ;;
+    esac
+}
+
 # ── Detectar un broker disponible ──
 # Recorre los brokers del 1 al 3 y devuelve el nombre del primero
 # que está corriendo. Si ninguno está vivo, retorna 1.

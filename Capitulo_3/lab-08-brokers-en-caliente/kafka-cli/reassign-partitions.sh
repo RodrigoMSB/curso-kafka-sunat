@@ -51,7 +51,12 @@ fi
 echo -e "${CYAN}[Reasignación] ${TOPIC} → brokers ${BROKER_LIST}${NC}"
 
 echo "{\"topics\":[{\"topic\":\"${TOPIC}\"}],\"version\":1}" > /tmp/lab08-topics-to-move.json
-docker cp /tmp/lab08-topics-to-move.json "${BROKER}:/tmp/topics-to-move.json"
+# El ORIGEN de un docker cp es una ruta del host, y docker.exe no entiende el
+# /c/... que devuelve Git Bash: hay que darsela en formato nativo. De esto no
+# se sale entrando al directorio como hace compose(), asi que va to_native_path
+# (bin/common.sh). El DESTINO es ruta del contenedor y no se toca; de ese lado
+# protege MSYS_NO_PATHCONV.
+docker cp "$(to_native_path /tmp/lab08-topics-to-move.json)" "${BROKER}:/tmp/topics-to-move.json"
 
 echo -e "${YELLOW}Generando plan...${NC}"
 docker exec "$BROKER" kafka-reassign-partitions --bootstrap-server "$BOOTSTRAP" \
@@ -59,7 +64,7 @@ docker exec "$BROKER" kafka-reassign-partitions --bootstrap-server "$BOOTSTRAP" 
     > /tmp/lab08-reassign-output.txt
 sed -n '/Proposed partition reassignment configuration/,$p' /tmp/lab08-reassign-output.txt \
     | tail -n +2 | head -n 1 > /tmp/lab08-reassignment.json
-docker cp /tmp/lab08-reassignment.json "${BROKER}:/tmp/reassignment.json"
+docker cp "$(to_native_path /tmp/lab08-reassignment.json)" "${BROKER}:/tmp/reassignment.json"
 echo -e "${YELLOW}Plan propuesto:${NC}"; cat /tmp/lab08-reassignment.json; echo ""
 
 echo -e "${YELLOW}Ejecutando...${NC}"

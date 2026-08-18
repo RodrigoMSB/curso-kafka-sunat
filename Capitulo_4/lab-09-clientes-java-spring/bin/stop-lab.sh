@@ -24,13 +24,16 @@ ENV_FILE="${LAB_DIR}/infra/.env"
 
 ficha_op "DETENER EL LAB 09" \
     'Apaga los contenedores del lab. No borra nada' \
-    'tus tópicos y mensajes en los volúmenes de Docker, y el material del lab' \
+    'el material del lab en disco, y los volúmenes mientras el lab siga detenido' \
     "nada: solo detiene los contenedores de novatech-lab09" \
     'cuando terminas por hoy y quieres liberarle memoria a Docker'
 
-echo -e "${YELLOW}[NovaTech] Deteniendo el laboratorio (se conservan los volúmenes)...${NC}"
+echo -e "${YELLOW}[NovaTech] Deteniendo el laboratorio...${NC}"
 compose stop
 
 echo -e "${GREEN}✓ Laboratorio detenido.${NC}"
-echo -e "${CYAN}  Para reanudar: bin/start-lab.sh${NC}"
-echo -e "${CYAN}  Para borrar todo (incluidos datos): bin/reset-lab.sh${NC}"
+echo -e "${CYAN}  Los volúmenes siguen ahí mientras el lab esté detenido.${NC}"
+echo -e "${YELLOW}  Ojo al reanudar: bin/start-lab.sh reconstruye el laboratorio desde cero,${NC}"
+echo -e "${YELLOW}  así que los tópicos y mensajes que creaste no sobreviven. El lab vuelve${NC}"
+echo -e "${YELLOW}  a sembrar los suyos. Si creaste algo propio, anótalo antes.${NC}"
+echo -e "${CYAN}  Para borrar todo ahora: bin/reset-lab.sh${NC}"
