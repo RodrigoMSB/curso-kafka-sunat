@@ -1,0 +1,68 @@
+# ============================================================
+# NovaTech Logistics - Lab 08b: Kafka instalado sobre RHEL 9
+# Un solo nodo. No es un lab de cluster: es un lab de plataforma.
+# ============================================================
+
+# Proyecto propio, como todos los labs del curso. Ningun `down` de este
+# lab puede alcanzar los recursos de otro.
+name: novatech-lab08b
+
+networks:
+  novatech-lab08b-net:
+    driver: bridge
+
+volumes:
+  # Los datos del broker viven aqui. El alumno apunta log.dirs a
+  # /var/lib/kafka/data durante el lab y ve que los datos sobreviven a un
+  # reinicio del servicio.
+  kafka-rhel-data:
+
+services:
+  kafka-rhel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CONFLUENT_VERSION: ${KAFKA_VERSION}
+        CONFLUENT_REPO: ${CONFLUENT_REPO}
+    image: novatech-lab08b-rhel:${KAFKA_VERSION}
+    # El hostname se ve en el prompt y en el journal. Que diga rhel9 y no
+    # un hash de contenedor es parte de la ilusion util: adentro es un
+    # servidor.
+    hostname: rhel9-kafka
+    container_name: kafka-rhel
+
+    # Arranca systemd, no Kafka. Encender el broker es trabajo del alumno.
+    command: /sbin/init
+    stop_signal: SIGRTMIN+3
+    stop_grace_period: 30s
+
+    volumes:
+      # ── Por que este montaje ──
+      # systemd necesita escribir en el arbol de cgroups para crear su
+      # /init.scope. Docker lo monta de solo lectura en los contenedores
+      # sin privilegios, y sin esto systemd muere al arrancar con
+      # "Failed to create /init.scope control group: Read-only file system".
+      #
+      # Se midieron trece combinaciones. Esta es la minima que funciona:
+      # NO lleva --privileged y NO agrega ninguna capacidad -- el conjunto
+      # efectivo del contenedor es el mismo que el de cualquier otro lab.
+      # En Docker Desktop el "host" de esta ruta es la VM de Linux, no el
+      # Windows del alumno.
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - kafka-rhel-data:/var/lib/kafka/data
+
+    # systemd necesita /run y /tmp escribibles y propios. Sin esto tampoco
+    # arranca.
+    tmpfs:
+      - /run
+      - /tmp
+
+    networks: [novatech-lab08b-net]
+
+    # ── Sin puertos publicados, a proposito ──
+    # El lab entero ocurre dentro del contenedor: el alumno entra una vez y
+    # trabaja como si fuera un servidor RHEL. Publicar un puerto invitaria a
+    # atacarlo desde el host, que es justo lo que este lab quiere evitar.
+    # Ademas el 08b se dicta en la sesion 8, cuando puede haber clusteres de
+    # sesiones anteriores ocupando 9092-9095.
