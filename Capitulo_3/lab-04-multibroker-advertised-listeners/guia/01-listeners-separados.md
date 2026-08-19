@@ -70,11 +70,21 @@ KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka-broker-1:29092,EXTERNAL://kafka-b
 
 Levanta el clúster.
 
-Desde tu Mac, intenta conectarte:
+Primero mira qué quedó publicado, que es la causa de lo que va a pasar:
+
+```bash
+kafka-cli/check-listeners.sh
+```
+
+Y ahora, desde tu máquina, intenta conectarte:
 ```bash
 docker run --rm confluentinc/cp-kafka:8.2.0 kafka-broker-api-versions \
     --bootstrap-server localhost:9092
 ```
+
+> Este `docker run` va **sin** `--network`, a propósito: es un cliente de tu
+> máquina, no de la red del clúster. Para el experimento inverso —un cliente
+> DENTRO de la red— está `kafka-cli/test-connection.sh`, que usarás en la Parte 2.
 
 ### Pregunta
 

@@ -46,14 +46,23 @@ En la imagen de Confluent no editas `server.properties` a mano: declaras variabl
 Descubre el archivo que la imagen generó dentro del contenedor:
 
 ```bash
-docker exec kafka-broker-1 bash -c 'ls /etc/kafka/*.properties'
+kafka-cli/list-config-files.sh
 ```
 
-Y examina el que corresponde al broker (el que contiene `process.roles`):
+El wrapper lista los archivos y además le pregunta al proceso de Kafka con
+**cuál** de ellos arrancó de verdad. Esa respuesta no se deduce: sale de la
+línea de comandos del `java` que está corriendo.
+
+Y ahora examina el que corresponde al broker (el que contiene `process.roles`):
 
 ```bash
-docker exec kafka-broker-1 bash -c 'grep -E "^(node.id|process.roles|log.dirs|listeners)" /etc/kafka/*.properties'
+kafka-cli/compare-configs.sh
 ```
+
+Las mismas cuatro propiedades aparecen en varios archivos con valores que se
+contradicen. El wrapper te muestra las **huellas** que delatan al real: la ruta
+de datos que fijaste tú en el compose y el nombre de tu contenedor en los
+listeners. La distribución no puede saber ninguna de las dos.
 
 ### Anota
 

@@ -22,8 +22,14 @@ Si un cliente lee una tarjeta que no fue escrita para él, el bootstrap puede re
 **Paso 1 — Leer la tarjeta de presentación.** Mira qué publica realmente tu broker (usando lo aprendido en el Lab 03):
 
 ```bash
-docker exec kafka-broker-1 bash -c 'grep advertised.listeners /etc/kafka/*.properties'
+kafka-cli/check-listeners.sh
 ```
+
+El wrapper saca las **dos** líneas que importan y te explica en qué se
+diferencian: `listeners` son las puertas que el broker abre, y
+`advertised.listeners` es la dirección que le dicta al cliente después del
+bootstrap. Fíjate en la asimetría del `0.0.0.0`: aparece del lado que abre y
+nunca del lado que publica.
 
 **Paso 2 — Confirmar el alcance desde el host.** El puerto publicado debe estar vivo desde donde está su público:
 
@@ -47,26 +53,24 @@ Sobre el **mismo clúster sano**, un cliente del público equivocado. Lanza un c
 Primero descubre el nombre de tu red (Docker Compose le antepone el prefijo del proyecto, así que no es fijo):
 
 ```bash
-RED=$(docker inspect kafka-broker-1 --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}')
-echo "Tu red: $RED"
+kafka-cli/show-network.sh
 ```
+
+(Si necesitas el nombre pelado para otro comando, el mismo wrapper tuberiado
+devuelve solo eso: `RED=$(kafka-cli/show-network.sh)`.)
 
 Ahora el cliente-contenedor, bootstrapeando por el EXTERNAL (puerto 9092):
 
 ```bash
-docker run --rm --network "$RED" confluentinc/cp-kafka:8.2.0 \
-  bash -c 'echo "hola" | kafka-console-producer --bootstrap-server kafka-broker-1:9092 \
-  --topic prueba.listeners --request-timeout-ms 10000' 2>&1 | tail -5
+kafka-cli/test-connection.sh kafka-broker-1 9092
 ```
 
-Observa: el bootstrap **conecta** (el contenedor sí alcanza `kafka-broker-1:9092`), pero el produce **falla** con un `TimeoutException` — el metadata le entregó `localhost:9092`, y para ese contenedor "localhost" es él mismo.
+Observa: el bootstrap **conecta** (el contenedor sí alcanza `kafka-broker-1:9092`), pero todo lo que viene después **falla** con `DisconnectException` — el metadata le entregó `localhost:9092`, y para ese contenedor "localhost" es él mismo. El wrapper te señala exactamente esa línea de la salida.
 
 Ahora el mismo cliente, leyendo la tarjeta que SÍ es para él (el listener interno, puerto 29092):
 
 ```bash
-docker run --rm --network "$RED" confluentinc/cp-kafka:8.2.0 \
-  bash -c 'echo "hola" | kafka-console-producer --bootstrap-server kafka-broker-1:29092 \
-  --topic prueba.listeners --request-timeout-ms 10000'
+kafka-cli/test-connection.sh kafka-broker-1 29092
 ```
 
 Funciona: el advertised interno publica `kafka-broker-1:29092`, resoluble en la red.

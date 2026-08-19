@@ -19,17 +19,18 @@ El properties dice lo que se declaró; `kafka-configs` dice lo que el broker **r
 ## Actividad 1: Configuración efectiva del broker 1
 
 ```bash
-docker exec kafka-broker-1 kafka-configs \
-  --bootstrap-server kafka-broker-1:29092 \
-  --describe --entity-type brokers --entity-name 1 --all | head -40
+kafka-cli/describe-broker-config.sh 1
 ```
 
-Busca tres valores concretos:
+El wrapper te muestra un recorte con las propiedades que interesan en este lab,
+y cuenta los orígenes sobre la salida **completa**, no sobre el recorte. Fíjate
+en los `synonyms`: de esa lista manda el **primero**; los de más abajo quedaron
+tapados.
+
+Si quieres la salida entera, sin ficha, el mismo wrapper tuberiado te la da:
 
 ```bash
-docker exec kafka-broker-1 bash -c 'kafka-configs \
-  --bootstrap-server kafka-broker-1:29092 \
-  --describe --entity-type brokers --entity-name 1 --all | grep -E "min.insync.replicas|log.retention.hours|num.partitions"'
+kafka-cli/describe-broker-config.sh 1 | head -40
 ```
 
 ### Anota
@@ -75,10 +76,7 @@ efectivo es `1`, y viene de fábrica.
 > número, o hay un límite? Escribe tu respuesta antes de correr el comando.
 
 ```bash
-docker exec -e KAFKA_OPTS= kafka-broker-1 kafka-configs \
-  --bootstrap-server kafka-broker-1:29092 \
-  --entity-type brokers --entity-name 1 \
-  --alter --add-config num.replica.fetchers=4
+kafka-cli/alter-broker-config.sh 1 num.replica.fetchers 4
 ```
 
 Sale una pared de texto Java. **Léela así: las dos primeras líneas, y sáltate
@@ -96,20 +94,18 @@ no*. Un `server.properties` en disco no te contesta; un broker corriendo sí.
 **Paso 3 — el mismo cambio, dentro del límite.** El doble de `1` es `2`:
 
 ```bash
-docker exec -e KAFKA_OPTS= kafka-broker-1 kafka-configs \
-  --bootstrap-server kafka-broker-1:29092 \
-  --entity-type brokers --entity-name 1 \
-  --alter --add-config num.replica.fetchers=2
+kafka-cli/alter-broker-config.sh 1 num.replica.fetchers 2
 ```
 
 `Completed updating config for broker 1.`
 
 **Paso 4 — de dónde viene ahora.**
 
+El propio wrapper del paso 3 ya te mostró el **antes** y el **ahora**. Si
+quieres volver a mirarlo:
+
 ```bash
-docker exec -e KAFKA_OPTS= kafka-broker-1 kafka-configs \
-  --bootstrap-server kafka-broker-1:29092 \
-  --entity-type brokers --entity-name 1 --describe --all | grep num.replica.fetchers
+kafka-cli/describe-broker-config.sh 1 | grep num.replica.fetchers
 ```
 
 ```
@@ -124,10 +120,7 @@ DYNAMIC le gana encima. Y si vuelves a preguntarle al archivo, sigue devolviendo
 **Paso 5 — dejarlo como estaba.**
 
 ```bash
-docker exec -e KAFKA_OPTS= kafka-broker-1 kafka-configs \
-  --bootstrap-server kafka-broker-1:29092 \
-  --entity-type brokers --entity-name 1 \
-  --alter --delete-config num.replica.fetchers
+kafka-cli/alter-broker-config.sh 1 num.replica.fetchers --delete
 ```
 
 ### Anota
