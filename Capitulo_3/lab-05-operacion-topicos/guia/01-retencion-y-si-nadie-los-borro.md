@@ -7,10 +7,11 @@
 > el dato tiene fecha de vencimiento, la fecha la pusiste tú, y cuando vence
 > nadie te avisa.
 
-**Duración.** Si lo repites tú solo, **la ejecución de comandos son 139 segundos
-medidos** de punta a punta — y 106 de esos 139 son esperar sin hacer nada, por un
-motivo que el Paso 6 explica. En clase toma alrededor de media hora, porque casi
-todo el tiempo es explicación.
+**Duración.** Si lo repites tú solo, una corrida completa de los 8 pasos tomó
+**256 segundos medidos** de punta a punta — y **212 de esos 256 fueron esperar
+sin hacer nada**, por un motivo que el Paso 6 explica. Los once comandos en sí
+suman 44 segundos. En clase toma alrededor de 35 minutos, porque casi todo el
+tiempo es explicación.
 **Antes de empezar:** el clúster tiene que estar arriba (`bin/start-lab.sh`).
 
 ---
@@ -483,6 +484,12 @@ partition.metadata
 | `00000000000000000100.log` | El espiche nuevo, el activo. Arranca en el offset 100 |
 | `.index` / `.timeindex` | Índices para no tener que recorrer el `.log` entero al buscar |
 
+> **Si `produce-bulk.sh` se queda colgado sin decir nada**, casi siempre es que
+> el tópico no existe — te saltaste el Paso 3, o hiciste `bin/reset-lab.sh` en
+> el medio. El clúster tiene la creación automática **desactivada** a propósito,
+> y el productor reintenta en silencio en vez de fallar. Ctrl+C, crea el tópico,
+> y repite.
+
 🔴 **Si solo ves un `.log`, el espiche no rotó.** Espera diez segundos más y
 vuelve a escribir 5 mensajes. Sin dos archivos `.log` aquí, el resto del
 laboratorio no va a mostrar nada, porque no hay ningún espiche cerrado que
@@ -618,7 +625,109 @@ Un tópico compactado **no se achica con el tiempo**: se achica cuando escribes
 la misma clave otra vez. Si tienes un millón de claves distintas, te quedas con
 un millón de mensajes para siempre, y ninguna retención te va a salvar.
 
-No lo vamos a ejecutar hoy. Queda en *Para profundizar*.
+**Se ejecuta.** Lo único que sí podemos ver en clase es **la condición previa**:
+que los mensajes lleven clave. Sin clave, no hay nada que compactar.
+
+```bash
+kafka-cli/produce-bulk.sh novatech.lab05.efimero 6 --key-pattern NVT
+```
+
+```bash
+docker exec kafka-broker-1 kafka-console-consumer \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.lab05.efimero --from-beginning --max-messages 6 \
+    --timeout-ms 12000 --property print.key=true --property key.separator='|'
+```
+
+| Parámetro | Para qué está |
+|---|---|
+| `--key-pattern NVT` | Le pide al envoltorio que numere las claves `NVT-1`, `NVT-2`… en vez de dejarlas vacías |
+| `--from-beginning` | Lee desde el principio, no solo lo que llegue de ahora en más |
+| `--max-messages 6` | Corta solo después de 6, para que el comando termine y no se quede colgado |
+| `--timeout-ms 12000` | Si en 12 segundos no llegan los 6, corta igual |
+| `--property print.key=true` | 🔴 Sin esto **solo verías el valor** y no podrías saber si la clave llegó |
+| `--property key.separator='\|'` | Con qué carácter se separan clave y valor **en pantalla** |
+
+**Qué sale.**
+
+```
+NVT-1|evento_1_payload
+NVT-2|evento_2_payload
+NVT-3|evento_3_payload
+NVT-4|evento_4_payload
+NVT-5|evento_5_payload
+NVT-6|evento_6_payload
+Processed a total of 6 messages
+```
+
+**Cómo se lee.** A la izquierda del `|` está la clave y a la derecha el valor.
+Las claves llegaron: `NVT-1` a `NVT-6`. Si en vez de eso vieras `null|…`, los
+mensajes no tendrían clave y **un tópico compactado con claves nulas no
+compacta nunca** — no habría por qué agrupar.
+
+(**El orden no es el de escritura, y a ti te va a salir en otro orden todavía.**
+Cada clave cae en la partición que le toca por su *hash*, y el consumidor lee
+partición por partición, no por reloj. Es el Lab 06.)
+
+🔴 **La compactación en sí no se va a ver hoy, y no vamos a fingir que sí.** El
+compactador de Kafka corre en segundo plano cada cierto tiempo, y no pasa en el
+minuto y medio que dura este bloque. Lo que acabas de verificar es la condición
+sin la cual **nunca** ocurriría. Ejecutarla de verdad queda en *Para
+profundizar B*.
+
+---
+
+### Paso 8 · Cambiarle el plazo a un tópico que ya existe
+
+**Se explica.**
+
+Todo lo anterior fue crear y esperar. Falta lo que de verdad vas a hacer todas
+las semanas: **cambiarle la configuración a un tópico que ya está en
+producción, con gente escribiendo y leyendo, sin reiniciar nada.**
+
+Es la misma operación que hiciste en el **Lab 03** sobre un broker en caliente.
+Aquí es sobre un tópico. La simetría no es casual: en Kafka casi todo lo que se
+configura se puede cambiar en caliente, y la pregunta operativa nunca es «¿se
+puede?» sino «¿desde cuándo aplica?».
+
+**Se ejecuta.** Súbele el plazo al tópico de la demostración, de 60 segundos a
+una hora:
+
+```bash
+kafka-cli/alter-topic-config.sh novatech.lab05.efimero --add retention.ms=3600000
+```
+
+| Parámetro | Para qué está |
+|---|---|
+| `--add` | Escribe un valor propio del tópico, que pisa el del broker. Si ya existía, lo reemplaza |
+| `retention.ms=3600000` | 3 600 000 ms = **1 hora** |
+
+**Qué sale.**
+
+```
+Completed updating config for topic novatech.lab05.efimero.
+```
+
+Verifica:
+
+```bash
+kafka-cli/describe-topic.sh novatech.lab05.efimero | head -1
+```
+
+**Cómo se lee.** La misma línea, antes y después:
+
+```
+antes    ... PartitionCount: 1  ReplicationFactor: 3  Configs: min.insync.replicas=2,retention.ms=60000,segment.ms=10000
+después  ... PartitionCount: 1  ReplicationFactor: 3  Configs: min.insync.replicas=2,retention.ms=3600000,segment.ms=10000
+```
+
+Cambió un número y nada más. **No hubo reinicio, no hubo corte, y ningún
+productor ni consumidor se enteró.** El cambio aplica a partir de la próxima
+ronda del broker — la misma ronda del Paso 6.
+
+Y lo que importa para SUNAT: **ese cambio no rescata lo que ya se fue.** Subir
+la retención hoy no devuelve los comprobantes de ayer. Solo cambia el plazo de
+los que todavía están vivos.
 
 ---
 

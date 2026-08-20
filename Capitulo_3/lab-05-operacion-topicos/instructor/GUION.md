@@ -36,8 +36,10 @@ quedas sin demostración.
 | 2 · Pasos 1 y 2 · leer un tópico | 8 | La salida es larga y hay que enseñar a recortarla |
 | 3 · Pasos 3 a 5 · fabricar y llenar | 8 | Tres comandos cortos |
 | 4 · Paso 6 · la espera | **5–7** | 🔴 No depende de ti. Ver abajo |
-| 5 · Paso 7 y cierre | 5 | Se habla |
-| **Total de clase** | **~32** | |
+| 5 · Paso 7 · compactación | 4–5 | Se habla; solo se ejecuta la condición previa |
+| 6 · Paso 8 · `--alter` en caliente | 5 | Dos comandos y una comparación |
+| 7 · Cierre y las cinco reglas | 4 | Se habla |
+| **Total de clase** | **~37** | 🟡 estimado |
 
 ### Los tres relojes
 
@@ -45,9 +47,10 @@ Este lab tiene tres duraciones distintas y conviene no confundirlas:
 
 | Reloj | Cuánto | Cómo se obtuvo | Para qué sirve |
 |---|---|---|---|
-| **Ejecución pura** | **139 s** | 🟢 **Medido**, corrida completa (`soluciones/SALIDAS.md`) | Lo que le toma a la máquina. Es el número que le sirve al alumno que repite el lab en su casa |
-| **Espera del broker** | **106 s** de esos 139 | 🟢 **Medido**, misma corrida | No es tiempo muerto: es el hueco donde se abren preguntas. Ver el bloque 4 |
-| **Dictado** | **~32 min** | 🟡 **Estimado**, no medido | 🔴 **Es el que manda.** El límite de 40 minutos aplica a este |
+| **Ejecución pura** | **256 s** | 🟢 **Medido**, corrida completa de los 8 pasos (`soluciones/SALIDAS.md`) | Lo que le toma a la máquina. Es el número que le sirve al alumno que repite el lab en su casa |
+| **Espera del broker** | **212 s** de esos 256 | 🟢 **Medido**, misma corrida. En otra corrida fueron **106 s** | No es tiempo muerto: es el hueco donde se abren preguntas. Ver el bloque 4 |
+| *(los otros 7 pasos)* | *44 s* | 🟢 Medido | 11 comandos. La máquina no es el cuello de botella |
+| **Dictado** | **~37 min** | 🟡 **Estimado**, no medido | 🔴 **Es el que manda.** El límite de 40 minutos aplica a este |
 
 🟡 **La estimación de dictado es una estimación.** Sale de suponer que explicar
 lleva del orden de tres veces lo que lleva ejecutar, más los bloques que son
@@ -55,9 +58,15 @@ solo palabra (1 y 5). **No está cronometrada contra una clase real.** El primer
 dictado es el que la convierte en dato: si te pasas de 40 minutos, eso es un
 hallazgo que hay que reportar, no un problema del alumno.
 
+🔴 **El margen quedó en 3 minutos estimados sobre un techo de 40.** Es poco. Si
+en el primer dictado ves que se va, lo primero que se recorta es el Paso 7: la
+compactación se enuncia y se manda a leer, sin ejecutar la condición previa —
+eso devuelve unos 4 minutos. **El Paso 8 no se recorta**, y el bloque 6 dice por
+qué.
+
 La modalidad es **demostrativa**: tú ejecutas en pantalla y explicas mientras.
-Por eso el techo no lo pone la máquina —139 segundos no aprietan a nadie— sino
-lo que tarda la explicación.
+Por eso el techo no lo pone la máquina —44 segundos de comandos más una espera
+que se llena con preguntas— sino lo que tarda la explicación.
 
 **El bloque 4 es el que hay que administrar.** El broker revisa la retención
 cada 5 minutos y no hay forma de apurarlo desde el tópico. Ese hueco **no se
@@ -408,11 +417,11 @@ el renombrado.
 
 ---
 
-## Bloque 5 · Paso 7 y cierre — 5 min
+## Bloque 5 · Paso 7 · compactación — 4 a 5 min
 
 Este bloque se dicta **intercalado con la espera del Bloque 4**.
 
-### Compactación, en un minuto y sin ejecutarla
+### Compactación, en dos frases y sin fingir que se ve
 
 > «`cleanup.policy` tiene dos valores y hoy usamos uno. `delete` bota el espiche
 > cuando vence el plazo: es lo que acaban de ver. El otro es `compact`, y no
@@ -430,6 +439,83 @@ Este bloque se dicta **intercalado con la espera del Bloque 4**.
 > Y una advertencia: un tópico compactado **no se achica con el tiempo**. Se
 > achica cuando repites la clave. Si tienen un millón de claves distintas, se
 > quedan con un millón de mensajes para siempre.»
+
+### Lo único que sí se ejecuta: la condición previa
+
+🔴 **No intentes mostrar la compactación en clase. No va a correr.** El
+compactador trabaja en segundo plano cada cierto tiempo y no pasa en el minuto y
+medio de este bloque. Lo que sí se demuestra —y es lo que importa— es que **los
+mensajes llevan clave**, la condición sin la cual nunca compactaría.
+
+```bash
+kafka-cli/produce-bulk.sh novatech.lab05.efimero 6 --key-pattern NVT
+docker exec kafka-broker-1 kafka-console-consumer \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.lab05.efimero --from-beginning --max-messages 6 \
+    --timeout-ms 12000 --property print.key=true --property key.separator='|'
+```
+
+> «A la izquierda de la barra está la clave, a la derecha el valor. Las claves
+> llegaron. Si en vez de `NVT-1` vieran `null`, este tópico **no compactaría
+> nunca**, porque no habría por qué agrupar. Y eso es lo que quiero que sepan
+> revisar el día que un tópico compactado no se achique: lo primero que se mira
+> no es el compactador, es si las claves están puestas.»
+
+**Di en voz alta que el resultado no se ve hoy.** Un alumno que se queda
+creyendo que vio compactación va a repetirlo mal.
+
+### ⚠ Errores probables en este bloque
+
+| Síntoma | Causa | Qué hacer |
+|---|---|---|
+| Sale `null` en vez de `NVT-1` | Se te fue el `--key-pattern` | Repetir el produce con el flag |
+| `produce-bulk.sh` se cuelga sin decir nada | El tópico no existe (un reset en el medio) | Ctrl+C y recrear. La creación automática está **desactivada** a propósito y el productor reintenta en silencio |
+| `Warning: --property is deprecated` | Kafka 8.x avisa del cambio de nombre del flag | Ignorarlo. **El flag funciona** — verificado midiendo las claves que llegan |
+
+---
+
+## Bloque 6 · Paso 8 · `--alter` en caliente — 5 min
+
+🔴 **Este bloque no se recorta.** Es lo único del laboratorio que muestra que un
+tópico **se administra después de creado**, y el laboratorio se llama
+«Operación de tópicos». Sin esto se enseña a crear y a esperar, no a operar.
+
+### Qué decir
+
+> «Todo lo que hicimos hasta ahora fue crear y esperar. Falta lo que ustedes van
+> a hacer todas las semanas: cambiarle la configuración a un tópico que ya está
+> en producción, con gente escribiendo y leyendo, sin reiniciar nada.
+>
+> Y esto ya lo hicieron: en el **Lab 03** cambiamos la configuración de un
+> broker en caliente. Aquí es la de un tópico. En Kafka casi todo se cambia en
+> caliente, y la pregunta operativa nunca es *¿se puede?* sino ***¿desde cuándo
+> aplica?***»
+
+### Se ejecuta
+
+```bash
+kafka-cli/alter-topic-config.sh novatech.lab05.efimero --add retention.ms=3600000
+kafka-cli/describe-topic.sh novatech.lab05.efimero | head -1
+```
+
+Pon las dos líneas `Configs` una encima de la otra:
+
+```
+antes    Configs: min.insync.replicas=2,retention.ms=60000,segment.ms=10000
+después  Configs: min.insync.replicas=2,retention.ms=3600000,segment.ms=10000
+```
+
+> «Cambió un número. No hubo reinicio, no hubo corte, y ni un productor ni un
+> consumidor se enteró.
+>
+> Y la parte que importa para SUNAT: **subir la retención hoy no rescata lo que
+> ya se fue.** Los cien comprobantes del Paso 6 no vuelven. Solo cambia el plazo
+> de los que todavía están vivos. El día que alguien pida *guardemos más*, esa
+> es la primera frase que hay que decirle.»
+
+---
+
+## Bloque 7 · Cierre — 4 min
 
 ### Las cinco reglas
 
