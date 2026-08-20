@@ -52,8 +52,8 @@ chmod +x bin/*.sh kafka-cli/*.sh infra/scripts/*.sh
 # 3. Iniciar el laboratorio
 bin/start-lab.sh
 
-# 4. Abrir la primera guía
-# guia/01-log-inmutable.md
+# 4. Abrir la guía
+# guia/01-grupos-y-quien-repartio-el-trabajo.md
 ```
 
 ---
@@ -81,9 +81,11 @@ lab-06-produccion-consumo-cli/
 │   ├── describe-group.sh      # Detalle de un grupo (offsets, lag)
 │   └── reset-group.sh         # Resetea offsets a --to-earliest
 ├── guia/
-│   ├── 01-log-inmutable.md
-│   ├── 02-pubsub-multiples-consumidores.md
-│   └── 03-offsets-y-replay.md
+│   └── 01-grupos-y-quien-repartio-el-trabajo.md
+├── practica/
+│   └── PASOS.md               # el recorrido con los huecos que rellenas
+├── instructor/
+│   └── GUION.md               # qué decir, qué preguntar, qué hacer si falla
 ├── plantillas/
 │   └── reporte-entregable.md
 ├── soluciones/
@@ -92,6 +94,24 @@ lab-06-produccion-consumo-cli/
 └── docs/
     └── troubleshooting.md
 ```
+
+---
+
+## Las tres carpetas
+
+| Carpeta | Qué lleva | Para quién |
+|---------|-----------|------------|
+| `practica/` | `PASOS.md`: el recorrido en seco, con los comandos en orden y los huecos que tú rellenas | El alumno |
+| `soluciones/` | `SALIDAS.md` con la transcripción de una corrida real y sus controles, y `reporte-resuelto.md` con las respuestas de referencia | El alumno, **después** de intentarlo |
+| `instructor/` | `GUION.md`: qué decir, qué preguntar antes de cada comando, qué sale, qué hacer cuando no sale, y el reloj por bloque | El relator |
+
+> **Si vienes del modelo de tres carpetas** (`practica/` · `solucion/` ·
+> `instructor/`): aquí **`soluciones/`, en plural, cumple el rol de
+> `solucion/`**. No falta ninguna carpeta — es el nombre que usan los catorce
+> labs del curso.
+
+> 🔴 **Este lab necesita CUATRO terminales.** Los consumidores se quedan
+> corriendo hasta que los cortes con `Ctrl+C`.
 
 ---
 

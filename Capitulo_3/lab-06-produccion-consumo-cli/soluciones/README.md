@@ -1,6 +1,11 @@
 # Soluciones del Lab 06 — Producción y consumo desde CLI
 
-Esta carpeta contiene las soluciones de referencia del laboratorio.
+Esta carpeta cumple el rol que el modelo de guías llama `solucion/`.
+
+| Archivo | Qué es |
+|---------|--------|
+| `SALIDAS.md` | La transcripción literal de una corrida real del recorrido, con los controles y lo que dio cada uno |
+| `reporte-resuelto.md` | Respuestas de referencia del reporte entregable |
 
 ## Archivos
 
