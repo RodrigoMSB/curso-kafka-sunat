@@ -1,15 +1,16 @@
 # Lab 05 · Operación de tópicos
 
-## ¿Quién borró los comprobantes, si nadie los borró?
+## ¿Y si nadie los borró?
 
 > **Este es el laboratorio que explica por qué Kafka no es una base de datos.**
 > Si hay una sola idea que te tienes que llevar de esta sesión, es esta: en Kafka
 > el dato tiene fecha de vencimiento, la fecha la pusiste tú, y cuando vence
 > nadie te avisa.
 
-**Duración:** unos 30 minutos de clase. De esos, **la ejecución de comandos son
-139 segundos medidos** de punta a punta — y 106 de los 139 son esperar sin hacer
-nada, por un motivo que el Paso 6 explica. Todo lo demás es explicación.
+**Duración.** Si lo repites tú solo, **la ejecución de comandos son 139 segundos
+medidos** de punta a punta — y 106 de esos 139 son esperar sin hacer nada, por un
+motivo que el Paso 6 explica. En clase toma alrededor de media hora, porque casi
+todo el tiempo es explicación.
 **Antes de empezar:** el clúster tiene que estar arriba (`bin/start-lab.sh`).
 
 ---
@@ -21,9 +22,11 @@ comprobantes del jueves anterior no está. No hay un `DELETE` en ningún log de
 auditoría. Nadie tocó nada. El equipo de plataforma jura que el clúster estuvo
 arriba todo el fin de semana, y tiene razón: estuvo arriba.
 
-La pregunta que se hace la sala es «¿quién los borró?», y esa pregunta no tiene
-respuesta, porque está mal hecha. La pregunta correcta es **«¿cuánto tiempo
-dijimos que había que guardarlos?»**.
+La sala se va a pasar la mañana en la pregunta obvia: **«¿quién los borró?»**.
+Y esa pregunta se puede investigar durante días sin llegar a nada, porque parte
+de un supuesto que nadie puso sobre la mesa: que alguien los borró.
+
+Guarda la otra por ahora: **¿y si nadie los borró?**
 
 Este es el error que más caro sale al empezar con Kafka: tratarlo como si fuera
 una base de datos. En una base de datos, lo que insertaste está hasta que

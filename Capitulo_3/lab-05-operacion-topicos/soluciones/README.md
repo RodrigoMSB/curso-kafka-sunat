@@ -2,10 +2,10 @@
 
 Esta carpeta contiene las soluciones de referencia **del reporte entregable**.
 
-> **¿Buscabas el código resuelto?** Está en `../solucion/` (sin la `s`): ahí
-> viven `crear-topicos.sh` resuelto y comentado, y `SALIDAS.md` con la
-> transcripción de una corrida real de la guía. Las dos carpetas contestan
-> preguntas distintas y no se repiten.
+> Esta carpeta cumple el rol que el modelo de guías llama `solucion/`. Aquí
+> viven las tres cosas: el código resuelto (`crear-topicos.sh`), la
+> transcripción de una corrida real (`SALIDAS.md`) y las respuestas del reporte
+> (`reporte-resuelto.md`).
 
 ## Archivos
 

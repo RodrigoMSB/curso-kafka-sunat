@@ -2,7 +2,7 @@
 
 > El recorrido en seco. Aquí están los comandos en orden y los huecos que tú
 > rellenas mientras corren. **La explicación de por qué hace cada cosa está en
-> la guía** — `guia/01-retencion-quien-borro-los-comprobantes.md`. Este archivo
+> la guía** — `guia/01-retencion-y-si-nadie-los-borro.md`. Este archivo
 > es para tener a mano en la terminal, no para reemplazarla.
 
 **Antes de empezar:** `bin/start-lab.sh` terminado, los 3 brokers arriba.
@@ -55,14 +55,32 @@ un mensaje en este tópico? *(Pista: no son 7 días.)*
 
 ## Paso 3 · Crear el tópico de la demostración
 
-Rellena los tres huecos de `practica/crear-topicos.sh` y ejecútalo:
+**Primero decide los tres valores.** No copies el comando todavía: escribe
+aquí lo que vas a poner, y recién después tecléalo. La guía justifica los tres
+en el Paso 3.
+
+| Hueco | Tu valor | Por qué ese |
+|---|---|---|
+| `--partitions` | | |
+| `--config retention.ms=` | | (60 segundos, en milisegundos) |
+| `--config segment.ms=` | | (10 segundos, en milisegundos) |
+
+🔴 **El de `--partitions` es el que decide si el laboratorio funciona o no.**
+Si dudas, vuelve al Paso 3 de la guía antes de teclear.
+
+Ahora sí:
 
 ```bash
-bash practica/crear-topicos.sh
+kafka-cli/create-topic.sh novatech.lab05.efimero \
+    --partitions ___ \
+    --rf 3 \
+    --config retention.ms=___ \
+    --config segment.ms=___
 ```
 
-Si todavía quedan huecos, el script se niega a correr y te dice en qué línea
-están. Eso es a propósito.
+> El mismo comando, ya resuelto y con el porqué de cada valor comentado línea
+> por línea, está en `soluciones/crear-topicos.sh`. Míralo **después** de
+> intentarlo.
 
 Verifica:
 

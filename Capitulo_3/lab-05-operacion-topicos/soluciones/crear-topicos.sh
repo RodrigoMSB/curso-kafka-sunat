@@ -1,8 +1,9 @@
 #!/bin/bash
 # ============================================================
-# Lab 05 · solucion/crear-topicos.sh
+# Lab 05 · soluciones/crear-topicos.sh
 # ============================================================
-# La versión resuelta de practica/crear-topicos.sh .
+# El script de aprovisionamiento resuelto: los tres valores que practica/PASOS.md
+# te pide decidir en el Paso 3, ya puestos y justificados.
 #
 # Los comentarios de este archivo NO explican qué hace cada línea — eso se lee
 # solo. Explican POR QUÉ está puesta, que es lo que no se puede deducir del
@@ -10,14 +11,14 @@
 # mismos valores en el clúster de SUNAT.
 #
 # Uso:
-#   bash solucion/crear-topicos.sh
+#   bash soluciones/crear-topicos.sh
 # ============================================================
 
 set -uo pipefail
 
 # POR QUÉ una ruta calculada y no una relativa:
 # el alumno puede invocar el script desde la raíz del lab, desde dentro de
-# solucion/, o desde cualquier otro sitio. "$(dirname "$0")/.." resuelve
+# soluciones/, o desde cualquier otro sitio. "$(dirname "$0")/.." resuelve
 # siempre al directorio del lab, sin depender de dónde estaba parado el shell.
 DIR_LAB="$(cd "$(dirname "$0")/.." && pwd)"
 

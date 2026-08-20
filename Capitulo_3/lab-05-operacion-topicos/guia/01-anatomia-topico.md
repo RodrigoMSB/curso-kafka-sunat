@@ -2,7 +2,7 @@
 
 El Lab 05 ahora tiene **una sola guía**:
 
-### → [`01-retencion-quien-borro-los-comprobantes.md`](01-retencion-quien-borro-los-comprobantes.md)
+### → [`01-retencion-y-si-nadie-los-borro.md`](01-retencion-y-si-nadie-los-borro.md)
 
 Lo que antes estaba repartido en tres archivos (`01-anatomia-topico`,
 `02-topicos-con-personalidad`, `03-retencion-por-tiempo-en-vivo`) está ahí:

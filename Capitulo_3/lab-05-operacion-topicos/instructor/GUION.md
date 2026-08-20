@@ -39,10 +39,25 @@ quedas sin demostración.
 | 5 · Paso 7 y cierre | 5 | Se habla |
 | **Total de clase** | **~32** | |
 
-De esos ~32 minutos, **la ejecución de comandos son 139 segundos medidos** de
-punta a punta (`solucion/SALIDAS.md` trae la transcripción con los tiempos), y
-106 de esos 139 son la espera del bloque 4. Todo el resto es explicación: si el
-bloque te queda corto, es que estás dictando poco, no ejecutando poco.
+### Los tres relojes
+
+Este lab tiene tres duraciones distintas y conviene no confundirlas:
+
+| Reloj | Cuánto | Cómo se obtuvo | Para qué sirve |
+|---|---|---|---|
+| **Ejecución pura** | **139 s** | 🟢 **Medido**, corrida completa (`soluciones/SALIDAS.md`) | Lo que le toma a la máquina. Es el número que le sirve al alumno que repite el lab en su casa |
+| **Espera del broker** | **106 s** de esos 139 | 🟢 **Medido**, misma corrida | No es tiempo muerto: es el hueco donde se abren preguntas. Ver el bloque 4 |
+| **Dictado** | **~32 min** | 🟡 **Estimado**, no medido | 🔴 **Es el que manda.** El límite de 40 minutos aplica a este |
+
+🟡 **La estimación de dictado es una estimación.** Sale de suponer que explicar
+lleva del orden de tres veces lo que lleva ejecutar, más los bloques que son
+solo palabra (1 y 5). **No está cronometrada contra una clase real.** El primer
+dictado es el que la convierte en dato: si te pasas de 40 minutos, eso es un
+hallazgo que hay que reportar, no un problema del alumno.
+
+La modalidad es **demostrativa**: tú ejecutas en pantalla y explicas mientras.
+Por eso el techo no lo pone la máquina —139 segundos no aprietan a nadie— sino
+lo que tarda la explicación.
 
 **El bloque 4 es el que hay que administrar.** El broker revisa la retención
 cada 5 minutos y no hay forma de apurarlo desde el tópico. Ese hueco **no se
@@ -332,6 +347,14 @@ cambiar, fueron **128 segundos** en una corrida y algo más en otras.
 >
 > Y quiero que se queden con esto, porque es la mitad de lo que vinimos a
 > demostrar: **no solo no avisa. Ni siquiera está mirando todo el tiempo.**»
+
+🔴 **Este hueco se llena con preguntas, no con silencio.** Es el mejor momento
+de todo el laboratorio para abrir la sala: la demostración está armada, el
+resultado todavía no llegó, y la clase está esperando un número. Di literalmente
+**«mientras esperamos, pregunten»**, y si nadie arranca, tira tú la primera:
+
+> «¿Alguien tiene hoy un tópico en producción y sabe de memoria qué retención
+> tiene puesta?»
 
 Consulta el offset **delante de la clase, cada minuto**, sin comentarlo mucho:
 

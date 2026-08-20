@@ -47,7 +47,7 @@ chmod +x bin/*.sh kafka-cli/*.sh infra/scripts/*.sh
 bin/start-lab.sh
 ```
 
-Luego abre la guía: [`guia/01-retencion-quien-borro-los-comprobantes.md`](guia/01-retencion-quien-borro-los-comprobantes.md).
+Luego abre la guía: [`guia/01-retencion-y-si-nadie-los-borro.md`](guia/01-retencion-y-si-nadie-los-borro.md).
 
 ---
 
@@ -55,13 +55,15 @@ Luego abre la guía: [`guia/01-retencion-quien-borro-los-comprobantes.md`](guia/
 
 | Carpeta | Qué lleva | Para quién |
 |---------|-----------|------------|
-| `practica/` | `PASOS.md` (el recorrido con los huecos que tú rellenas) y `crear-topicos.sh` con tres valores en blanco | El alumno |
-| `solucion/` | `crear-topicos.sh` resuelto y comentado línea por línea, y `SALIDAS.md` con la transcripción de una corrida real | El alumno, **después** de intentarlo |
+| `practica/` | `PASOS.md`: el recorrido en seco, con los comandos en orden y los huecos que tú rellenas mientras corren | El alumno |
+| `soluciones/` | `crear-topicos.sh` resuelto y comentado línea por línea, `SALIDAS.md` con la transcripción de una corrida real, y `reporte-resuelto.md` con las respuestas de referencia | El alumno, **después** de intentarlo |
 | `instructor/` | `GUION.md`: qué decir, qué preguntar antes de cada comando, qué sale, qué hacer cuando no sale, y el reloj por bloque | El relator |
 
-> `soluciones/` (con **s** final) es otra cosa y sigue en su sitio: son las
-> respuestas de referencia del reporte entregable. `solucion/` es el código
-> resuelto de `practica/`.
+> **Si vienes del modelo de tres carpetas** (`practica/` · `solucion/` ·
+> `instructor/`): aquí **`soluciones/`, en plural, cumple el rol de
+> `solucion/`**. No hay una carpeta en singular y no falta nada — es el nombre
+> que usan los catorce labs del curso, y se conservó para no romper esa
+> convención.
 
 ---
 
