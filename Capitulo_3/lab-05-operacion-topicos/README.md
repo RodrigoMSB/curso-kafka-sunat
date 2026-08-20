@@ -47,7 +47,21 @@ chmod +x bin/*.sh kafka-cli/*.sh infra/scripts/*.sh
 bin/start-lab.sh
 ```
 
-Luego abre `guia/01-anatomia-topico.md`.
+Luego abre la guía: [`guia/01-retencion-quien-borro-los-comprobantes.md`](guia/01-retencion-quien-borro-los-comprobantes.md).
+
+---
+
+## Las tres carpetas
+
+| Carpeta | Qué lleva | Para quién |
+|---------|-----------|------------|
+| `practica/` | `PASOS.md` (el recorrido con los huecos que tú rellenas) y `crear-topicos.sh` con tres valores en blanco | El alumno |
+| `solucion/` | `crear-topicos.sh` resuelto y comentado línea por línea, y `SALIDAS.md` con la transcripción de una corrida real | El alumno, **después** de intentarlo |
+| `instructor/` | `GUION.md`: qué decir, qué preguntar antes de cada comando, qué sale, qué hacer cuando no sale, y el reloj por bloque | El relator |
+
+> `soluciones/` (con **s** final) es otra cosa y sigue en su sitio: son las
+> respuestas de referencia del reporte entregable. `solucion/` es el código
+> resuelto de `practica/`.
 
 ---
 

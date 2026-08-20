@@ -1,6 +1,11 @@
 # Soluciones del Lab 05 — Operación de tópicos
 
-Esta carpeta contiene las soluciones de referencia del laboratorio.
+Esta carpeta contiene las soluciones de referencia **del reporte entregable**.
+
+> **¿Buscabas el código resuelto?** Está en `../solucion/` (sin la `s`): ahí
+> viven `crear-topicos.sh` resuelto y comentado, y `SALIDAS.md` con la
+> transcripción de una corrida real de la guía. Las dos carpetas contestan
+> preguntas distintas y no se repiten.
 
 ## Archivos
 

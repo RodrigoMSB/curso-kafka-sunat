@@ -1,128 +1,13 @@
-# Parte 1: Anatomía de un tópico
+# Esta guía se movió
 
-## Objetivo
+El Lab 05 ahora tiene **una sola guía**:
 
-Entender qué hay realmente "dentro" de un tópico Kafka: particiones, líderes, ISR, configuraciones efectivas, segmentos en disco.
+### → [`01-retencion-quien-borro-los-comprobantes.md`](01-retencion-quien-borro-los-comprobantes.md)
 
-## Contexto
+Lo que antes estaba repartido en tres archivos (`01-anatomia-topico`,
+`02-topicos-con-personalidad`, `03-retencion-por-tiempo-en-vivo`) está ahí:
+el recorrido principal en la sección **5 · LOS PASOS**, y el resto de las
+actividades en la sección **7 · PARA PROFUNDIZAR**, con su comando completo.
 
-Los Labs anteriores trabajaron con tópicos como cajas negras: produces, consumes, listo. En este lab te vuelves su DBA: vas a inspeccionar, configurar y modificar tópicos.
-
----
-
-## Actividad 1: Inventario inicial
-
-Lista los tópicos existentes en tu clúster:
-
-```bash
-kafka-cli/list-topics.sh
-```
-
-Y ahora con los tópicos internos visibles:
-
-```bash
-kafka-cli/list-topics.sh --internal
-```
-
-### Pregunta
-
-| Pregunta | Tu respuesta |
-|----------|-------------|
-| ¿Cuántos tópicos visibles aparecen sin `--internal`? | |
-| ¿Cuántos aparecen con `--internal`? | |
-| ¿Qué tópicos internos detectas? (ej: `__consumer_offsets`) | |
-| ¿Para qué crees que sirve `__consumer_offsets`? | |
-
----
-
-## Actividad 2: Anatomía completa
-
-Describe el tópico GPS de la flota:
-
-```bash
-kafka-cli/describe-topic.sh novatech.fleet.gps
-```
-
-La salida tiene **2 secciones** de datos:
-1. **Esto devolvió Kafka** (estructura: particiones, líderes y réplicas)
-2. **Y estas son las configuraciones efectivas del tópico** (parámetros)
-
-> **Sobre `Elr` y `LastKnownElr`.** Los vas a ver en cada línea de partición y la ficha
-> no los explica, así que acá va. Son campos nuevos de Kafka 4.x. `Elr` (Eligible Leader
-> Replicas) son las réplicas que Kafka sabe que tienen todos los datos confirmados y por
-> eso podría elegir como líder sin perder nada, aunque ya no estén en el ISR.
-> `LastKnownElr` guarda las últimas que estuvieron en esa condición.
->
-> En este laboratorio los vas a ver **siempre vacíos**, incluso después de apagar un
-> broker en la Actividad 3, y el motivo es el `min.insync.replicas=2` que este tópico
-> ya te mostró la ficha. Con 3 copias, al caer un broker quedan 2 al día, que es
-> exactamente el mínimo, así que el ISR nunca dejó de ser utilizable. ELR se puebla
-> cuando el ISR cae **por debajo** de ese mínimo, o sea en escenarios de pérdida más
-> severos que los de este lab.
->
-> El wrapper los omite de su tabla resumida por ancho. Para verlos, corré el comando de
-> Kafka directo:
->
-> ```bash
-> docker exec kafka-broker-1 kafka-topics \
->     --bootstrap-server kafka-broker-1:29092 \
->     --describe --topic novatech.fleet.gps
-> ```
-
-### Anota la estructura
-
-| Atributo | Valor |
-|----------|-------|
-| Número de particiones | |
-| Replication factor | |
-| Líder de la partición 0 | |
-| ISR de la partición 0 | |
-| ¿Hay réplicas fuera de sincronía (Out-of-Sync)? | |
-
-### Anota 5 configuraciones efectivas que te llamen la atención
-
-| Config | Valor | ¿Es DEFAULT, DYNAMIC o STATIC? |
-|--------|-------|--------------------------------|
-| | | |
-| | | |
-| | | |
-| | | |
-| | | |
-
-> **Pista**: el campo `ConfigSource` indica de dónde viene cada config:
-> - `DEFAULT_CONFIG`: valor por defecto del broker
-> - `STATIC_BROKER_CONFIG`: definido en `server.properties` del broker
-> - `DYNAMIC_TOPIC_CONFIG`: override aplicado al tópico vía `--alter`
-
----
-
-## Actividad 3: Inspección visual con Kafbat UI
-
-Abre **http://localhost:8090** > **Topics** > `novatech.fleet.gps` > pestaña **Settings**.
-
-Compara la información visual con la salida CLI de la Actividad 2.
-
-### Pregunta
-
-| Pregunta | Tu respuesta |
-|----------|-------------|
-| ¿La UI muestra la misma información? | |
-| ¿Ves alguna config en la UI que no salió por CLI? | |
-| ¿Qué te resulta más cómodo: CLI o UI? ¿Por qué? | |
-
----
-
-## Conclusiones
-
-| Concepto | Lo aprendiste haciendo... |
-|----------|---------------------------|
-| Inventario de tópicos | Listaste con y sin internos |
-| Estructura de particiones | Vista líder, ISR y réplicas |
-| Jerarquía de configs | DEFAULT vs STATIC vs DYNAMIC |
-| CLI vs UI | Comparaste ambas vistas |
-
----
-
-## Siguiente paso
-
-Continúa con [Parte 2: Tópicos con personalidad](02-topicos-con-personalidad.md).
+> Este archivo existe solo porque `bin/start-lab.sh` todavía imprime el nombre
+> antiguo al terminar. Se puede borrar en cuanto esa línea se actualice.
