@@ -11,6 +11,10 @@ abiertas en la carpeta del lab. Llámalas A, B, C y D.
 > **D es la terminal de trabajo**: desde ahí se produce y se consulta. A, B y C
 > son consumidores y se quedan corriendo.
 
+> **Estos son los cuatro pasos del recorrido de clase.** El rebalanceo al matar
+> un consumidor y el techo de particiones salieron por tiempo y están en la
+> sección **PARA PROFUNDIZAR** de la guía, con su comando y su salida real.
+
 ---
 
 ## Paso 1 · El tópico de tres sectores
@@ -110,77 +114,7 @@ puede salir 6–0 y está bien— **sino que la suma sea 6 y los repetidos 0.**
 
 ---
 
-## Paso 4 · Se va un cocinero
-
-En **B**: `Ctrl+C`.
-
-Espera ~20 s y en **D**:
-
-```bash
-docker exec kafka-broker-1 kafka-consumer-groups \
-    --bootstrap-server kafka-broker-1:29092 \
-    --describe --group validacion
-```
-
-| Pregunta | Lo que salió |
-|---|---|
-| ¿Cuántos miembros quedan? | |
-| ¿Quién tiene ahora la partición que era de `cons-B`? | |
-| ¿Ejecutaste algún comando para reasignarla? | |
-
-Tres comprobantes más, en **D**:
-
-```bash
-for i in 7 8 9; do
-  echo "RUC-2010006660${i}:comprobante_${i}" | \
-  docker exec -i kafka-broker-1 kafka-console-producer \
-      --bootstrap-server kafka-broker-1:29092 \
-      --topic novatech.validacion \
-      --property parse.key=true --property key.separator=:
-done
-```
-
-| Pregunta | Lo que salió |
-|---|---|
-| ¿Cuántos de los 3 llegaron a **A**? | |
-| ¿Se perdió alguno? | |
-
----
-
-## Paso 5 · El techo · cuatro cocineros, tres sectores
-
-🔴 **El paso que no hay que saltarse.**
-
-Levanta consumidores en **B**, **C** y una cuarta terminal, todos con
-`--group validacion`, cambiando solo el `client.id` (`cons-B`, `cons-C`,
-`cons-D`).
-
-Espera ~30 s y en **D**:
-
-```bash
-docker exec kafka-broker-1 kafka-consumer-groups \
-    --bootstrap-server kafka-broker-1:29092 \
-    --describe --group validacion --members
-```
-
-| `CLIENT-ID` | `#PARTITIONS` |
-|---|---|
-| `cons-A` | |
-| `cons-B` | |
-| `cons-C` | |
-| `cons-D` | |
-
-| Pregunta | Tu respuesta |
-|---|---|
-| ¿Cuántos miembros hay? | |
-| ¿Cuántos tienen `0`? | |
-| ¿Qué está viendo en pantalla el que tiene `0`? | |
-| Si mañana el atraso se duplica, ¿agregar un quinto consumidor ayuda? | |
-| ¿Qué habría que cambiar para que ayudara? | |
-
----
-
-## Paso 6 · Otra brigada
+## Paso 4 · Otra brigada
 
 En una terminal libre (corta alguna con `Ctrl+C` si hace falta):
 
@@ -198,6 +132,7 @@ docker exec -it kafka-broker-1 kafka-console-consumer \
 | Pregunta | Lo que salió |
 |---|---|
 | ¿Cuántos mensajes recibió `cons-Z`? | |
+| ¿Cuántos había leído ya el grupo `validacion`? | |
 | ¿Qué cambió respecto del comando del Paso 2? | |
 
 Y en **D**:
@@ -220,7 +155,8 @@ docker exec kafka-broker-1 kafka-consumer-groups \
 **1 · ¿Qué palabra del comando decide si dos procesos colaboran o duplican?**
 
 **2 · Tienes un tópico de 3 particiones y el atraso no baja con 4 consumidores.
-¿Qué hay que cambiar?**
+¿Qué hay que cambiar?** *(Si no lo tienes claro, es exactamente lo que
+demuestra* Para profundizar B *de la guía.)*
 
 **3 · Un compañero dice «levanté otro consumidor y ahora los mensajes se
 procesan dos veces». ¿Qué es lo primero que le preguntas?**

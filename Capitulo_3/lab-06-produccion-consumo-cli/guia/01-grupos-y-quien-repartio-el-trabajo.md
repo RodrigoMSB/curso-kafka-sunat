@@ -7,10 +7,9 @@
 > a veces se reparten el trabajo y a veces lo duplican** — y lo que decide cuál
 > de las dos cosas pasa es **una sola palabra** del comando.
 
-**Duración.** La ejecución de comandos son **189 segundos medidos** de punta a
-punta, y unos 95 de esos 189 son esperar a que Kafka rehaga el reparto. En clase
-toma alrededor de 35 minutos, porque casi todo el tiempo es explicación y abrir
-terminales.
+**Duración.** La ejecución de los cuatro pasos son **96 segundos medidos** de
+punta a punta, y unos 70 de esos 96 son esperar a que Kafka rehaga el reparto.
+En clase toma 20 minutos, porque casi todo el tiempo es explicación.
 
 **Antes de empezar:** el clúster arriba (`bin/start-lab.sh`), y **cuatro
 terminales** abiertas en la carpeta del lab. Vas a necesitarlas.
@@ -135,6 +134,10 @@ Y su consecuencia, que es la que cuesta plata:
 
 > ▎ **Más consumidores que particiones no acelera nada. El sobrante mira.**
 
+La afirmación se demuestra entera en los cuatro pasos de hoy. **La consecuencia
+no**: verla en pantalla toma seis minutos y cuatro terminales, y está en
+*Para profundizar B*, con su comando y su salida real.
+
 ---
 
 ## 5 · LOS PASOS
@@ -144,8 +147,8 @@ Y su consecuencia, que es la que cuesta plata:
 Los comandos de hoy **no usan los envoltorios de `kafka-cli/`**. El motivo es
 concreto: `consume-as-group.sh` tiene el tópico fijo por dentro
 (`novatech.fleet.events`, de 6 particiones) y no acepta `--topic`, y hoy
-necesitamos uno de **3 particiones** para que el techo se vea con cuatro
-terminales en vez de siete.
+necesitamos uno de **3 particiones** para que el techo de *Para profundizar B*
+se vea con cuatro terminales en vez de siete.
 
 Así que van los comandos de Kafka **crudos**, con todo desglosado aquí mismo. No
 es una pérdida: es exactamente lo que vas a escribir en el servidor de SUNAT.
@@ -154,8 +157,8 @@ es una pérdida: es exactamente lo que vas a escribir en el servidor de SUNAT.
 terminan solos.** Se quedan corriendo, esperando mensajes, hasta que tú los
 cortes con **`Ctrl+C`**. Eso no es un error ni rompe nada — es lo que hace un
 consumidor de verdad. Cortarlo con `Ctrl+C` es la forma correcta de sacarlo, y
-además es lo que vamos a usar en el Paso 4 para que Kafka rehaga el reparto
-delante de nosotros.
+es lo que se usa en *Para profundizar A* para que Kafka rehaga el reparto
+delante de ti.
 
 ---
 
@@ -168,8 +171,9 @@ delante de nosotros.
 > salón: existen para que el trabajo se pueda repartir.
 
 Necesitamos un tópico con **3 particiones**. Tres es el número más chico que
-permite ver las dos cosas del laboratorio: un reparto desigual entre dos
-miembros (2 y 1), y un cuarto miembro sin nada que hacer.
+permite ver un reparto desigual entre dos miembros (2 y 1) — y también el más
+chico que deja ver, con una cuarta terminal, a un miembro sin nada que hacer.
+Eso último está en *Para profundizar B*.
 
 **Se ejecuta.**
 
@@ -387,7 +391,125 @@ sino que **cada mensaje lo recibe uno solo**. La suma es 6 y los duplicados son
 
 ---
 
-### Paso 4 · Se va un cocinero a mitad de turno
+### Paso 4 · Otra brigada entra a la cocina
+
+**Se explica.**
+
+Falta la segunda mitad de la afirmación. Hasta aquí todos los consumidores
+estaban en **el mismo grupo**. ¿Qué pasa con uno que declara un grupo distinto?
+
+En SUNAT es el caso real: el equipo de **reportes** necesita leer **todos** los
+comprobantes para su analítica, y no puede quitarle trabajo al de validación.
+
+**Se ejecuta.** Los consumidores `cons-A` y `cons-B` **siguen corriendo**: no
+los cortes. Usa la tercera terminal, la que todavía está libre:
+
+```bash
+docker exec -it kafka-broker-1 kafka-console-consumer \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.validacion \
+    --group reportes \
+    --from-beginning \
+    --consumer-property client.id=cons-Z \
+    --property print.partition=true \
+    --property print.key=true --property key.separator='|'
+```
+
+| Parámetro | Para qué está |
+|---|---|
+| `--group reportes` | 🔴 **Un nombre distinto. Eso es todo lo que cambia** |
+| `--from-beginning` | Desde el principio del tópico, no solo lo que llegue de ahora en más. Un grupo nuevo no tiene posición guardada, así que hay que decirle desde dónde arrancar |
+
+**Qué sale.**
+
+```
+Partition:2|RUC-20100066604|comprobante_4
+Partition:2|RUC-20100066606|comprobante_6
+Partition:0|RUC-20100066602|comprobante_2
+Partition:0|RUC-20100066605|comprobante_5
+Partition:1|RUC-20100066601|comprobante_1
+Partition:1|RUC-20100066603|comprobante_3
+```
+
+**Cómo se lee.** **Los seis.** Todos los comprobantes del laboratorio, en una
+sola terminal — incluidos los que el grupo `validacion` ya había leído y dado
+por procesados. `cons-Z` está solo en su brigada, así que se lleva las tres
+particiones y todo lo que hay dentro.
+
+(**A ti el orden de las particiones te va a salir distinto.** Lo que no cambia
+es que estén los seis y que salgan agrupados.)
+
+(Salen agrupados por partición, no en orden de escritura: el consumidor recorre
+una partición y después otra. **Kafka garantiza el orden dentro de cada
+partición, nunca entre particiones.**)
+
+Y lo que cierra el laboratorio, desde la terminal de trabajo:
+
+```bash
+docker exec kafka-broker-1 kafka-consumer-groups \
+    --bootstrap-server kafka-broker-1:29092 \
+    --describe --group validacion
+```
+
+```
+GROUP       TOPIC                PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG  ...  CLIENT-ID
+validacion  novatech.validacion  0          2               2               0    ...  cons-A
+validacion  novatech.validacion  1          2               2               0    ...  cons-A
+validacion  novatech.validacion  2          2               2               0    ...  cons-B
+```
+
+**El grupo `validacion` no se movió ni un offset.** Que `reportes` haya leído
+los seis mensajes **no le quitó nada**: sigue con `CURRENT-OFFSET` igual a
+`LOG-END-OFFSET` en las tres particiones, y `LAG` en 0. **Cada brigada lleva su
+propia cuenta.**
+
+---
+
+## 6 · QUÉ QUEDÓ
+
+### Lo que se demostró
+
+> ▎ **Dos consumidores del mismo grupo se reparten el trabajo; dos grupos
+> distintos leen todo cada uno.**
+
+| La afirmación decía | Y en pantalla se vio |
+|---|---|
+| **mismo grupo se reparten** | Paso 3: 4 mensajes en una terminal, 2 en la otra. Suman 6, **cero repetidos** |
+| **grupos distintos leen todo** | Paso 4: `reportes` recibió **los 6**, y `validacion` no perdió nada |
+| **y el sobrante mira** | 🔴 **Esto no se demostró en el recorrido de hoy.** Está en *Para profundizar B*, con la salida real: cuatro miembros y `#PARTITIONS` = 1, 1, 1 y **0** |
+
+### Las cuatro reglas, para llevarse a SUNAT
+
+**1 · `--group` es la palabra más importante del comando.**
+Con el mismo nombre, los procesos colaboran. Con nombres distintos, duplican.
+Y por fuera se ven idénticos: **el nombre del grupo es un dato de arquitectura
+escondido en una línea de configuración.**
+
+**2 · El paralelismo lo fijaste al crear el tópico.**
+Kafka reparte particiones, no mensajes. Más consumidores que particiones es
+plata gastada en procesos que miran. Y las particiones solo suben, nunca bajan.
+*(Se ve en pantalla en* Para profundizar B*.)*
+
+**3 · El rebalanceo es automático, y también es un costo.**
+Nadie tiene que reasignar nada cuando un proceso se cae. Pero durante el
+rebalanceo el grupo **para**: si tus procesos se reinician seguido, estás
+pagando pausas que no ves. *(Se ve en pantalla en* Para profundizar A*.)*
+
+**4 · `LAG` es el número que se vigila.**
+Es la única señal temprana de que el consumo va más lento que la producción.
+Cuando alguien pregunte «¿vamos atrasados?», es esto lo que se mira.
+
+---
+
+## 7 · PARA PROFUNDIZAR
+
+Todo lo que sigue está fuera del recorrido de hoy **por tiempo, no por
+dificultad**. Los dos primeros bloques —el rebalanceo y el techo— estaban en el
+recorrido de clase hasta esta versión y salieron para que el laboratorio quepa
+en 20 minutos de dictado. 🔴 **El techo (B) es el concepto que más cuesta del
+paradigma: si vas a hacer uno solo de esta sección, haz ese.**
+
+### A · El rebalanceo · se va un cocinero a mitad de turno
 
 **Se explica.**
 
@@ -447,7 +569,7 @@ Partition:0|RUC-20100066609|comprobante_9
 
 ---
 
-### Paso 5 · El techo · cuatro cocineros, tres sectores
+### B · El techo · cuatro cocineros, tres sectores
 
 🔴 **Este es el paso que hay que entender. Si algo se te olvida del lab, que no
 sea esto.**
@@ -520,118 +642,7 @@ tópicos de alto volumen llevaban 12 particiones y no 3.
 
 ---
 
-### Paso 6 · Otra brigada entra a la cocina
-
-**Se explica.**
-
-Falta la segunda mitad de la afirmación. Hasta aquí todos los consumidores
-estaban en **el mismo grupo**. ¿Qué pasa con uno que declara un grupo distinto?
-
-En SUNAT es el caso real: el equipo de **reportes** necesita leer **todos** los
-comprobantes para su analítica, y no puede quitarle trabajo al de validación.
-
-**Se ejecuta.** En una terminal libre —corta antes alguno de los consumidores
-con `Ctrl+C` si te quedaste sin—:
-
-```bash
-docker exec -it kafka-broker-1 kafka-console-consumer \
-    --bootstrap-server kafka-broker-1:29092 \
-    --topic novatech.validacion \
-    --group reportes \
-    --from-beginning \
-    --consumer-property client.id=cons-Z \
-    --property print.partition=true \
-    --property print.key=true --property key.separator='|'
-```
-
-| Parámetro | Para qué está |
-|---|---|
-| `--group reportes` | 🔴 **Un nombre distinto. Eso es todo lo que cambia** |
-| `--from-beginning` | Desde el principio del tópico, no solo lo que llegue de ahora en más. Un grupo nuevo no tiene posición guardada, así que hay que decirle desde dónde arrancar |
-
-**Qué sale.**
-
-```
-Partition:1|RUC-20100066601|comprobante_1
-Partition:1|RUC-20100066603|comprobante_3
-Partition:1|RUC-20100066608|comprobante_8
-Partition:0|RUC-20100066602|comprobante_2
-Partition:0|RUC-20100066605|comprobante_5
-Partition:0|RUC-20100066607|comprobante_7
-Partition:0|RUC-20100066609|comprobante_9
-Partition:2|RUC-20100066604|comprobante_4
-Partition:2|RUC-20100066606|comprobante_6
-```
-
-**Cómo se lee.** **Los nueve.** Todos los comprobantes del laboratorio, en una
-sola terminal — incluidos los que el grupo `validacion` ya había leído y dado
-por procesados.
-
-(Salen agrupados por partición, no en orden de escritura: el consumidor recorre
-una partición y después otra. **Kafka garantiza el orden dentro de cada
-partición, nunca entre particiones.**)
-
-Y lo que cierra el laboratorio, desde la terminal de trabajo:
-
-```bash
-docker exec kafka-broker-1 kafka-consumer-groups \
-    --bootstrap-server kafka-broker-1:29092 \
-    --describe --group validacion
-```
-
-```
-GROUP       TOPIC                PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG  ...  CLIENT-ID
-validacion  novatech.validacion  0          4               4               0    ...  cons-A
-validacion  novatech.validacion  1          3               3               0    ...  cons-B
-validacion  novatech.validacion  2          2               2               0    ...  cons-C
-```
-
-**El grupo `validacion` no se movió ni un offset.** Que `reportes` haya leído
-los nueve mensajes **no le quitó nada**. `LAG` sigue en 0 para los dos.
-
----
-
-## 6 · QUÉ QUEDÓ
-
-### Lo que se demostró
-
-> ▎ **Dos consumidores del mismo grupo se reparten el trabajo; dos grupos
-> distintos leen todo cada uno.**
-
-| La afirmación decía | Y en pantalla se vio |
-|---|---|
-| **mismo grupo se reparten** | Paso 3: 4 mensajes en una terminal, 2 en la otra. Suman 6, **cero repetidos** |
-| **grupos distintos leen todo** | Paso 6: `reportes` recibió **los 9**, y `validacion` no perdió nada |
-| **y el sobrante mira** | Paso 5: cuatro miembros, `#PARTITIONS` = 1, 1, 1 y **0** |
-
-### Las cuatro reglas, para llevarse a SUNAT
-
-**1 · `--group` es la palabra más importante del comando.**
-Con el mismo nombre, los procesos colaboran. Con nombres distintos, duplican.
-Y por fuera se ven idénticos: **el nombre del grupo es un dato de arquitectura
-escondido en una línea de configuración.**
-
-**2 · El paralelismo lo fijaste al crear el tópico.**
-Kafka reparte particiones, no mensajes. Más consumidores que particiones es
-plata gastada en procesos que miran. Y las particiones solo suben, nunca bajan.
-
-**3 · El rebalanceo es automático, y también es un costo.**
-Nadie tiene que reasignar nada cuando un proceso se cae. Pero durante el
-rebalanceo el grupo **para**: si tus procesos se reinician seguido, estás
-pagando pausas que no ves.
-
-**4 · `LAG` es el número que se vigila.**
-Es la única señal temprana de que el consumo va más lento que la producción.
-Cuando alguien pregunte «¿vamos atrasados?», es esto lo que se mira.
-
----
-
-## 7 · PARA PROFUNDIZAR
-
-Todo lo que sigue estaba en las versiones anteriores de esta guía. Está fuera
-del recorrido de hoy por tiempo, no por dificultad.
-
-### A · Consumir sin grupo
+### C · Consumir sin grupo
 
 ```bash
 docker exec -it kafka-broker-1 kafka-console-consumer \
@@ -641,9 +652,9 @@ docker exec -it kafka-broker-1 kafka-console-consumer \
 
 **Lo que hay que mirar:** sin `--group`, Kafka le inventa uno
 (`console-consumer-XXXXX`) y ese consumidor recibe **todo**. Es el caso del Paso
-6 llevado al extremo: cada terminal es su propia brigada.
+4 llevado al extremo: cada terminal es su propia brigada.
 
-### B · Rebobinar un grupo
+### D · Rebobinar un grupo
 
 ```bash
 kafka-cli/reset-group.sh reportes
@@ -655,7 +666,7 @@ total. **El grupo tiene que estar sin miembros activos** — tras un `Ctrl+C` ha
 que esperar a que la sesión caduque, o el reset falla con *«Assignments can only
 be reset if the group is inactive»*.
 
-### C · Las claves y el particionado
+### E · Las claves y el particionado
 
 ```bash
 kafka-cli/produce-event.sh --key NVT-1001 "evento alfa"
@@ -666,14 +677,14 @@ en la misma partición**, y por lo tanto los lee **siempre el mismo miembro** de
 grupo, en orden. Es la herramienta para garantizar que los movimientos de un
 mismo contribuyente se procesen ordenados.
 
-### D · Los tópicos y grupos del lab original
+### F · Los tópicos y grupos del lab original
 
 `novatech.fleet.events` (6 particiones) y los envoltorios de `kafka-cli/`
 (`consume-as-group.sh`, `describe-group.sh`, `list-groups.sh`) siguen
 funcionando sobre ese tópico. Con 6 particiones, para ver un miembro ocioso
 harían falta **siete** consumidores.
 
-### E · El reporte del lab
+### G · El reporte del lab
 
 `plantillas/reporte-entregable.md`, con las respuestas de referencia en
 `soluciones/reporte-resuelto.md`.
