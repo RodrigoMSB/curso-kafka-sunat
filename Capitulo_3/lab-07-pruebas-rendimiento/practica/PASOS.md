@@ -7,10 +7,10 @@
 
 **Antes de empezar:** `bin/start-lab.sh` terminado, los 3 brokers arriba.
 
-> **Estos son los tres pasos del recorrido de clase.** Los acks medidos, la
-> compresión, la combinación de parámetros, el lado del consumidor y el
-> particionado salieron por tiempo y están en la sección **PARA PROFUNDIZAR** de
-> la guía, con su comando y su salida real.
+> **Estos son los tres pasos del recorrido de clase.** Los tres niveles de
+> `acks` medidos, `batch.size`, la compresión, la combinación de parámetros, el
+> lado del consumidor y el particionado salieron por tiempo y están en la sección
+> **PARA PROFUNDIZAR** de la guía, con su comando y su salida real.
 
 ---
 
@@ -29,16 +29,15 @@ kafka-cli/perf-test.sh novatech.tuning.bench 50000
 | Medición | Corrida 1 | Corrida 2 |
 |---|---|---|
 | records/sec | | |
-| MB/sec | | |
 | Latencia media (ms) | | |
 | Latencia p99 (ms) | | |
 | Latencia máxima (ms) | | |
 
-**La pregunta del paso:** no cambiaste nada. ¿Por qué los dos números son
-distintos, y de cuánto es la diferencia en `records/sec`?
+**La pregunta del paso:** no cambiaste nada. ¿De cuánto por ciento es la
+diferencia en `records/sec`?
 
-🔴 **Esa diferencia es el ruido de tu máquina.** Anótala: cualquier «mejora» más
-chica que eso no es una mejora.
+🔴 **Ese porcentaje es el ruido de tu máquina.** Anótalo aquí: **______ %**.
+Cualquier «mejora» más chica que eso no es una mejora.
 
 ---
 
@@ -48,70 +47,92 @@ chica que eso no es una mejora.
 
 | Pregunta | Tu apuesta |
 |---|---|
-| Al subir `batch.size` de 16 KB a 64 KB, ¿el throughput sube o baja? | |
+| Al subir `linger.ms` de 0 a 10, ¿el throughput sube o baja? | |
 | ¿Y la latencia media? | |
 
 Ahora sí, dos veces:
 
 ```bash
-kafka-cli/perf-test.sh novatech.tuning.bench 50000 --batch-size 65536
+kafka-cli/perf-test.sh novatech.tuning.bench 50000 --linger-ms 10
 ```
 
 ```bash
-kafka-cli/perf-test.sh novatech.tuning.bench 50000 --batch-size 65536
+kafka-cli/perf-test.sh novatech.tuning.bench 50000 --linger-ms 10
 ```
 
 | Medición | Corrida 1 | Corrida 2 |
 |---|---|---|
 | records/sec | | |
-| MB/sec | | |
 | Latencia media (ms) | | |
 | Latencia p99 (ms) | | |
 | Latencia máxima (ms) | | |
 
-🔴 **`linger.ms`, `acks` y la compresión no se tocan.** Un parámetro a la vez, o
+🔴 **`batch.size`, `acks` y la compresión no se tocan.** Un parámetro a la vez, o
 la comparación no sirve.
 
 ---
 
-## Paso 3 · La tabla, que es el paso de verdad
+## Paso 3 · Un par más, y la tabla
 
-Junta las cuatro corridas:
+**Antes de correr nada**, compara lo que ya tienes:
 
-| | records/sec | Latencia media | Latencia p99 | Latencia máx |
+| Pregunta | Tu respuesta |
+|---|---|
+| Tu **mejor** corrida base | |
+| Tu **peor** corrida con `linger.ms=10` | |
+| ¿Cuánto por ciento las separa? | |
+| ¿Es más o menos que el ruido que anotaste en el Paso 1? | |
+
+🔴 **Si la diferencia es más chica que el ruido, no puedes concluir nada
+todavía.** Por eso viene un par más.
+
+Un par, uno detrás del otro:
+
+```bash
+kafka-cli/perf-test.sh novatech.tuning.bench 50000
+```
+
+```bash
+kafka-cli/perf-test.sh novatech.tuning.bench 50000 --linger-ms 10
+```
+
+Ahora los tres pares, **cada uno contra el suyo**:
+
+| Par | Base | `linger.ms=10` | ¿Quién ganó? | Diferencia |
 |---|---|---|---|---|
-| Base, corrida 1 | | | | |
-| Base, corrida 2 | | | | |
-| 64 KB, corrida 1 | | | | |
-| 64 KB, corrida 2 | | | | |
+| 1 | | | | |
+| 2 | | | | |
+| 3 | | | | |
 
 **Las tres lecturas:**
 
 | Pregunta | Tu respuesta |
 |---|---|
-| 1 · ¿Se pisan los rangos de `records/sec` de las dos configuraciones? | |
-| 1b · Si compararas solo la peor tuneada contra la mejor base, ¿qué concluirías? | |
-| 2 · ¿Se pisan los rangos de latencia media? | |
-| 2b · Entonces, ¿qué mejora **sí** puedes afirmar? | |
-| 3 · En **una sola** corrida tuneada: promedio, p99 y máximo. ¿Cuántas veces el promedio es el máximo? | |
+| 1 · ¿Se pisan los rangos sueltos de las dos configuraciones? | |
+| 1b · Si compararas tu mejor base contra tu peor tuneada, ¿qué concluirías? | |
+| 2 · ¿Cuántos de los tres pares ganó `linger.ms=10`? | |
+| 2b · Escribe la conclusión afirmable en una frase, con el rango de mejora | |
+| 2c · ¿Y qué pasó con la latencia media? ¿`linger.ms` la movió? | |
+| 3 · En **una sola** corrida: promedio, p99 y máximo. ¿Cuántas veces el promedio es el máximo? | |
 | 3b · Si tu tablero solo muestra el promedio, ¿qué mensaje no aparece? | |
 
 ---
 
 ## Cierre · Las tres preguntas del laboratorio
 
-**1 · Un compañero te dice «subí `batch.size` y el throughput bajó un 3 %».
+**1 · Un compañero te dice «subí `linger.ms` y el throughput bajó un 3 %».
 ¿Qué le preguntas antes de creerle?**
 
 **2 · Cambiaste tres parámetros a la vez y mejoró un 20 %. ¿Qué sabes y qué no
 sabes?**
 
-**3 · Tienes que escribir un acuerdo de nivel de servicio para el equipo de
-comprobantes. ¿Pones el promedio o el p99, y por qué?**
+**3 · La guía dice que en este clúster `acks=0` no salió más rápido que
+`acks=all`. ¿Significa que `acks` da lo mismo? ¿Qué medirías tú antes de
+decidirlo para SUNAT?**
 
 ---
 
-> **Lo que sigue** — los tres niveles de `acks` medidos, la compresión, la
-> combinación de parámetros, el lado del consumidor y el particionado están
-> listados en la sección **PARA PROFUNDIZAR** de la guía, con su comando
-> completo y su salida real.
+> **Lo que sigue** — los tres niveles de `acks` medidos, `batch.size`, la
+> compresión, la combinación de parámetros, el lado del consumidor y el
+> particionado están listados en la sección **PARA PROFUNDIZAR** de la guía, con
+> su comando completo y su salida real.

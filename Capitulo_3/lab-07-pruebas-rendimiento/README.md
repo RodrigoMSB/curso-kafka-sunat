@@ -25,15 +25,18 @@ Tu misión: medir empíricamente el rendimiento de producción y consumo con las
 - Cuánto se mueve una medición de rendimiento **cuando no cambias nada**, y por
   qué eso hay que medirlo antes de tunear
 - Medir throughput y latencia con `kafka-producer-perf-test`
-- Cómo `batch.size` cambia la latencia, y por qué su efecto en el throughput
-  **no se puede afirmar** con dos corridas
+- Cómo `linger.ms` cambia el throughput, y por qué eso solo se puede afirmar
+  comparando **pares repetidos**, no rangos sueltos
 - Por qué el rendimiento se vigila en percentiles y no en promedios
 - Por qué se mueve **un parámetro a la vez**
 
 **En la sección *Para profundizar* de la guía**, con su comando y su salida real:
 
-- Los tres niveles de `acks`, medidos — y por qué en este clúster no se
-  distinguen
+- Los tres niveles de `acks`, medidos — el recorrido los explica sin
+  ejecutarlos, y aquí están las nueve corridas que muestran por qué en este
+  clúster no se distinguen
+- `batch.size`, que mueve la latencia y no el throughput — al revés que el
+  parámetro del recorrido
 - Compresión `lz4` y `zstd`
 - Combinar parámetros, y por qué se hace al final
 - El lado del consumidor con `kafka-consumer-perf-test`, y la trampa del
