@@ -4,6 +4,12 @@
 > preguntar antes de cada comando, qué va a salir en pantalla y qué se hace
 > cuando algo no sale.
 
+🔴 **El techo es 20 minutos de dictado.** Tres sesiones de 180 minutos para once
+laboratorios dan 45 minutos por lab, y en esos 45 entra también la demostración
+de apertura, las preguntas y el cambio de un lab a otro. Este guion está
+recortado a ese techo **botando bloques enteros**, no acortando párrafos: lo que
+quedó, quedó completo.
+
 ---
 
 ## Antes de la clase
@@ -23,61 +29,79 @@ kafka-cli/delete-topic.sh novatech.lab05.efimero
 ```
 
 🔴 **El tópico tiene que arrancar sin existir.** Si arrancas con un tópico que
-ya tiene 60 segundos de antigüedad, el borrado puede ocurrir en el Paso 4 y te
+ya tiene 60 segundos de antigüedad, el borrado puede ocurrir en el Bloque 2 y te
 quedas sin demostración.
 
 ---
 
-## Presupuesto de tiempo
+## Presupuesto de tiempo — 20 minutos
 
-| Bloque | Minutos | Qué lo hace largo |
-|---|---|---|
-| 1 · El problema y la metáfora | 6 | Se habla, no se ejecuta |
-| 2 · Pasos 1 y 2 · leer un tópico | 8 | La salida es larga y hay que enseñar a recortarla |
-| 3 · Pasos 3 a 5 · fabricar y llenar | 8 | Tres comandos cortos |
-| 4 · Paso 6 · la espera | **5–7** | 🔴 No depende de ti. Ver abajo |
-| 5 · Paso 7 · compactación | 4–5 | Se habla; solo se ejecuta la condición previa |
-| 6 · Paso 8 · `--alter` en caliente | 5 | Dos comandos y una comparación |
-| 7 · Cierre y las cinco reglas | 4 | Se habla |
-| **Total de clase** | **~37** | 🟡 estimado |
+| Bloque | Arranca en | Qué se muestra en pantalla | Min |
+|---|---|---|---|
+| 1 · El problema y la metáfora | minuto 0 | Nada. Se habla | 6 |
+| 2 · Crear, describir y llenar | minuto 6 | `create-topic`, `describe`, 100 mensajes y la doble tanda | 10 |
+| 3 · La espera y el número que cambia | minuto 16 | `kafka-get-offsets --time -2` cada minuto, hasta que el 0 salte | 4 |
+| 4 · Cierre y las cinco reglas | — | Nada. Se dicta **dentro** de la espera del Bloque 3 | (4) |
+| **Total de dictado** | | | **20** |
+
+**De dónde salen esos dos números que cambiaron.**
+
+- El **Bloque 2 son 10 y no 8** porque absorbió la lectura de la línea
+  `Configs`, que antes vivía en el bloque de `novatech.fleet.gps` que se botó.
+  🔴 **Es el número más frágil de esta tabla**: es el bloque más largo y el que
+  más contenido junta.
+- El **Bloque 3 son 4 y no 6** porque su duración no la pone la explicación:
+  la pone la ronda del broker, y esa está **medida**. En la última corrida
+  fueron 193 s (3,2 min) y el rango medido va de 106 s a 260 s. Si te toca el
+  extremo largo, el laboratorio se va a **20,3 minutos**.
+
+El Bloque 4 no suma minutos propios: ocupa el hueco de la espera del Bloque 3,
+que es tiempo de reloj que de todas formas hay que llenar. Ese es el único
+solapamiento de este guion.
 
 ### Los tres relojes
 
-Este lab tiene tres duraciones distintas y conviene no confundirlas:
+Tres duraciones distintas, y conviene no confundirlas:
 
 | Reloj | Cuánto | Cómo se obtuvo | Para qué sirve |
 |---|---|---|---|
-| **Ejecución pura** | **256 s** | 🟢 **Medido**, corrida completa de los 8 pasos (`soluciones/SALIDAS.md`) | Lo que le toma a la máquina. Es el número que le sirve al alumno que repite el lab en su casa |
-| **Espera del broker** | **212 s** de esos 256 | 🟢 **Medido**, misma corrida. En otra corrida fueron **106 s** | No es tiempo muerto: es el hueco donde se abren preguntas. Ver el bloque 4 |
-| *(los otros 7 pasos)* | *44 s* | 🟢 Medido | 11 comandos. La máquina no es el cuello de botella |
-| **Dictado** | **~37 min** | 🟡 **Estimado**, no medido | 🔴 **Es el que manda.** El límite de 40 minutos aplica a este |
+| **Ejecución pura** | **217 s** | 🟢 **Medido**, corrida completa del recorrido recortado (los 5 pasos), 22-ago-2026 | Lo que le toma a la máquina. Es el número que le sirve al alumno que repite el lab en su casa |
+| **Espera del broker** | **193 s** de esos 217 | 🟢 **Medido**, misma corrida. En corridas anteriores fueron **260 s**, **212 s** y **106 s** | No es tiempo muerto: es el hueco donde entran el cierre y las preguntas |
+| *(los otros 4 pasos)* | *24 s* | 🟢 Medido | 9 comandos. La máquina no es el cuello de botella |
+| **Dictado** | **20 min** | 🟡 **Estimado**, no medido | 🔴 **Es el que manda.** El techo de 20 minutos aplica a este |
 
-🟡 **La estimación de dictado es una estimación.** Sale de suponer que explicar
-lleva del orden de tres veces lo que lleva ejecutar, más los bloques que son
-solo palabra (1 y 5). **No está cronometrada contra una clase real.** El primer
-dictado es el que la convierte en dato: si te pasas de 40 minutos, eso es un
-hallazgo que hay que reportar, no un problema del alumno.
+🟡 **La estimación de dictado sigue siendo una estimación.** Sale de tres
+cosas: los minutos que cada bloque ya tenía asignados antes del recorte, el
+ajuste del Bloque 2 por el contenido que absorbió, y el Bloque 3 puesto en la
+espera **medida** del broker. El Bloque 4 no suma porque se dicta dentro de esa
+espera. **Nada de esto está cronometrado contra una clase real.** El primer
+dictado es el que lo convierte en dato: si te pasas de 20 minutos, eso es un
+hallazgo que hay que reportar, con el bloque que se te fue.
 
-🔴 **El margen quedó en 3 minutos estimados sobre un techo de 40.** Es poco. Si
-en el primer dictado ves que se va, lo primero que se recorta es el Paso 7: la
-compactación se enuncia y se manda a leer, sin ejecutar la condición previa —
-eso devuelve unos 4 minutos. **El Paso 8 no se recorta**, y el bloque 6 dice por
-qué.
+🔴 **El margen es cero.** No hay bloque de reserva: si algo se estira, lo que se
+bota es el Bloque 1 completo —el problema y la metáfora— y se entra directo al
+comando. Es la peor de las salidas posibles, y por eso está escrita aquí y no en
+el momento.
 
 La modalidad es **demostrativa**: tú ejecutas en pantalla y explicas mientras.
-Por eso el techo no lo pone la máquina —44 segundos de comandos más una espera
-que se llena con preguntas— sino lo que tarda la explicación.
+Por eso el techo no lo pone la máquina —24 segundos de comandos más una espera
+que se llena hablando— sino lo que tarda la explicación.
 
-**El bloque 4 es el que hay que administrar.** El broker revisa la retención
-cada 5 minutos y no hay forma de apurarlo desde el tópico. Ese hueco **no se
-llena con silencio**: es el momento de dar el Paso 7 (compactación) y las cinco
-reglas del cierre, volviendo a consultar el offset cada minuto delante de la
-clase. Que el número no cambie durante cuatro minutos **es parte de la
-demostración**, no un problema técnico.
+### Lo que se botó de este guion
+
+| Bloque botado | Minutos que devolvió | Dónde quedó |
+|---|---|---|
+| Describir `novatech.fleet.gps` y la cuenta de los 7 + 7 días | 8 | Guía, *Para profundizar G* |
+| El Paso 7 · compactación ejecutada | 4–5 | Se menciona en **una frase** en el Bloque 3. El comando queda en *Para profundizar B* |
+| El Paso 8 · `--alter` de configuración en caliente | 5 | Guía, *Para profundizar C* |
+
+🔴 **Nada de eso se explica a medias.** O va completo, o no va y se manda a leer.
 
 ---
 
-## Bloque 1 · El problema y la metáfora — 6 min
+## Bloque 1 · minuto 0 · El problema y la metáfora — 6 min
+
+**En pantalla no hay nada.** Este bloque es solo palabra.
 
 ### Qué decir
 
@@ -124,90 +148,10 @@ razones distintas que ninguno de ellos podía saber.
 
 ---
 
-## Bloque 2 · Pasos 1 y 2 · leer un tópico — 8 min
+## Bloque 2 · minuto 6 · Crear, describir y llenar — 10 min
 
-### 🔮 Predicción antes de ejecutar
-
-> «Voy a describir un tópico que ya está creado. ¿Cuántas configuraciones creen
-> que me va a mostrar?»
-
-### Se ejecuta
-
-```bash
-kafka-cli/describe-topic.sh novatech.fleet.gps
-```
-
-### Cómo leerlo en voz alta
-
-Lee **solo la primera línea**, en este orden, señalando en pantalla:
-
-> «`PartitionCount: 6` — el tópico está cortado en seis pedazos. Ese número nos
-> va a perseguir el Lab 06, porque es el que decide cuántos consumidores pueden
-> trabajar en paralelo.
->
-> `ReplicationFactor: 3` — de cada pedazo hay tres copias, en tres servidores
-> distintos.
->
-> Y ahora miren esto: `Configs: min.insync.replicas=2`. **Una sola.** ¿Este
-> tópico tiene una sola configuración?»
-
-Deja que contesten. La respuesta correcta es que no:
-
-> «Tiene más de treinta. Aquí solo aparece lo que está **cambiado respecto de
-> la fábrica**. Todo lo que no aparece está en su valor por defecto, y está ahí,
-> decidiendo cosas, sin que nadie lo haya escrito. Esa línea casi vacía es la
-> trampa: se lee como *este tópico no tiene configuración*, y lo que dice es
-> *este tópico tiene un solo valor distinto del de fábrica*.»
-
-Después baja a la línea de la partición 0 y define **réplica** e **ISR**. Si
-alguien pregunta por `Elr` / `LastKnownElr`: son campos de Kafka 4.x para
-escenarios de pérdida severos, **en este lab salen siempre vacíos**, y no vale
-la pena gastar tiempo ahí.
-
-### El Paso 2
-
-> «Vamos a buscar el plazo que este tópico tiene puesto. Como no aparecía en la
-> línea de resumen, ya sabemos que está en su valor de fábrica. Pero está.»
-
-```bash
-kafka-cli/describe-topic.sh novatech.fleet.gps | grep -E "^  (retention.ms|segment.ms|cleanup.policy)="
-```
-
-Sale:
-
-```
-  cleanup.policy=delete sensitive=false synonyms={DEFAULT_CONFIG:log.cleanup.policy=delete}
-  retention.ms=604800000 sensitive=false synonyms={}
-  segment.ms=604800000 sensitive=false synonyms={}
-```
-
-**El momento del bloque.** Haz la cuenta en voz alta:
-
-> «604 800 000 milisegundos. Dividido mil, son segundos. Dividido sesenta, entre
-> sesenta, entre veinticuatro: **siete días**. Perfecto, retención de siete días.
->
-> Ahora miren la línea de abajo. `segment.ms`, el espiche, **también siete
-> días**. Entonces: el espiche se cierra a los siete días, y el plazo de
-> siete días **empieza a contar cuando el espiche se cierra**.
->
-> ¿Cuánto puede llegar a vivir un mensaje en un tópico que dice "siete días"?»
-
-Espera. Alguien va a decir catorce.
-
-> «Catorce. Y nadie mintió. Ese tópico dice siete días y cumple lo que dice. Lo
-> que pasa es que "siete días" no se cuenta desde donde ustedes creían.»
-
-### ⚠ Errores probables en este bloque
-
-| Síntoma | Causa | Qué hacer |
-|---|---|---|
-| `describe-topic.sh` no devuelve nada y dice que no hay brokers | El clúster no terminó de arrancar | `bin/90-test-lab.sh` y esperar |
-| El `grep` no devuelve nada en Git Bash | Comillas cambiadas por el editor / copiado desde el PDF | Que lo escriban a mano; las comillas tienen que ser rectas |
-| Alguien pregunta por `synonyms={}` vacío | Ese valor viene de `log.retention.hours` del broker, que no tiene sinónimo directo | Contestar en una frase y seguir; se retoma en *Para profundizar C* |
-
----
-
-## Bloque 3 · Pasos 3 a 5 · fabricar y llenar — 8 min
+**En pantalla:** `create-topic.sh`, `describe-topic.sh`, 100 mensajes, los dos
+extremos del offset, y la segunda tanda que cierra el espiche.
 
 ### 🔮 Predicción antes de ejecutar
 
@@ -233,19 +177,48 @@ nunca rota, y **la demostración no muestra nada**.
 Esto está medido: con 3 particiones el borrado tardó 265 s y dejó una partición
 intacta. Con 1 partición tardó 128 s y se llevó todo lo vencido.
 
-### Verificación, y el retorno del Paso 1
+### Describir, y leer la línea `Configs`
 
 ```bash
 kafka-cli/describe-topic.sh novatech.lab05.efimero | head -2
 ```
 
 ```
-Topic: novatech.lab05.efimero	TopicId: ...	PartitionCount: 1	ReplicationFactor: 3	Configs: min.insync.replicas=2,retention.ms=60000,segment.ms=10000
+Topic: novatech.lab05.efimero	TopicId: dBn0wnH_SIKGYMgNDgfgwA	PartitionCount: 1	ReplicationFactor: 3	Configs: min.insync.replicas=2,retention.ms=60000,segment.ms=10000
+	Topic: novatech.lab05.efimero	Partition: 0	Leader: 2	Replicas: 2,3,1	Isr: 2,3,1	Elr: 	LastKnownElr:
 ```
 
-> «Miren la línea `Configs`. Hace diez minutos traía un valor. Ahora trae tres.
-> ¿Por qué? Porque ahora sí hay tres cosas cambiadas respecto de la fábrica. La
-> línea no cambió de comportamiento: siempre mostró lo mismo.»
+Lee la primera línea en este orden, señalando en pantalla:
+
+> «`PartitionCount: 1` — un solo pedazo, porque lo pedí así. Ese número es el
+> que decide cuántos consumidores pueden trabajar en paralelo, y nos va a
+> perseguir todo el Lab 06.
+>
+> `ReplicationFactor: 3` — de ese pedazo hay tres copias, en tres servidores
+> distintos. Aguanto perder uno.
+>
+> Y ahora la línea que importa hoy: `Configs`. Trae tres valores. ¿Este tópico
+> tiene tres configuraciones?»
+
+Deja que contesten. La respuesta correcta es que no:
+
+> «Tiene más de treinta. Aquí solo aparece lo que está **cambiado respecto de
+> la fábrica**, y da la casualidad de que yo cambié tres cosas hace diez
+> segundos. Todo lo que no aparece está en su valor por defecto, y está ahí,
+> decidiendo cosas, sin que nadie lo haya escrito. Esa línea es la trampa: en un
+> tópico que nadie tocó se lee casi vacía, y se entiende como *este tópico no
+> tiene configuración*. Lo que dice es *este tópico no tiene ningún valor
+> distinto del de fábrica*.»
+
+Baja a la segunda línea y define **réplica** e **ISR** ahí mismo:
+
+> «`Replicas: 2,3,1` son las tres libretas de respaldo: en qué brokers vive este
+> pedazo. `Isr: 2,3,1` son las que están **al día** en este momento. Mismos tres
+> números: ninguna se quedó atrás.»
+
+Si alguien pregunta por `Elr` / `LastKnownElr`: son campos de Kafka 4.x para
+escenarios de pérdida severos, **en este lab salen siempre vacíos**, y no vale
+la pena gastar tiempo ahí.
 
 ### Llenar y contar
 
@@ -277,7 +250,7 @@ novatech.lab05.efimero:0:0
 > laboratorio se juega en que ese cero deje de ser cero. Y va a ser el único
 > aviso que tengan.»
 
-### El Paso 5, que es el que todo el mundo se salta
+### La doble tanda, que es el paso que todo el mundo se salta
 
 > «Ahora viene el paso que se salta el noventa por ciento de la gente que
 > intenta esto en su casa, y por saltárselo concluye que la retención de Kafka
@@ -333,16 +306,20 @@ la causa.
 | **Solo hay un `.log`** | El espiche no rotó: pasaron menos de 10 s, o la segunda ráfaga no llegó | Esperar 10 s, volver a escribir 5 mensajes, mirar de nuevo. 🔴 **No sigas sin esto** |
 | `ls` falla con «no such file or directory» y una ruta con `C:/Program Files/Git` | Falta `MSYS_NO_PATHCONV=1` | Reponerla. Es exactamente el error que la variable evita |
 | `Created topic` viene con un `WARNING` sobre puntos y guiones bajos | Kafka avisa que el nombre puede chocar en sus métricas | Ignorarlo, el tópico se creó. Vale la pena decirlo para que nadie crea que falló |
-| El tópico ya existía | Ensayo previo sin limpiar | `kafka-cli/delete-topic.sh novatech.lab05.efimero` y rehacer el Paso 3 |
+| El tópico ya existía | Ensayo previo sin limpiar | `kafka-cli/delete-topic.sh novatech.lab05.efimero` y rehacer la creación |
+| `describe-topic.sh` no devuelve nada y dice que no hay brokers | El clúster no terminó de arrancar | `bin/90-test-lab.sh` y esperar |
 
 ---
 
-## Bloque 4 · Paso 6 · la espera — 5 a 7 min
+## Bloque 3 · minuto 16 · La espera y el número que cambia — 4 min
+
+**En pantalla:** el mismo `kafka-get-offsets --time -2`, repetido cada minuto,
+hasta que el `0` deje de ser `0`.
 
 🔴 **Este es el bloque que hay que administrar.** El borrado va a ocurrir en
 algún momento dentro de los próximos cinco minutos, no antes, y no se puede
 apurar. Lo medido de punta a punta, desde crear el tópico hasta ver el número
-cambiar, fueron **128 segundos** en una corrida y algo más en otras.
+cambiar, fueron **217 segundos** en la última corrida medida y **242** en otra.
 
 ### Qué decir mientras no pasa nada
 
@@ -357,10 +334,23 @@ cambiar, fueron **128 segundos** en una corrida y algo más en otras.
 > Y quiero que se queden con esto, porque es la mitad de lo que vinimos a
 > demostrar: **no solo no avisa. Ni siquiera está mirando todo el tiempo.**»
 
-🔴 **Este hueco se llena con preguntas, no con silencio.** Es el mejor momento
-de todo el laboratorio para abrir la sala: la demostración está armada, el
-resultado todavía no llegó, y la clase está esperando un número. Di literalmente
-**«mientras esperamos, pregunten»**, y si nadie arranca, tira tú la primera:
+**La compactación, en una sola frase y sin ejecutarla:**
+
+> «Y para que no se lo lleven incompleto: la política que estamos viendo se
+> llama `delete`, y existe otra que se llama `compact`, que no mira el reloj —
+> mira la clave de cada mensaje y **guarda solo el último valor de cada clave**.
+> No la vamos a correr hoy: el compactador trabaja en segundo plano y no pasa en
+> los minutos que nos quedan. Está en la guía, en *Para profundizar B*, con el
+> comando listo.»
+
+🔴 **Es una frase, y sigues.** Si te enredas explicando compactación, este bloque
+se come el cierre y el lab se pasa de 20 minutos.
+
+🔴 **El resto del hueco se llena con el Bloque 4 y con preguntas, no con
+silencio.** Es el mejor momento de todo el laboratorio para abrir la sala: la
+demostración está armada, el resultado todavía no llegó, y la clase está
+esperando un número. Di literalmente **«mientras esperamos, pregunten»**, y si
+nadie arranca, tira tú la primera:
 
 > «¿Alguien tiene hoy un tópico en producción y sabe de memoria qué retención
 > tiene puesta?»
@@ -374,7 +364,7 @@ docker exec kafka-broker-1 kafka-get-offsets \
 ```
 
 Que salga `:0:0` cuatro veces seguidas **es parte de la demostración**. Entre
-consulta y consulta, adelanta el Bloque 5 (el Paso 7 y las cinco reglas).
+consulta y consulta, dicta el Bloque 4.
 
 ### Cuando el número cambia
 
@@ -410,112 +400,18 @@ el renombrado.
 
 | Síntoma | Causa | Qué hacer |
 |---|---|---|
-| **Pasaron 6 minutos y sigue en `:0:0`** | Casi siempre: no hay un segundo `.log`. El espiche no rotó | Volver al Paso 5, escribir 5 mensajes, esperar la ronda siguiente |
-| El número saltó a `:0:105` en vez de `:0:100` | La ronda llegó tarde y también los 5 mensajes de la segunda ráfaga pasaron los 60 s | **No es un fallo, es mejor**: se fue todo. `latest − earliest = 0` |
+| **Pasaron 6 minutos y sigue en `:0:0`** | Casi siempre: no hay un segundo `.log`. El espiche no rotó | Volver a la doble tanda, escribir 5 mensajes, esperar la ronda siguiente |
+| El número saltó a `:0:105` en vez de `:0:100` | La ronda llegó tarde y también los 5 mensajes de la segunda ráfaga pasaron los 60 s | **No es un fallo, es mejor**: se fue todo. `latest − earliest = 0`. Es lo que salió en la última corrida medida |
 | Un alumno lo vio y otro no | Cada uno tiene su propio clúster y su propia ronda | Normal. Que comparen a qué hora les cambió |
 | Alguien pregunta si se puede forzar el borrado | Sí, bajando `log.retention.check.interval.ms`, pero es config **de broker** y exige reinicio | Contestarlo así, y no tocar el compose en clase |
 
 ---
 
-## Bloque 5 · Paso 7 · compactación — 4 a 5 min
+## Bloque 4 · Cierre y las cinco reglas — 4 min
 
-Este bloque se dicta **intercalado con la espera del Bloque 4**.
-
-### Compactación, en dos frases y sin fingir que se ve
-
-> «`cleanup.policy` tiene dos valores y hoy usamos uno. `delete` bota el espiche
-> cuando vence el plazo: es lo que acaban de ver. El otro es `compact`, y no
-> mira el reloj: mira la **clave** de cada mensaje y deja solo el último de cada
-> clave, para siempre.
->
-> En el restaurante: en vez de botar el espiche, se lo repasa y de cada mesa se
-> deja únicamente la última comanda. La cuenta final, no el historial.
->
-> La diferencia práctica es qué pregunta contesta cada uno. `delete` contesta
-> *¿cuándo pasó?* — sirve para eventos: un comprobante emitido, un pago.
-> `compact` contesta *¿cómo está ahora?* — sirve para estados: el saldo actual,
-> el último domicilio fiscal declarado.
->
-> Y una advertencia: un tópico compactado **no se achica con el tiempo**. Se
-> achica cuando repites la clave. Si tienen un millón de claves distintas, se
-> quedan con un millón de mensajes para siempre.»
-
-### Lo único que sí se ejecuta: la condición previa
-
-🔴 **No intentes mostrar la compactación en clase. No va a correr.** El
-compactador trabaja en segundo plano cada cierto tiempo y no pasa en el minuto y
-medio de este bloque. Lo que sí se demuestra —y es lo que importa— es que **los
-mensajes llevan clave**, la condición sin la cual nunca compactaría.
-
-```bash
-kafka-cli/produce-bulk.sh novatech.lab05.efimero 6 --key-pattern NVT
-docker exec kafka-broker-1 kafka-console-consumer \
-    --bootstrap-server kafka-broker-1:29092 \
-    --topic novatech.lab05.efimero --from-beginning --max-messages 6 \
-    --timeout-ms 12000 --property print.key=true --property key.separator='|'
-```
-
-> «A la izquierda de la barra está la clave, a la derecha el valor. Las claves
-> llegaron. Si en vez de `NVT-1` vieran `null`, este tópico **no compactaría
-> nunca**, porque no habría por qué agrupar. Y eso es lo que quiero que sepan
-> revisar el día que un tópico compactado no se achique: lo primero que se mira
-> no es el compactador, es si las claves están puestas.»
-
-**Di en voz alta que el resultado no se ve hoy.** Un alumno que se queda
-creyendo que vio compactación va a repetirlo mal.
-
-### ⚠ Errores probables en este bloque
-
-| Síntoma | Causa | Qué hacer |
-|---|---|---|
-| Sale `null` en vez de `NVT-1` | Se te fue el `--key-pattern` | Repetir el produce con el flag |
-| `produce-bulk.sh` se cuelga sin decir nada | El tópico no existe (un reset en el medio) | Ctrl+C y recrear. La creación automática está **desactivada** a propósito y el productor reintenta en silencio |
-| `Warning: --property is deprecated` | Kafka 8.x avisa del cambio de nombre del flag | Ignorarlo. **El flag funciona** — verificado midiendo las claves que llegan |
-
----
-
-## Bloque 6 · Paso 8 · `--alter` en caliente — 5 min
-
-🔴 **Este bloque no se recorta.** Es lo único del laboratorio que muestra que un
-tópico **se administra después de creado**, y el laboratorio se llama
-«Operación de tópicos». Sin esto se enseña a crear y a esperar, no a operar.
-
-### Qué decir
-
-> «Todo lo que hicimos hasta ahora fue crear y esperar. Falta lo que ustedes van
-> a hacer todas las semanas: cambiarle la configuración a un tópico que ya está
-> en producción, con gente escribiendo y leyendo, sin reiniciar nada.
->
-> Y esto ya lo hicieron: en el **Lab 03** cambiamos la configuración de un
-> broker en caliente. Aquí es la de un tópico. En Kafka casi todo se cambia en
-> caliente, y la pregunta operativa nunca es *¿se puede?* sino ***¿desde cuándo
-> aplica?***»
-
-### Se ejecuta
-
-```bash
-kafka-cli/alter-topic-config.sh novatech.lab05.efimero --add retention.ms=3600000
-kafka-cli/describe-topic.sh novatech.lab05.efimero | head -1
-```
-
-Pon las dos líneas `Configs` una encima de la otra:
-
-```
-antes    Configs: min.insync.replicas=2,retention.ms=60000,segment.ms=10000
-después  Configs: min.insync.replicas=2,retention.ms=3600000,segment.ms=10000
-```
-
-> «Cambió un número. No hubo reinicio, no hubo corte, y ni un productor ni un
-> consumidor se enteró.
->
-> Y la parte que importa para SUNAT: **subir la retención hoy no rescata lo que
-> ya se fue.** Los cien comprobantes del Paso 6 no vuelven. Solo cambia el plazo
-> de los que todavía están vivos. El día que alguien pida *guardemos más*, esa
-> es la primera frase que hay que decirle.»
-
----
-
-## Bloque 7 · Cierre — 4 min
+🔴 **Este bloque no tiene minuto propio: se dicta dentro de la espera del Bloque
+3**, entre una consulta del offset y la siguiente. Si el número cambia a mitad
+de camino, córtalo, muestra el cambio, y retómalo después.
 
 ### Las cinco reglas
 
@@ -533,23 +429,45 @@ es la **cuarta**:
 > línea que van a ir a mirar es `retention.ms`, y la segunda es `segment.ms`. Y
 > ya saben con qué comando.»
 
+### 🔴 La frase que hay que decir en voz alta antes de pasar al Lab 06
+
+> «Y una cosa: **este laboratorio tiene más operaciones que las que vimos hoy.
+> Están todas en el repositorio, con la clase grabada.** Cambiarle la
+> configuración a un tópico en caliente, la compactación de verdad, subir
+> particiones, los cuatro perfiles de tópico. Está en la guía, sección *Para
+> profundizar*, con el comando escrito y la salida real.»
+
+Sin esa frase, el alumno que abra la guía después va a creer que se saltó algo.
+
 El clúster queda arriba para el Lab 06.
 
 ---
 
 ## Si el tiempo se acorta
 
-Recorta en este orden. **Los pasos 3 a 6 no se recortan**: son la demostración.
+Ya no hay bloque de reserva: este guion **es** el recorte. Y ojo con una
+tentación: **recortar el Bloque 4 no devuelve nada**, porque se dicta dentro de
+una espera que ocurre igual. Lo único que devuelve minutos es esto, en este
+orden, y **se reporta**:
 
-1. El Paso 7 (compactación) → se enuncia en dos frases y se manda a leer.
-2. El Paso 1 → describir el tópico sin desglosar cada campo de partición.
-3. Las cinco reglas → dejar la 1, la 3 y la 4.
+1. En el Bloque 2, **no bajes a la línea de la partición**: `Replicas` e `Isr`
+   ya quedaron nombradas al crear el tópico con `--rf 3`. Devuelve ~1 min y no
+   deja ninguna idea a medias.
+2. El Bloque 1 se bota completo y se entra directo al `create-topic.sh`.
+   Devuelve 6 min y es la peor salida posible: el lab pasa a ser un comando.
+
+**El resto del Bloque 2 y el Bloque 3 no se recortan**: son la demostración
+entera.
 
 ## Si sobra tiempo
 
-**Para profundizar A** (los cuatro perfiles de tópico) es lo que mejor engancha,
-porque cada perfil es una discusión de negocio. **C** (cambio en caliente) es el
-segundo mejor, pero **léelo antes**: la sorpresa no es que aparezca
-`DYNAMIC_TOPIC_CONFIG` —ya estaba desde que el tópico se creó con `--config`—
-sino que el `--delete` devuelve el valor al del **broker**, no a cero. Es el
-error que se comete en producción.
+Nada de lo botado se improvisa. Se manda a leer, por nombre:
+
+- **Para profundizar C** (cambio en caliente) es el que más rinde: la sorpresa
+  no es que aparezca `DYNAMIC_TOPIC_CONFIG` —ya estaba desde que el tópico se
+  creó con `--config`— sino que el `--delete` devuelve el valor al del
+  **broker**, no a cero. Es el error que se comete en producción.
+- **Para profundizar A** (los cuatro perfiles de tópico) es el segundo, porque
+  cada perfil es una discusión de negocio.
+- **Para profundizar G** (los 7 + 7 días de `novatech.fleet.gps`) es la versión
+  aritmética de lo que la doble tanda ya mostró en vivo.

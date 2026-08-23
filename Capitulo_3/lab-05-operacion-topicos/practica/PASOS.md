@@ -9,10 +9,41 @@
 
 ---
 
-## Paso 1 · Mirar un tópico por dentro
+## Paso 1 · Crear el tópico de la demostración
+
+**Primero decide los tres valores.** No copies el comando todavía: escribe
+aquí lo que vas a poner, y recién después tecléalo. La guía justifica los tres
+en el Paso 1.
+
+| Hueco | Tu valor | Por qué ese |
+|---|---|---|
+| `--partitions` | | |
+| `--config retention.ms=` | | (60 segundos, en milisegundos) |
+| `--config segment.ms=` | | (10 segundos, en milisegundos) |
+
+🔴 **El de `--partitions` es el que decide si el laboratorio funciona o no.**
+Si dudas, vuelve al Paso 1 de la guía antes de teclear.
+
+Ahora sí:
 
 ```bash
-kafka-cli/describe-topic.sh novatech.fleet.gps
+kafka-cli/create-topic.sh novatech.lab05.efimero \
+    --partitions ___ \
+    --rf 3 \
+    --config retention.ms=___ \
+    --config segment.ms=___
+```
+
+> El mismo comando, ya resuelto y con el porqué de cada valor comentado línea
+> por línea, está en `soluciones/crear-topicos.sh`. Míralo **después** de
+> intentarlo.
+
+---
+
+## Paso 2 · Describirlo y leer la línea `Configs`
+
+```bash
+kafka-cli/describe-topic.sh novatech.lab05.efimero | head -2
 ```
 
 Anota de la **primera línea**:
@@ -31,74 +62,13 @@ Y de la línea de la **partición 0**:
 | `Replicas` | |
 | `Isr` | |
 
-**La pregunta del paso:** `Configs` trae un solo valor. ¿Significa que el
-tópico tiene una sola configuración?
+**La pregunta del paso:** `Configs` trae tres valores. ¿Significa que el tópico
+tiene tres configuraciones? ¿Y dónde está `cleanup.policy`, que es el que
+decide qué pasa cuando un espiche vence?
 
 ---
 
-## Paso 2 · Ver el plazo que ya tiene puesto
-
-```bash
-kafka-cli/describe-topic.sh novatech.fleet.gps | grep -E "^  (retention.ms|segment.ms|cleanup.policy)="
-```
-
-| Config | Valor en ms | ¿Cuántos días son? |
-|---|---|---|
-| `retention.ms` | | |
-| `segment.ms` | | |
-| `cleanup.policy` | (no es un tiempo) | |
-
-**La pregunta del paso:** con esos dos valores, ¿cuánto puede llegar a vivir
-un mensaje en este tópico? *(Pista: no son 7 días.)*
-
----
-
-## Paso 3 · Crear el tópico de la demostración
-
-**Primero decide los tres valores.** No copies el comando todavía: escribe
-aquí lo que vas a poner, y recién después tecléalo. La guía justifica los tres
-en el Paso 3.
-
-| Hueco | Tu valor | Por qué ese |
-|---|---|---|
-| `--partitions` | | |
-| `--config retention.ms=` | | (60 segundos, en milisegundos) |
-| `--config segment.ms=` | | (10 segundos, en milisegundos) |
-
-🔴 **El de `--partitions` es el que decide si el laboratorio funciona o no.**
-Si dudas, vuelve al Paso 3 de la guía antes de teclear.
-
-Ahora sí:
-
-```bash
-kafka-cli/create-topic.sh novatech.lab05.efimero \
-    --partitions ___ \
-    --rf 3 \
-    --config retention.ms=___ \
-    --config segment.ms=___
-```
-
-> El mismo comando, ya resuelto y con el porqué de cada valor comentado línea
-> por línea, está en `soluciones/crear-topicos.sh`. Míralo **después** de
-> intentarlo.
-
-Verifica:
-
-```bash
-kafka-cli/describe-topic.sh novatech.lab05.efimero | head -2
-```
-
-| Campo | Lo que salió |
-|---|---|
-| `PartitionCount` | |
-| `Configs` | |
-
-**La pregunta del paso:** en el Paso 1 la línea `Configs` traía un solo valor
-y ahora trae tres. ¿Qué cambió?
-
----
-
-## Paso 4 · Escribir 100 comprobantes y contarlos
+## Paso 3 · Escribir 100 comprobantes y contarlos
 
 ```bash
 kafka-cli/produce-bulk.sh novatech.lab05.efimero 100
@@ -123,7 +93,7 @@ docker exec kafka-broker-1 kafka-get-offsets \
 
 ---
 
-## Paso 5 · Cerrar el espiche
+## Paso 4 · Cerrar el espiche
 
 Espera unos 15 segundos y escribe unos pocos mensajes más:
 
@@ -143,11 +113,11 @@ MSYS_NO_PATHCONV=1 docker exec kafka-broker-1 \
 
 🔴 **Si solo hay un `.log`, no sigas.** El segmento no rotó. Espera diez
 segundos más, vuelve a escribir 5 mensajes, y mira de nuevo. Sin un segundo
-`.log` el Paso 6 no va a mostrar nada.
+`.log` el Paso 5 no va a mostrar nada.
 
 ---
 
-## Paso 6 · Esperar, y contar de nuevo
+## Paso 5 · Esperar, y contar de nuevo
 
 Repite esto cada minuto hasta que el número cambie. Puede tardar **hasta 5
 minutos**, y la guía explica por qué.
@@ -167,7 +137,7 @@ docker exec kafka-broker-1 kafka-get-offsets \
 
 Y la cuenta final:
 
-| Medición | Antes (Paso 4) | Después |
+| Medición | Antes (Paso 3) | Después |
 |---|---|---|
 | offset más nuevo (`--time -1`) | | |
 | offset más antiguo (`--time -2`) | | |

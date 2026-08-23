@@ -7,10 +7,10 @@
 > el dato tiene fecha de vencimiento, la fecha la pusiste tú, y cuando vence
 > nadie te avisa.
 
-**Duración.** Si lo repites tú solo, una corrida completa de los 8 pasos tomó
-**256 segundos medidos** de punta a punta — y **212 de esos 256 fueron esperar
-sin hacer nada**, por un motivo que el Paso 6 explica. Los once comandos en sí
-suman 44 segundos. En clase toma alrededor de 35 minutos, porque casi todo el
+**Duración.** Si lo repites tú solo, una corrida completa de los 5 pasos tomó
+**217 segundos medidos** de punta a punta — y **193 de esos 217 fueron esperar
+sin hacer nada**, por un motivo que el Paso 5 explica. Los cuatro primeros
+pasos suman 24 segundos. En clase toma 20 minutos, porque casi todo el
 tiempo es explicación.
 **Antes de empezar:** el clúster tiene que estar arriba (`bin/start-lab.sh`).
 
@@ -137,146 +137,7 @@ Tres partes, y las tres se ven en pantalla:
 
 ## 5 · LOS PASOS
 
-### Paso 1 · Mirar un tópico por dentro
-
-**Se explica.**
-
-Antes de operar un tópico hay que saber leerlo. Empecemos por los tres términos
-que van a aparecer en la salida.
-
-> 🖥 **Broker**
-> Cada uno de los servidores Kafka del clúster. Este laboratorio levanta tres:
-> `kafka-broker-1`, `kafka-broker-2` y `kafka-broker-3`. Es el mozo.
-
-> 📋 **Tópico**
-> El nombre bajo el que se agrupan mensajes del mismo tipo. No es una tabla ni
-> una cola: es un registro que solo crece por el final. Es el tipo de comanda.
-
-> 🍰 **Partición**
-> Cada uno de los pedazos en que se corta un tópico. Un tópico de 6 particiones
-> son 6 registros independientes, cada uno con su propio orden interno. Son los
-> sectores del salón: por eso el trabajo se puede repartir.
-
-El clúster ya tiene un tópico creado, `novatech.fleet.gps`, con los datos de
-posición de una flota. Vamos a describirlo.
-
-**Se ejecuta.**
-
-```bash
-kafka-cli/describe-topic.sh novatech.fleet.gps
-```
-
-| Parte del comando | Para qué está |
-|---|---|
-| `kafka-cli/describe-topic.sh` | Envoltorio del curso. Por dentro llama a `kafka-topics --describe` dentro del contenedor y le agrega la ficha didáctica |
-| `novatech.fleet.gps` | Qué tópico queremos mirar |
-
-El comando real que corre por debajo, y que es el que vas a escribir en el
-servidor de SUNAT donde no hay Docker:
-
-```bash
-kafka-topics --bootstrap-server kafka-broker-1:29092 \
-    --describe --topic novatech.fleet.gps
-```
-
-| Parámetro | Para qué está |
-|---|---|
-| `--bootstrap-server` | La puerta de entrada al clúster. Le preguntas a un broker cualquiera y él te contesta por todos |
-| `--describe` | Solo consulta. No modifica nada |
-| `--topic` | Sobre qué tópico preguntamos |
-
-**Qué sale.** La primera línea es el resumen del tópico:
-
-```
-Topic: novatech.fleet.gps	TopicId: EkAoQqD3QYuv4dPGk1cvvA	PartitionCount: 6	ReplicationFactor: 3	Configs: min.insync.replicas=2
-```
-
-**Cómo se lee.**
-
-| Campo | Qué dice |
-|---|---|
-| `PartitionCount: 6` | El tópico está cortado en 6 pedazos. Es el número que limita cuántos consumidores pueden trabajar en paralelo — lo vas a ver en el Lab 06 |
-| `ReplicationFactor: 3` | De cada pedazo hay 3 copias, en 3 brokers distintos. Aguantas perder uno |
-| `Configs: min.insync.replicas=2` | 🔴 **Esta es la parte que importa hoy.** Aquí solo aparece lo que está **cambiado respecto del valor por defecto**. Todo lo que no aparece está en su valor de fábrica |
-
-Ese último punto es una trampa clásica: la línea `Configs` está casi vacía y se
-lee como «este tópico no tiene configuración». Lo que dice en realidad es «este
-tópico tiene un solo valor que difiere de la fábrica». Los otros treinta y pico
-están ahí, con su valor por defecto, decidiendo cosas.
-
-Debajo del resumen viene una línea por partición:
-
-```
-	Topic: novatech.fleet.gps	Partition: 0	Leader: 1	Replicas: 1,2,3	Isr: 1,2,3	Elr: 	LastKnownElr:
-```
-
-> 📚 **Réplica**
-> Cada una de las copias de una partición. `Replicas: 1,2,3` significa que esta
-> partición vive en los brokers 1, 2 y 3. Son las libretas de respaldo.
-
-> ✅ **ISR** (*In-Sync Replicas*)
-> Cuáles de esas copias están **al día** en este momento. Si `Isr` tiene los
-> mismos tres números que `Replicas`, ninguna se quedó atrás. Son los que
-> marcaron tarjeta.
-
-| Campo | Qué dice |
-|---|---|
-| `Partition: 0` | El número de este pedazo. Van de 0 a 5 |
-| `Leader: 1` | Qué broker atiende las lecturas y escrituras de este pedazo. Los otros dos solo copian |
-| `Replicas: 1,2,3` | En qué brokers está |
-| `Isr: 1,2,3` | Cuáles están al día. Los tres |
-| `Elr` / `LastKnownElr` | Campos nuevos de Kafka 4.x, para escenarios de pérdida más severos que los de este lab. En este laboratorio salen **siempre vacíos** |
-
----
-
-### Paso 2 · Ver el plazo que ya tiene puesto
-
-**Se explica.**
-
-El resumen no mostró `retention.ms` porque está en su valor por defecto. Eso no
-quiere decir que no exista: quiere decir que nadie lo cambió. Vamos a ir a
-buscarlo al listado completo.
-
-**Se ejecuta.**
-
-```bash
-kafka-cli/describe-topic.sh novatech.fleet.gps | grep -E "^  (retention.ms|segment.ms|cleanup.policy)="
-```
-
-| Parte del comando | Para qué está |
-|---|---|
-| `\| grep -E "..."` | El listado completo trae más de treinta configuraciones. Nos quedamos con las tres de hoy |
-| `^  ` (dos espacios) | Ancla al inicio de línea. Sin esto, `retention.ms` también matchea dentro de `local.retention.ms` |
-
-**Qué sale.**
-
-```
-  cleanup.policy=delete sensitive=false synonyms={DEFAULT_CONFIG:log.cleanup.policy=delete}
-  retention.ms=604800000 sensitive=false synonyms={}
-  segment.ms=604800000 sensitive=false synonyms={}
-```
-
-**Cómo se lee.**
-
-| Valor | Traducción |
-|---|---|
-| `retention.ms=604800000` | 604 800 000 ms ÷ 1000 ÷ 60 ÷ 60 ÷ 24 = **7 días** |
-| `segment.ms=604800000` | El espiche también se cierra cada **7 días** |
-| `cleanup.policy=delete` | Cuando el plazo vence, el espiche **se bota**. Es la política por defecto |
-
-Y aquí está el problema de este tópico, dicho con la metáfora del restaurante:
-**el espiche se cierra cada 7 días y se bota 7 días después de cerrado**. Un
-mensaje puede vivir hasta 14 días en un tópico que dice «7 días de retención».
-Nadie mintió. Simplemente el plazo se cuenta desde que el espiche se cierra, no
-desde que el mensaje se escribió.
-
-Con esos números, para ver un borrado habría que esperar una semana. No
-tenemos una semana. Vamos a fabricar un tópico donde el mismo mecanismo corra
-en segundos.
-
----
-
-### Paso 3 · Fabricar el tópico que sí podemos ver morir
+### Paso 1 · Fabricar el tópico que sí podemos ver morir
 
 **Se explica.**
 
@@ -327,25 +188,112 @@ Puede venir acompañado de un `WARNING` sobre puntos y guiones bajos en el
 nombre. Es Kafka avisando que un nombre que mezcla ambos podría chocar en sus
 métricas internas. El tópico se creó igual.
 
-**Cómo se lee.** Una sola línea de confirmación. Verifica que los dos plazos
-quedaron puestos:
+---
+
+### Paso 2 · Describirlo y leer la línea `Configs`
+
+**Se explica.**
+
+Antes de escribirle nada, hay que saber leerlo. Empecemos por los términos que
+van a aparecer en la salida.
+
+> 🖥 **Broker**
+> Cada uno de los servidores Kafka del clúster. Este laboratorio levanta tres:
+> `kafka-broker-1`, `kafka-broker-2` y `kafka-broker-3`. Es el mozo.
+
+> 📋 **Tópico**
+> El nombre bajo el que se agrupan mensajes del mismo tipo. No es una tabla ni
+> una cola: es un registro que solo crece por el final. Es el tipo de comanda.
+
+> 🍰 **Partición**
+> Cada uno de los pedazos en que se corta un tópico. Un tópico de 6 particiones
+> son 6 registros independientes, cada uno con su propio orden interno. Son los
+> sectores del salón: por eso el trabajo se puede repartir. El tuyo tiene una
+> sola, a propósito.
+
+**Se ejecuta.**
 
 ```bash
 kafka-cli/describe-topic.sh novatech.lab05.efimero | head -2
 ```
 
-```
-Topic: novatech.lab05.efimero	TopicId: NLUyJc1QRXOezFHcBa1heg	PartitionCount: 1	ReplicationFactor: 3	Configs: min.insync.replicas=2,retention.ms=60000,segment.ms=10000
+| Parte del comando | Para qué está |
+|---|---|
+| `kafka-cli/describe-topic.sh` | Envoltorio del curso. Por dentro llama a `kafka-topics --describe` dentro del contenedor y le agrega la ficha didáctica |
+| `novatech.lab05.efimero` | Qué tópico queremos mirar |
+| `\| head -2` | El listado completo trae más de treinta configuraciones. Las dos primeras líneas son el resumen del tópico y la de su única partición |
+
+El comando real que corre por debajo, y que es el que vas a escribir en el
+servidor de SUNAT donde no hay Docker:
+
+```bash
+kafka-topics --bootstrap-server kafka-broker-1:29092 \
+    --describe --topic novatech.lab05.efimero
 ```
 
-La línea `Configs` que en el Paso 1 traía **un** valor ahora trae **tres**: los
-dos plazos que acabas de poner, más el que ya venía del broker. No cambió de
-comportamiento — siempre mostró lo mismo, lo que está cambiado respecto de la
-fábrica. Ahora hay tres cosas cambiadas.
+| Parámetro | Para qué está |
+|---|---|
+| `--bootstrap-server` | La puerta de entrada al clúster. Le preguntas a un broker cualquiera y él te contesta por todos |
+| `--describe` | Solo consulta. No modifica nada |
+| `--topic` | Sobre qué tópico preguntamos |
+
+**Qué sale.**
+
+```
+Topic: novatech.lab05.efimero	TopicId: dBn0wnH_SIKGYMgNDgfgwA	PartitionCount: 1	ReplicationFactor: 3	Configs: min.insync.replicas=2,retention.ms=60000,segment.ms=10000
+	Topic: novatech.lab05.efimero	Partition: 0	Leader: 2	Replicas: 2,3,1	Isr: 2,3,1	Elr: 	LastKnownElr:
+```
+
+**Cómo se lee.** La primera línea es el resumen del tópico:
+
+| Campo | Qué dice |
+|---|---|
+| `PartitionCount: 1` | El tópico tiene un solo pedazo, porque lo pediste así. Es el número que limita cuántos consumidores pueden trabajar en paralelo — lo vas a ver en el Lab 06 |
+| `ReplicationFactor: 3` | De ese pedazo hay 3 copias, en 3 brokers distintos. Aguantas perder uno |
+| `Configs: ...` | 🔴 **Esta es la parte que importa hoy.** Trae **tres** valores: los dos plazos que acabas de poner y uno que ya venía del broker |
+
+Y aquí está la trampa clásica de esta línea: **`Configs` no lista la
+configuración del tópico. Lista solo lo que está cambiado respecto del valor
+por defecto.** Tu tópico tiene más de treinta configuraciones; aparecen tres
+porque hay tres cosas cambiadas. En un tópico que nadie tocó esta línea se lee
+casi vacía y se entiende como «este tópico no tiene configuración». Lo que dice
+en realidad es «este tópico no tiene ningún valor distinto del de fábrica»:
+los otros treinta y pico están ahí, con su valor por defecto, decidiendo cosas.
+
+Uno de los que **no** aparece es `cleanup.policy`, y es el que decide qué pasa
+cuando un espiche vence. Está en su valor de fábrica, `delete`: el espiche
+cerrado se bota entero. Es lo que vas a ver en los pasos siguientes.
+
+> 🧹 **La otra política, en una frase**
+> `cleanup.policy` acepta también `compact`, que no mira el reloj: mira la
+> **clave** de cada mensaje y guarda **solo el último valor de cada clave**,
+> para siempre. Sirve para estados («¿cómo está ahora?») en vez de eventos
+> («¿cuándo pasó?»). No se ejecuta en clase porque el compactador corre en
+> segundo plano y tarda bastante más que este laboratorio. El comando está en
+> *Para profundizar B*.
+
+La segunda línea es la de la partición, y trae dos términos más:
+
+> 📚 **Réplica**
+> Cada una de las copias de una partición. `Replicas: 2,3,1` significa que esta
+> partición vive en los brokers 2, 3 y 1. Son las libretas de respaldo.
+
+> ✅ **ISR** (*In-Sync Replicas*)
+> Cuáles de esas copias están **al día** en este momento. Si `Isr` tiene los
+> mismos tres números que `Replicas`, ninguna se quedó atrás. Son los que
+> marcaron tarjeta.
+
+| Campo | Qué dice |
+|---|---|
+| `Partition: 0` | El número de este pedazo. Solo hay uno, así que solo está el 0 |
+| `Leader: 2` | Qué broker atiende las lecturas y escrituras de este pedazo. Los otros dos solo copian. **A ti te va a salir otro número**: Kafka reparte los líderes al crear |
+| `Replicas: 2,3,1` | En qué brokers está |
+| `Isr: 2,3,1` | Cuáles están al día. Los tres |
+| `Elr` / `LastKnownElr` | Campos nuevos de Kafka 4.x, para escenarios de pérdida más severos que los de este lab. En este laboratorio salen **siempre vacíos** |
 
 ---
 
-### Paso 4 · Escribir 100 comprobantes y contarlos
+### Paso 3 · Escribir 100 comprobantes y contarlos
 
 **Se explica.**
 
@@ -423,7 +371,7 @@ laboratorio se juega en que el segundo deje de ser 0.
 
 ---
 
-### Paso 5 · Cerrar el espiche
+### Paso 4 · Cerrar el espiche
 
 **Se explica.**
 
@@ -485,7 +433,7 @@ partition.metadata
 | `.index` / `.timeindex` | Índices para no tener que recorrer el `.log` entero al buscar |
 
 > **Si `produce-bulk.sh` se queda colgado sin decir nada**, casi siempre es que
-> el tópico no existe — te saltaste el Paso 3, o hiciste `bin/reset-lab.sh` en
+> el tópico no existe — te saltaste el Paso 1, o hiciste `bin/reset-lab.sh` en
 > el medio. El clúster tiene la creación automática **desactivada** a propósito,
 > y el productor reintenta en silencio en vez de fallar. Ctrl+C, crea el tópico,
 > y repite.
@@ -504,7 +452,7 @@ botar.
 
 ---
 
-### Paso 6 · Esperar, y contar de nuevo
+### Paso 5 · Esperar, y contar de nuevo
 
 **Se explica.**
 
@@ -595,139 +543,10 @@ Si esperas un minuto más y repites el `ls`, los `.deleted` desaparecen y queda
 solo `00000000000000000105.log`: un espiche nuevo, vacío, esperando el próximo
 mensaje.
 
-> **Si tras cinco minutos el número sigue en 0**, casi siempre es el Paso 5: no
+> **Si tras cinco minutos el número sigue en 0**, casi siempre es el Paso 4: no
 > hay un segundo `.log`. Vuelve a escribir 5 mensajes y espera la siguiente
 > ronda. `docs/troubleshooting.md` no cubre este caso — el diagnóstico está
 > aquí.
-
----
-
-### Paso 7 · La cara opuesta, en un minuto
-
-**Se explica.**
-
-`cleanup.policy` tiene dos valores, y hoy usaste uno. El otro se apoya en la
-**clave** que definimos en el Paso 3 — la que hoy dejamos vacía.
-
-| Política | Qué hace | Metáfora |
-|---|---|---|
-| `delete` | Bota el espiche cerrado cuando vence el plazo. **Es lo que acabas de ver** | Al cierre del turno, el espiche entero al depósito y de ahí a la basura |
-| `compact` | No mira el reloj. Mira la **clave** de cada mensaje y deja **solo el último de cada clave**, para siempre | En vez de botar el espiche, se lo repasa y de cada mesa se deja únicamente la última comanda: la cuenta final, no el historial de lo que fueron pidiendo |
-
-La diferencia práctica, y la única que necesitas hoy:
-
-- Con `delete` la pregunta es **«¿cuándo pasó?»**. Sirve para eventos: un
-  comprobante emitido, una validación, un pago.
-- Con `compact` la pregunta es **«¿cómo está ahora?»**. Sirve para estados: el
-  saldo actual de un contribuyente, el último domicilio fiscal declarado.
-
-Un tópico compactado **no se achica con el tiempo**: se achica cuando escribes
-la misma clave otra vez. Si tienes un millón de claves distintas, te quedas con
-un millón de mensajes para siempre, y ninguna retención te va a salvar.
-
-**Se ejecuta.** Lo único que sí podemos ver en clase es **la condición previa**:
-que los mensajes lleven clave. Sin clave, no hay nada que compactar.
-
-```bash
-kafka-cli/produce-bulk.sh novatech.lab05.efimero 6 --key-pattern NVT
-```
-
-```bash
-docker exec kafka-broker-1 kafka-console-consumer \
-    --bootstrap-server kafka-broker-1:29092 \
-    --topic novatech.lab05.efimero --from-beginning --max-messages 6 \
-    --timeout-ms 12000 --property print.key=true --property key.separator='|'
-```
-
-| Parámetro | Para qué está |
-|---|---|
-| `--key-pattern NVT` | Le pide al envoltorio que numere las claves `NVT-1`, `NVT-2`… en vez de dejarlas vacías |
-| `--from-beginning` | Lee desde el principio, no solo lo que llegue de ahora en más |
-| `--max-messages 6` | Corta solo después de 6, para que el comando termine y no se quede colgado |
-| `--timeout-ms 12000` | Si en 12 segundos no llegan los 6, corta igual |
-| `--property print.key=true` | 🔴 Sin esto **solo verías el valor** y no podrías saber si la clave llegó |
-| `--property key.separator='\|'` | Con qué carácter se separan clave y valor **en pantalla** |
-
-**Qué sale.**
-
-```
-NVT-1|evento_1_payload
-NVT-2|evento_2_payload
-NVT-3|evento_3_payload
-NVT-4|evento_4_payload
-NVT-5|evento_5_payload
-NVT-6|evento_6_payload
-Processed a total of 6 messages
-```
-
-**Cómo se lee.** A la izquierda del `|` está la clave y a la derecha el valor.
-Las claves llegaron: `NVT-1` a `NVT-6`. Si en vez de eso vieras `null|…`, los
-mensajes no tendrían clave y **un tópico compactado con claves nulas no
-compacta nunca** — no habría por qué agrupar.
-
-(**El orden no es el de escritura, y a ti te va a salir en otro orden todavía.**
-Cada clave cae en la partición que le toca por su *hash*, y el consumidor lee
-partición por partición, no por reloj. Es el Lab 06.)
-
-🔴 **La compactación en sí no se va a ver hoy, y no vamos a fingir que sí.** El
-compactador de Kafka corre en segundo plano cada cierto tiempo, y no pasa en el
-minuto y medio que dura este bloque. Lo que acabas de verificar es la condición
-sin la cual **nunca** ocurriría. Ejecutarla de verdad queda en *Para
-profundizar B*.
-
----
-
-### Paso 8 · Cambiarle el plazo a un tópico que ya existe
-
-**Se explica.**
-
-Todo lo anterior fue crear y esperar. Falta lo que de verdad vas a hacer todas
-las semanas: **cambiarle la configuración a un tópico que ya está en
-producción, con gente escribiendo y leyendo, sin reiniciar nada.**
-
-Es la misma operación que hiciste en el **Lab 03** sobre un broker en caliente.
-Aquí es sobre un tópico. La simetría no es casual: en Kafka casi todo lo que se
-configura se puede cambiar en caliente, y la pregunta operativa nunca es «¿se
-puede?» sino «¿desde cuándo aplica?».
-
-**Se ejecuta.** Súbele el plazo al tópico de la demostración, de 60 segundos a
-una hora:
-
-```bash
-kafka-cli/alter-topic-config.sh novatech.lab05.efimero --add retention.ms=3600000
-```
-
-| Parámetro | Para qué está |
-|---|---|
-| `--add` | Escribe un valor propio del tópico, que pisa el del broker. Si ya existía, lo reemplaza |
-| `retention.ms=3600000` | 3 600 000 ms = **1 hora** |
-
-**Qué sale.**
-
-```
-Completed updating config for topic novatech.lab05.efimero.
-```
-
-Verifica:
-
-```bash
-kafka-cli/describe-topic.sh novatech.lab05.efimero | head -1
-```
-
-**Cómo se lee.** La misma línea, antes y después:
-
-```
-antes    ... PartitionCount: 1  ReplicationFactor: 3  Configs: min.insync.replicas=2,retention.ms=60000,segment.ms=10000
-después  ... PartitionCount: 1  ReplicationFactor: 3  Configs: min.insync.replicas=2,retention.ms=3600000,segment.ms=10000
-```
-
-Cambió un número y nada más. **No hubo reinicio, no hubo corte, y ningún
-productor ni consumidor se enteró.** El cambio aplica a partir de la próxima
-ronda del broker — la misma ronda del Paso 6.
-
-Y lo que importa para SUNAT: **ese cambio no rescata lo que ya se fue.** Subir
-la retención hoy no devuelve los comprobantes de ayer. Solo cambia el plazo de
-los que todavía están vivos.
 
 ---
 
@@ -740,15 +559,17 @@ los que todavía están vivos.
 | La afirmación decía | Y en pantalla se vio |
 |---|---|
 | **solo** | Nadie ejecutó un comando de borrado en todo el laboratorio |
-| **cuando se lo pediste** | El plazo lo escribiste tú, en el Paso 3: `retention.ms=60000` |
+| **cuando se lo pediste** | El plazo lo escribiste tú, en el Paso 1: `retention.ms=60000` |
 | **y no te avisa** | Ni log, ni alerta, ni métrica. Solo `--time -2` dejó de valer 0 |
 
 ### Las cinco reglas, para llevarse a SUNAT
 
 **1 · `retention.ms` sin `segment.ms` no hace nada.**
 El plazo se cuenta desde que el espiche se **cierra**, no desde que el mensaje
-se escribió. Con los valores de fábrica (7 días y 7 días), un dato puede vivir
-hasta 14 días en un tópico que en el papel dice 7.
+se escribió. Lo viste en el Paso 4: los 100 comprobantes no se movieron hasta
+que escribiste otros 5. Con los valores de fábrica (7 días y 7 días), un dato
+puede vivir hasta 14 días en un tópico que en el papel dice 7 — la cuenta, sobre
+un tópico real, está en *Para profundizar G*.
 
 **2 · El segmento activo es intocable.**
 Un tópico sin escrituras nuevas no borra nada, por vencido que esté. Si tienes
@@ -786,15 +607,20 @@ Es la misma cuenta que vas a usar en el Lab 06 y en el Lab 07.
 
 ## 7 · PARA PROFUNDIZAR
 
-Todo lo que sigue estaba en las versiones anteriores de esta guía. Está fuera
-del recorrido de hoy por tiempo, no por dificultad. **Los comandos de esta
-sección se ejecutaron uno por uno contra este mismo clúster antes de
-publicarlos**, así que corren tal cual están escritos; el análisis queda para
-ti.
+Todo lo que sigue está fuera del recorrido de hoy **por tiempo, no por
+dificultad**. Tres de estos bloques —**B** (compactación), **C** (cambio en
+caliente) y **G** (los 7 + 7 días)— estaban en el recorrido de clase hasta esta
+versión y salieron para que el laboratorio quepa en 20 minutos de dictado. 🔴
+**El que más rinde es C**: es la operación que de verdad vas a hacer todas las
+semanas.
 
-Los tópicos que estas actividades usan **no existen todavía** en tu clúster: el
-recorrido de hoy solo creó `novatech.lab05.efimero`. Cada bloque incluye su
-creación.
+**Los comandos de esta sección se ejecutaron uno por uno contra este mismo
+clúster antes de publicarlos**, así que corren tal cual están escritos; el
+análisis queda para ti.
+
+Salvo `novatech.fleet.gps`, que el clúster trae creado, los tópicos que estas
+actividades usan **no existen todavía**: el recorrido de hoy solo creó
+`novatech.lab05.efimero`. Cada bloque que lo necesita incluye su creación.
 
 ### A · Cuatro tópicos, cuatro personalidades
 
@@ -826,6 +652,9 @@ si **un solo** broker se cae, el tópico deja de aceptar escrituras. ¿En qué c
 eso es lo que quieres?
 
 ### B · Compactación de verdad
+
+*(En clase queda mencionada en una frase: existe una política que guarda solo
+el último valor de cada clave. Esto es verla.)*
 
 Sobre `novatech.vehicle.state`, escribe cinco mensajes con la misma clave y
 mira qué sobrevive:
@@ -860,7 +689,7 @@ Fíjate en lo que **no** pasó: `DYNAMIC_TOPIC_CONFIG` ya estaba ahí **antes** 
 cambio. No lo puso el `--alter` — lo puso el `--config` con que se creó el
 tópico. Todo valor que escribas tú, al crear o al modificar, queda marcado así.
 
-El que nunca tuvo valor propio es el del Paso 2, `novatech.fleet.gps`, con
+El que nunca tuvo valor propio es `novatech.fleet.gps` —el de *Para profundizar G*—, con
 `synonyms={}`. Ese `{}` significa «aquí no escribió nadie; esto es lo que manda
 el broker».
 
@@ -879,6 +708,19 @@ Los 90 días desaparecieron y el tópico volvió a los 7 días de fábrica, con 
 `synonyms` otra vez vacío. **Ese es el camino que hay que saber reconocer:** un
 `--delete` no pone el valor en cero, lo devuelve al del broker — que casi nunca
 es el que querías.
+
+Y lo que hay que decir el día que en SUNAT alguien pida «guardemos más»:
+🔴 **subir la retención hoy no rescata lo que ya se fue.** Los comprobantes que
+el Paso 5 vio desaparecer no vuelven con un `--alter`. El cambio solo mueve el
+plazo de los que todavía están vivos, y aplica desde la próxima ronda del
+broker — la misma ronda del Paso 5.
+
+Lo mismo funciona sobre el tópico del recorrido, si todavía lo tienes:
+
+```bash
+kafka-cli/alter-topic-config.sh novatech.lab05.efimero --add retention.ms=3600000
+kafka-cli/describe-topic.sh novatech.lab05.efimero | head -1
+```
 
 ### D · Particiones: el camino de ida
 
@@ -904,6 +746,36 @@ tópico es el equivalente visual de `describe-topic.sh`.
 `plantillas/reporte-entregable.md` recorre las actividades de esta sección con
 sus preguntas. Las respuestas de referencia están en
 `soluciones/reporte-resuelto.md`.
+
+### G · Los 7 + 7 días de un tópico recién salido de fábrica
+
+Este bloque estaba en el recorrido de clase y salió por tiempo. Es la versión
+aritmética de lo que la doble tanda del Paso 4 ya te mostró en vivo.
+
+El clúster trae creado `novatech.fleet.gps`, con 6 particiones y **ningún plazo
+propio**. Mira los tres valores que deciden su borrado:
+
+```bash
+kafka-cli/describe-topic.sh novatech.fleet.gps | grep -E "^  (retention.ms|segment.ms|cleanup.policy)="
+```
+
+```
+  cleanup.policy=delete sensitive=false synonyms={DEFAULT_CONFIG:log.cleanup.policy=delete}
+  retention.ms=604800000 sensitive=false synonyms={}
+  segment.ms=604800000 sensitive=false synonyms={}
+```
+
+**Lo que hay que mirar:** los dos números son el mismo, 604 800 000 ms ÷ 1000 ÷
+60 ÷ 60 ÷ 24 = **7 días**. El espiche se cierra cada 7 días, y el plazo de 7
+días **empieza a contar cuando el espiche se cierra**. Un mensaje puede vivir
+hasta **14 días** en un tópico que en el papel dice «7 días de retención».
+Nadie mintió: el plazo no se cuenta desde donde uno cree.
+
+Y el `^  ` con dos espacios del `grep` no es decorativo: ancla al inicio de
+línea. Sin él, `retention.ms` también matchea dentro de `local.retention.ms`.
+
+**La pregunta que vale:** ¿cuántos de los tópicos que tu equipo tiene hoy en
+producción están en este estado, y quién decidió que 7 días era el número?
 
 ---
 
