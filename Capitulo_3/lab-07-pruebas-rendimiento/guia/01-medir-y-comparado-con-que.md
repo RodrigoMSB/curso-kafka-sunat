@@ -6,7 +6,7 @@
 > clúster, vas a medirlo otra vez sin tocar nada, y los dos números van a ser
 > distintos. Todo lo demás del laboratorio sale de ahí.
 
-**Duración.** La ejecución son **9 segundos medidos** de punta a punta: seis
+**Duración.** La ejecución son **10 segundos medidos** de punta a punta: seis
 comandos que tardan unos dos segundos cada uno. En clase toma 20 minutos, porque
 aquí la máquina no es el trabajo — el trabajo es leer lo que devolvió.
 
@@ -25,12 +25,13 @@ correr la prueba, y salen **111 000**. Conclusión de la reunión: *el cambio
 empeoró el clúster, vuélvanlo atrás.*
 
 Las dos mediciones son reales. Las dos salieron de este laboratorio y las vas a
-ver en pantalla. Y la conclusión está **al revés**: ese cambio, medido bien,
-mejora el throughput todas las veces.
+ver en pantalla. Y la conclusión **no se sostiene** — pero cuidado, la contraria
+tampoco. Si los números hubieran salido al revés y la reunión hubiera decidido
+*«el cambio funciona, déjenlo»*, habrían estado **igual de equivocados**.
 
 El problema no es el tuning. El problema es que **114 000 no significa nada por
 sí solo**, y nadie en esa reunión sabía cuánto se mueve ese número cuando no se
-cambia nada.
+cambia nada. Sin eso, ninguna de las dos conclusiones vale.
 
 ---
 
@@ -78,7 +79,7 @@ una línea de código:
 Hoy usamos la primera. Devuelve una sola línea con todo:
 
 ```
-50000 records sent, 114155.251142 records/sec (21.77 MB/sec), 60.98 ms avg latency, 216.00 ms max latency, 67 ms 50th, 91 ms 95th, 94 ms 99th, 96 ms 99.9th.
+50000 records sent, 114942.528736 records/sec (21.92 MB/sec), 60.03 ms avg latency, 197.00 ms max latency, 64 ms 50th, 92 ms 95th, 97 ms 99th, 101 ms 99.9th.
 ```
 
 > 📊 **Throughput**
@@ -97,7 +98,9 @@ Y la pieza que hace falta para leer todo lo demás:
 
 🔴 **Un número de rendimiento no se lee solo. Se lee contra otro.** No existe
 «114 000 es bueno». Existe «114 000 contra los 118 000 de la corrida de al lado,
-con un solo parámetro de diferencia, medidos hace un minuto».
+con un solo parámetro de diferencia, medidos hace un minuto» — **y aun así hay
+que preguntarse si esos 4 000 de diferencia son más de lo que la máquina se
+mueve sola.**
 
 ---
 
@@ -107,10 +110,20 @@ Todo lo que sigue existe para demostrar una sola frase:
 
 > ▎ **Una sola medición no dice nada. El rendimiento es siempre una comparación.**
 
+Y la comparación tampoco se lee sola:
+
+> ▎ **Una diferencia solo cuenta si es más grande que el ruido de tu máquina.**
+> Por eso lo primero que se mide no es la mejora: es el ruido.
+
 Y la consecuencia, que es la que decide si el experimento sirve o no:
 
 > ▎ **Un parámetro a la vez.** Si cambias tres y mejora, no sabes cuál sirvió, y
 > el día que uno de los tres te haga daño no vas a saber cuál sacar.
+
+🔴 **Aviso, porque este lab termina distinto a como espera todo el mundo:** al
+final del recorrido la respuesta medida va a ser **«en esta máquina no se
+distingue»**. No es que el laboratorio salga mal. Es el resultado, y aprender a
+decirlo en voz alta es la mitad de la clase.
 
 ---
 
@@ -168,24 +181,28 @@ kafka-producer-perf-test \
 **Qué sale.** Dos líneas, una por corrida:
 
 ```
-50000 records sent, 114155.251142 records/sec (21.77 MB/sec), 60.98 ms avg latency, 216.00 ms max latency, 67 ms 50th, 91 ms 95th, 94 ms 99th, 96 ms 99.9th.
-50000 records sent, 104166.666667 records/sec (19.87 MB/sec), 62.30 ms avg latency, 244.00 ms max latency, 73 ms 50th, 89 ms 95th, 94 ms 99th, 96 ms 99.9th.
+50000 records sent, 114942.528736 records/sec (21.92 MB/sec), 60.03 ms avg latency, 197.00 ms max latency, 64 ms 50th, 92 ms 95th, 97 ms 99th, 101 ms 99.9th.
+50000 records sent, 96899.224806 records/sec (18.48 MB/sec), 74.98 ms avg latency, 234.00 ms max latency, 80 ms 50th, 122 ms 95th, 132 ms 99th, 140 ms 99.9th.
 ```
 
 **Cómo se lee.**
 
 | Medición | Corrida 1 | Corrida 2 | Diferencia |
 |---|---|---|---|
-| records/sec | 114 155 | 104 167 | **−8,8 %** |
-| MB/sec | 21,77 | 19,87 | −8,7 % |
-| Latencia media | 60,98 ms | 62,30 ms | +2,2 % |
-| Latencia p99 | 94 ms | 94 ms | 0 % |
+| records/sec | 114 943 | 96 899 | **−15,7 %** |
+| MB/sec | 21,92 | 18,48 | −15,7 % |
+| Latencia media | 60,03 ms | 74,98 ms | +24,9 % |
+| Latencia p99 | 97 ms | 132 ms | +36,1 % |
 
 🔴 **No se cambió nada entre las dos corridas.** Mismo comando, mismo tópico,
-mismo clúster, dos segundos de diferencia. Y el throughput se movió casi un 9 %.
+mismo clúster, un segundo de diferencia. Y el throughput se movió un 15,7 %.
 
 **Ese es el ruido de tu máquina, y acabas de medirlo.** Cualquier mejora que
 anuncies por debajo de ese margen no es una mejora: es la corrida siguiente.
+
+🔴 **Anota ese número.** Es la vara con la que se mide todo lo que viene
+después, y en el Paso 3 lo vas a usar para decidir si puedes concluir algo o
+no.
 
 **A ti te van a salir otros números**, y probablemente otra diferencia. Lo que
 no cambia es que **las dos corridas no coinciden**.
@@ -218,8 +235,8 @@ kafka-cli/perf-test.sh novatech.tuning.bench 50000 --linger-ms 10
 **Qué sale.**
 
 ```
-50000 records sent, 118764.845606 records/sec (22.65 MB/sec), 56.61 ms avg latency, 224.00 ms max latency, 63 ms 50th, 75 ms 95th, 80 ms 99th, 82 ms 99.9th.
-50000 records sent, 117096.018735 records/sec (22.33 MB/sec), 65.78 ms avg latency, 214.00 ms max latency, 75 ms 50th, 89 ms 95th, 92 ms 99th, 94 ms 99.9th.
+50000 records sent, 118764.845606 records/sec (22.65 MB/sec), 62.85 ms avg latency, 204.00 ms max latency, 71 ms 50th, 85 ms 95th, 89 ms 99th, 92 ms 99.9th.
+50000 records sent, 110375.275938 records/sec (21.05 MB/sec), 65.93 ms avg latency, 220.00 ms max latency, 65 ms 50th, 106 ms 95th, 110 ms 99th, 112 ms 99.9th.
 ```
 
 **Cómo se lee.** Todavía no. Y con estas cuatro corridas **tampoco se va a poder
@@ -235,18 +252,18 @@ Pon las cuatro corridas juntas y mira la columna que importa:
 
 | | records/sec |
 |---|---|
-| Base, corrida 1 | **114 155** |
-| Base, corrida 2 | 104 167 |
+| Base, corrida 1 | **114 943** |
+| Base, corrida 2 | 96 899 |
 | `linger.ms=10`, corrida 1 | 118 765 |
-| `linger.ms=10`, corrida 2 | 117 096 |
+| `linger.ms=10`, corrida 2 | 110 375 |
 
-Parece limpio: las dos tuneadas le ganan a las dos base. **Pero fíjate en la
-distancia.** La mejor base (114 155) y la peor tuneada (117 096) están a un
-2,6 % — y en el Paso 1 mediste que el ruido de tu máquina es del **8,8 %**.
+Parece limpio: las dos tuneadas están arriba de la peor base. **Pero fíjate en
+las distancias.** La mejor base (114 943) y la mejor tuneada (118 765) están a un
+3,3 % — y en el Paso 1 mediste que el ruido de tu máquina es del **15,7 %**.
 
-🔴 **La diferencia que quieres celebrar es más chica que el ruido que ya
-mediste.** Con estas cuatro corridas no se puede concluir nada, y esa es la
-respuesta correcta del Paso 2.
+🔴 **La diferencia que quieres celebrar es casi cinco veces más chica que el
+ruido que ya mediste.** Con estas cuatro corridas no se puede concluir nada, y
+esa es la respuesta correcta del Paso 2.
 
 **Se ejecuta.** Un par más, uno detrás del otro:
 
@@ -256,67 +273,117 @@ kafka-cli/perf-test.sh novatech.tuning.bench 50000 --linger-ms 10
 ```
 
 ```
-50000 records sent, 106157.112527 records/sec (20.25 MB/sec), 60.67 ms avg latency, 237.00 ms max latency, 67 ms 50th, 82 ms 95th, 85 ms 99th, 86 ms 99.9th.
-50000 records sent, 111607.142857 records/sec (21.29 MB/sec), 60.97 ms avg latency, 223.00 ms max latency, 66 ms 50th, 81 ms 95th, 88 ms 99th, 92 ms 99.9th.
+50000 records sent, 117096.018735 records/sec (22.33 MB/sec), 60.65 ms avg latency, 205.00 ms max latency, 68 ms 50th, 83 ms 95th, 87 ms 99th, 89 ms 99.9th.
+50000 records sent, 120192.307692 records/sec (22.92 MB/sec), 46.60 ms avg latency, 206.00 ms max latency, 49 ms 50th, 70 ms 95th, 76 ms 99th, 79 ms 99.9th.
 ```
 
 **Cómo se lee, y son tres lecturas distintas.**
 
 | | records/sec | Latencia media | Latencia p99 | Latencia máx |
 |---|---|---|---|---|
-| **Base 1** | 114 155 | 60,98 ms | 94 ms | 216 ms |
-| **`linger` 1** | 118 765 | 56,61 ms | 80 ms | 224 ms |
-| **Base 2** | 104 167 | 62,30 ms | 94 ms | 244 ms |
-| **`linger` 2** | 117 096 | 65,78 ms | 92 ms | 214 ms |
-| **Base 3** | 106 157 | 60,67 ms | 85 ms | 237 ms |
-| **`linger` 3** | 111 607 | 60,97 ms | 88 ms | 223 ms |
+| **Base 1** | 114 943 | 60,03 ms | 97 ms | 197 ms |
+| **`linger` 1** | 118 765 | 62,85 ms | 89 ms | 204 ms |
+| **Base 2** | 96 899 | 74,98 ms | 132 ms | 234 ms |
+| **`linger` 2** | 110 375 | 65,93 ms | 110 ms | 220 ms |
+| **Base 3** | 117 096 | 60,65 ms | 87 ms | 205 ms |
+| **`linger` 3** | 120 192 | 46,60 ms | 76 ms | 206 ms |
 
 **Uno · Los rangos sueltos no separan, y engañan en las dos direcciones.**
 
 ```
-base       104 167 ──────────── 114 155
-linger      111 607 ──────── 118 765          se pisan
+base        96 899 ────────────────── 117 096
+linger              110 375 ───────────────── 120 192      se pisan
 ```
 
-La **mejor** corrida base (114 155) le gana a la **peor** corrida tuneada
-(111 607). Un alumno que corriera esas dos se iría con «el tuning empeoró el
+La **mejor** corrida base (117 096) le gana a la **peor** corrida tuneada
+(110 375). Un alumno que corriera esas dos se iría con «el tuning empeoró el
 clúster» — que es exactamente la reunión del capítulo 1. Otro que corriera la
-base 2 contra la tuneada 1 se iría con «mejoró un 14 %». **Las dos conclusiones
-saldrían de datos reales y las dos estarían mal.**
+base 2 contra la tuneada 3 se iría con «mejoró un **24 %**». **Las dos
+conclusiones saldrían de datos reales y las dos estarían mal.**
 
-**Dos · Pareado sí se puede afirmar, y por eso hicimos tres pares.**
+**Dos · Pareado se ve mucho mejor. Y todavía no alcanza.**
 
 Cada par se midió uno detrás del otro, con la máquina en el mismo estado:
 
 | Par | Base | `linger.ms=10` | Diferencia |
 |---|---|---|---|
-| 1 | 114 155 | 118 765 | **+4,0 %** |
-| 2 | 104 167 | 117 096 | **+12,4 %** |
-| 3 | 106 157 | 111 607 | **+5,1 %** |
+| 1 | 114 943 | 118 765 | **+3,3 %** |
+| 2 | 96 899 | 110 375 | **+13,9 %** |
+| 3 | 117 096 | 120 192 | **+2,6 %** |
 
-**Tres de tres.** No hay ningún par donde `linger.ms=10` pierda. *Eso* sí se
-puede afirmar — y fíjate en lo que hizo falta para poder decirlo: **no una
-métrica distinta ni un comando más listo, sino repetir.**
+**Tres de tres.** No hay ningún par donde `linger.ms=10` pierda, y la tentación
+de cerrar aquí es enorme. Es el momento exacto en que se escribe la lámina que
+dice «`linger.ms=10` mejora el throughput hasta un 14 %».
 
-🔴 **La conclusión del laboratorio no es «`linger.ms` da un 12 % más».** Ese 12 %
-es un par. Es «`linger.ms=10` ganó los tres pares, con mejoras de entre 4 % y
-12 %», que es una frase más fea y es la única defendible.
+🔴 **Vuelve a mirar la vara.** El ruido que mediste en el Paso 1, sin tocar nada,
+fue del **15,7 %**. Las tres ganancias son **+3,3 %, +13,9 % y +2,6 %**.
 
-**Y mira la latencia:** 60,98 · 56,61 · 62,30 · 65,78 · 60,67 · 60,97. Ahí no
-pasa nada: el tuneado gana un par y pierde dos. **`linger.ms` mueve el
-throughput, no la latencia**, y con estos datos eso también hay que decirlo.
+```
+ruido medido, sin cambiar nada     ├──────────────── 15,7 % ────────────────┤
+ganancia del par 1                 ├── 3,3 % ──┤
+ganancia del par 2                 ├──────────── 13,9 % ────────────┤
+ganancia del par 3                 ├─ 2,6 % ─┤
+```
 
-**Tres · El promedio esconde los casos malos.** Ahora no compares corridas:
+**Las tres caben dentro del ruido.** Ganar tres de tres suena a evidencia, pero
+si cada victoria es más chica que lo que la máquina se mueve sola, lo que tienes
+no es un efecto: es una moneda que salió cara tres veces.
+
+**Tres · Entonces, ¿qué sí se puede afirmar?**
+
+Para poder cerrar esta guía se corrieron **diez pares más**, con el clúster ya
+caliente y alternando el orden dentro de cada par. El resultado está completo en
+`soluciones/SALIDAS.md`, y es este:
+
+```
+linger.ms=10 gana 5 pares, pierde 5
+
+media base    115 699 rec/s
+media linger  113 739 rec/s
+
+la diferencia por par va de −15,2 % a +17,1 %, repartida alrededor de cero
+```
+
+🔴 **Cinco a cinco.** La conclusión honesta de este laboratorio, y la única
+defendible, es:
+
+> ▎ **En esta máquina, con esta carga, `linger.ms=10` no se distingue de la
+> línea base.** No es que sea peor: es que el efecto, si existe, es más chico
+> que lo que esta máquina se mueve sola, y con estas herramientas no lo podemos
+> medir.
+
+Y fíjate en lo que hizo falta para poder decir eso: **no una métrica distinta ni
+un comando más listo, sino repetir hasta que el ruido dejara de mandar.**
+
+**«No se distingue» es un resultado, no un fracaso.** Es lo que un ingeniero le
+lleva a su jefe cuando el jefe le pidió un número: *«medí, y la diferencia es más
+chica que mi error de medición; si quieres que la persiga, necesito otro banco de
+pruebas.»* Esa frase vale más que la lámina del 14 %, porque la lámina del 14 %
+se cae sola la primera vez que alguien la repite.
+
+**¿Y algo se distingue en este lab?** Sí, y está en *Para profundizar B*:
+`batch.size` mueve la **latencia media** de 66–107 ms a 17–43 ms. Esos rangos no
+se pisan. **Así se ve un efecto real**: no hay que ir a buscarlo con pares, se
+ve a simple vista. Que `linger.ms` haya necesitado trece pares para decir «no sé»
+y `batch.size` no haya necesitado ninguno para decir «sí» es la comparación que
+vale la pena llevarse.
+
+**Y la latencia con `linger.ms`, para cerrar:** en la tanda de control el tuneado
+gana 4 pares y pierde 6, con medias de 54,8 ms contra 58,7 ms. **Tampoco separa.**
+Con `linger.ms` en esta máquina no se mueve ninguna de las dos métricas de forma
+afirmable.
+
+**Cuatro · El promedio esconde los casos malos.** Ahora no compares corridas:
 quédate dentro de **una sola línea**, la primera.
 
 | Métrica de la misma corrida | Valor |
 |---|---|
-| Latencia media | 60,98 ms |
-| Latencia p99 | 94 ms |
-| Latencia máxima | **216 ms** |
+| Latencia media | 60,03 ms |
+| Latencia p99 | 97 ms |
+| Latencia máxima | **197 ms** |
 
-El promedio dice 61 ms. Pero uno de cada cien mensajes tardó más de 94, y hubo
-al menos uno que tardó **216 ms, tres veces y media el promedio**. Si tu tablero
+El promedio dice 60 ms. Pero uno de cada cien mensajes tardó más de 97, y hubo
+al menos uno que tardó **197 ms, más del triple del promedio**. Si tu tablero
 muestra el promedio, ese mensaje **no aparece en ninguna parte** — y es
 exactamente el que el usuario nota, porque es el que se quedó esperando.
 
@@ -324,6 +391,7 @@ exactamente el que el usuario nota, porque es el que se quedó esperando.
 > le fue al sistema. El p99 te dice cómo le fue al peor de cada cien usuarios.
 > Los acuerdos de nivel de servicio se escriben con percentiles, nunca con
 > promedios.
+
 
 ### Y el tercer parámetro del ayudante, que no vamos a medir
 
@@ -356,9 +424,11 @@ Y de ahí sale la regla que vale más que el número:
 
 | Síntoma | Causa | Qué hacer |
 |---|---|---|
-| Un par sale con el tuneado más lento | **Es normal.** Estás dentro del ruido | Corre un par más. Lo que se mira es cuántos pares gana, no cuánto gana |
-| Los tres pares los gana el tuneado por poquísimo | Máquina muy descargada | Está bien: la conclusión «gana siempre, por poco» es honesta y es la que sirve |
-| Los tres pares salen repartidos | Máquina con mucho ruido de fondo | **Dilo.** Cierra todo lo demás y corre tres pares más. Si sigue repartido, la respuesta medida es «aquí no se distingue» |
+| Los tres pares los gana el tuneado | Lo mismo que salió en la corrida grabada | **No cierres ahí.** Compara cada ganancia contra el ruido del Paso 1. Si caben dentro, la respuesta sigue siendo «no se distingue» |
+| Los tres pares los pierde el tuneado | También pasa, y en la tanda de control pasó la mitad de las veces | Idéntico tratamiento. La conclusión no depende de quién ganó |
+| Los tres pares salen repartidos | Es el resultado más frecuente con muchos pares | Es la conclusión del lab, servida en bandeja |
+| Una ganancia **sí** supera tu ruido, y por mucho | Puede ser un efecto real, o la máquina hizo algo raro en esa corrida | Corre tres pares más. Un efecto real se repite; una corrida rara, no |
+| El ruido del Paso 1 te salió minúsculo (1–2 %) | Máquina muy descargada | **Cuidado:** con un ruido así, ganancias del 3 % sí lo superan. Corre la base tres o cuatro veces más — el ruido casi siempre es mayor de lo que muestran dos corridas |
 | `Option --producer-props has been deprecated` | Kafka 8.x avisa del cambio de nombre del flag | Ignorarlo. El flag funciona |
 
 ---
@@ -371,9 +441,10 @@ Y de ahí sale la regla que vale más que el número:
 
 | La afirmación decía | Y en pantalla se vio |
 |---|---|
-| **una sola medición no dice nada** | Dos corridas idénticas, sin tocar nada: 114 155 y 104 167, un 8,8 % de diferencia |
-| **es siempre una comparación** | Con cuatro corridas no alcanzaba: la mejor base le ganaba a la peor tuneada. Hicieron falta **tres pares** |
-| **un parámetro a la vez** | Se movió `linger.ms` y nada más, y por eso la mejora se le puede atribuir a él |
+| **una sola medición no dice nada** | Dos corridas idénticas, sin tocar nada: 114 943 y 96 899, un **15,7 %** de diferencia |
+| **es siempre una comparación** | Los rangos sueltos se pisaban: la mejor base le ganaba a la peor tuneada, y otro par de corridas daba un +24 % que no existe |
+| **y la comparación hay que medirla contra el ruido** | Tres pares ganados de tres, y aun así **ninguna ganancia superaba el ruido**. Con diez pares más el marcador quedó **5 a 5** |
+| **un parámetro a la vez** | Se movió `linger.ms` y nada más — por eso el «no se distingue» se le puede atribuir a él y no a otra cosa |
 
 ### Las cuatro reglas, para llevarse a SUNAT
 
@@ -387,9 +458,16 @@ Si cambias `linger.ms`, `batch.size` y la compresión juntos y mejora, tienes un
 mejora que no sabes atribuir. Sirve para la lámina y no sirve para operar.
 
 **3 · Compara pares, no rangos, y mide los dos el mismo día.**
-Cada configuración contra la otra, una detrás de la otra, varias veces. Lo que
-se afirma es **cuántos pares ganó**, no cuánto ganó el mejor par. Y comparar la
-corrida de hoy contra un número anotado el mes pasado es comparar ruido.
+Cada configuración contra la otra, una detrás de la otra, varias veces. Y
+comparar la corrida de hoy contra un número anotado el mes pasado es comparar
+ruido.
+
+**3 bis · Una mejora solo cuenta si es más grande que tu ruido.**
+Es la regla que este laboratorio existe para enseñar. Ganar tres pares de tres
+no es evidencia si cada victoria cabe dentro de lo que la máquina se mueve sola.
+Antes de anunciar una mejora, pon la ganancia al lado del ruido que mediste. Si
+no lo supera, la respuesta correcta es **«no se distingue»** — y esa respuesta es
+un resultado, no un fracaso.
 
 **4 · El promedio se reporta, el percentil se vigila.**
 El promedio esconde la cola. Si un tablero solo muestra promedios, los casos que
@@ -399,6 +477,11 @@ el usuario nota son invisibles en él.
 
 > **Un número de rendimiento sin su comparación, su repetición y su percentil no
 > es un dato. Es una anécdota.**
+
+Y su corolario, que es lo que separa a quien mide de quien presenta:
+
+> **La respuesta «no se distingue» es una medición. La respuesta «mejoró un
+> 14 %», dicha sin saber cuánto se mueve la máquina sola, no lo es.**
 
 ---
 
@@ -410,7 +493,40 @@ este mismo clúster antes de publicarlos**, así que corren tal cual están
 escritos, y las salidas de abajo son las que dieron.
 
 🔴 **Y todos se leen con la regla del recorrido:** pares intercalados, varias
-veces, y se cuenta cuántos pares gana cada configuración.
+veces, y cada diferencia se compara **contra el ruido**, no contra cero.
+
+### A0 · La tanda de control que cierra el recorrido
+
+Es la que produce el «no se distingue» del Paso 3, y la que conviene rehacer si
+quieres convencerte por tu cuenta. Diez pares, clúster caliente, **alternando el
+orden dentro de cada par**:
+
+```bash
+# los pares impares, la base primero
+kafka-cli/perf-test.sh novatech.tuning.bench 50000
+kafka-cli/perf-test.sh novatech.tuning.bench 50000 --linger-ms 10
+
+# los pares, el tuneado primero
+kafka-cli/perf-test.sh novatech.tuning.bench 50000 --linger-ms 10
+kafka-cli/perf-test.sh novatech.tuning.bench 50000
+```
+
+**Por qué se alterna.** Si una configuración corre siempre en la misma posición,
+cualquier cosa que dependa de la posición —cachés que se calientan, otra tarea
+del sistema que arranca— se le suma o se le resta siempre a la misma. Alternar
+reparte ese efecto entre las dos.
+
+La tabla completa de los diez pares está en `soluciones/SALIDAS.md`. El
+resultado: **5 a 5**, medias de 115 699 contra 113 739 rec/s, y diferencias por
+par que van de −15,2 % a +17,1 % repartidas alrededor de cero.
+
+> 🔬 **Un detalle que vale la clase entera.** Antes de alternar el orden, una
+> tanda sin balancear sugería que la configuración que corría primero salía un
+> 2,1 % mejor. Parecía un sesgo real. Con el orden alternado la diferencia cae a
+> **+0,7 %** — dentro del ruido. **No había tal sesgo.** Era el mismo error del
+> laboratorio, un nivel más arriba: un patrón visto en pocas corridas que se
+> desarma al medirlo bien. Si alguna vez encuentras un efecto interesante,
+> sospecha primero de tu diseño.
 
 ### A · Los tres niveles de `acks`, medidos
 
@@ -444,18 +560,26 @@ de sí mismo, no de Kafka.
 kafka-cli/perf-test.sh novatech.tuning.bench 50000 --batch-size 65536
 ```
 
-**Lo que hay que mirar, y es lo contrario que `linger.ms`:** sobre 23 corridas
-medidas, `batch.size=65536` **no** separa en throughput —los rangos se pisan
-enteros, y hubo corridas tuneadas más lentas que las de la línea base— pero sí
-separa en **latencia media**, y ahí sin solape:
+**Lo que hay que mirar:** sobre 23 corridas medidas, `batch.size=65536` **no**
+separa en throughput —los rangos se pisan enteros, y hubo corridas tuneadas más
+lentas que las de la línea base— pero sí separa en **latencia media**, y ahí sin
+solape:
 
 ```
 lat. media   base    66,51 ─────────── 106,91 ms
              64 KB   17,29 ──── 42,89 ms
 ```
 
-Los dos parámetros mueven el lote y **cada uno mejora una cosa distinta**. Es el
-mejor argumento contra tocarlos juntos.
+🔴 **Este es el contraste que cierra el laboratorio.** `linger.ms` necesitó trece
+pares para responder «no sé». `batch.size` no necesita ninguno: los dos rangos de
+latencia **no se tocan**, y eso se ve a simple vista, sin estadística y sin
+pares. Así se ve un efecto de verdad. Cuando hay que pelear con el ruido para
+encontrar una mejora, casi siempre la mejora no está.
+
+Y ojo con el reflejo de decir «entonces `batch.size` es el bueno»: lo que mejoró
+fue la **latencia**, no el throughput. Si tu problema era el throughput, este
+parámetro tampoco te sirve. Cada uno mueve una cosa distinta, y es el mejor
+argumento contra tocarlos juntos.
 
 Y el extremo opuesto, que es el más instructivo de todos:
 
@@ -597,7 +721,12 @@ bin/stop-lab.sh
 
 **Lo que te llevas:** la próxima vez que alguien te muestre un número de
 rendimiento, la primera pregunta ya no es «¿es bueno?». Es **«¿comparado con
-qué, y cuántas veces lo mediste?»**.
+qué, cuántas veces lo mediste, y cuánto se mueve solo?»**.
+
+Y la segunda cosa que te llevas, que cuesta más: **este laboratorio terminó sin
+encontrar la mejora que fue a buscar, y eso está bien.** Medir en serio incluye
+poder decir «no se distingue». El que nunca reporta ese resultado no es que tenga
+mejores parámetros — es que no está midiendo el ruido.
 
 **Siguiente:** Lab 08 — *¿se le puede agregar un servidor a un clúster que está
 atendiendo?*

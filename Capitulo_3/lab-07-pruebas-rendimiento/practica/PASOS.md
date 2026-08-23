@@ -7,7 +7,8 @@
 
 **Antes de empezar:** `bin/start-lab.sh` terminado, los 3 brokers arriba.
 
-> **Estos son los tres pasos del recorrido de clase.** Los tres niveles de
+> **Los pasos 1 a 3 son el recorrido de clase**; el Paso 4 es opcional y no se
+> dicta. Los tres niveles de
 > `acks` medidos, `batch.size`, la compresión, la combinación de parámetros, el
 > lado del consumidor y el particionado salieron por tiempo y están en la sección
 > **PARA PROFUNDIZAR** de la guía, con su comando y su salida real.
@@ -104,21 +105,58 @@ Ahora los tres pares, **cada uno contra el suyo**:
 | 2 | | | | |
 | 3 | | | | |
 
-**Las tres lecturas:**
+**Las cuatro lecturas:**
 
 | Pregunta | Tu respuesta |
 |---|---|
 | 1 · ¿Se pisan los rangos sueltos de las dos configuraciones? | |
 | 1b · Si compararas tu mejor base contra tu peor tuneada, ¿qué concluirías? | |
 | 2 · ¿Cuántos de los tres pares ganó `linger.ms=10`? | |
-| 2b · Escribe la conclusión afirmable en una frase, con el rango de mejora | |
-| 2c · ¿Y qué pasó con la latencia media? ¿`linger.ms` la movió? | |
-| 3 · En **una sola** corrida: promedio, p99 y máximo. ¿Cuántas veces el promedio es el máximo? | |
-| 3b · Si tu tablero solo muestra el promedio, ¿qué mensaje no aparece? | |
+| 2b · Anota la diferencia de **cada** par: par 1 ____ %, par 2 ____ %, par 3 ____ % | |
+| 2c · 🔴 Vuelve al ruido que anotaste en el Paso 1: ____ %. **¿Alguna de las tres ganancias lo supera?** | |
+| 2d · Si ninguna lo supera: ¿puedes afirmar que `linger.ms=10` mejora el throughput? ¿Por qué no? | |
+| 3 · Escribe la conclusión que **sí** puedes defender, en una frase | |
+| 3b · ¿Y la latencia media? ¿La movió de forma que supere tu ruido? | |
+| 4 · En **una sola** corrida: promedio, p99 y máximo. ¿Cuántas veces el promedio es el máximo? | |
+| 4b · Si tu tablero solo muestra el promedio, ¿qué mensaje no aparece? | |
+
+> 💡 **Si te costó la 2d, estás en el lugar correcto.** Ganar tres pares de tres
+> se siente como evidencia. Si cada victoria es más chica que lo que tu máquina
+> se mueve sola sin tocarla, no lo es. La guía lo desarrolla en el Paso 3, y
+> `soluciones/SALIDAS.md` trae **diez pares más** que cierran la pregunta.
 
 ---
 
-## Cierre · Las tres preguntas del laboratorio
+## Paso 4 · opcional, 40 segundos · La tanda que cierra la pregunta
+
+Si te quedaste con la duda de si `linger.ms` sirve o no, la respuesta no sale de
+tres pares. Corre **cinco pares más alternando el orden** —así ninguna
+configuración corre siempre en la misma posición— y suma el marcador:
+
+```bash
+# repite esto cinco veces, invirtiendo el orden en las corridas pares
+kafka-cli/perf-test.sh novatech.tuning.bench 50000
+kafka-cli/perf-test.sh novatech.tuning.bench 50000 --linger-ms 10
+```
+
+| Par | Orden | Base | `linger.ms=10` | Diferencia |
+|---|---|---|---|---|
+| 4 | base 1º | | | |
+| 5 | linger 1º | | | |
+| 6 | base 1º | | | |
+| 7 | linger 1º | | | |
+| 8 | base 1º | | | |
+
+| Pregunta | Tu respuesta |
+|---|---|
+| Marcador final sobre los 8 pares: base ____ / `linger` ____ | |
+| ¿Cambió tu conclusión respecto del Paso 3? | |
+
+En la corrida con la que se grabó este lab, diez pares dieron **5 a 5**.
+
+---
+
+## Cierre · Las cuatro preguntas del laboratorio
 
 **1 · Un compañero te dice «subí `linger.ms` y el throughput bajó un 3 %».
 ¿Qué le preguntas antes de creerle?**
@@ -129,6 +167,10 @@ sabes?**
 **3 · La guía dice que en este clúster `acks=0` no salió más rápido que
 `acks=all`. ¿Significa que `acks` da lo mismo? ¿Qué medirías tú antes de
 decidirlo para SUNAT?**
+
+**4 · Tu jefe te pide el resultado del tuning y tu respuesta es «no se
+distingue». Escríbela como se la mandarías por correo, en dos frases, de modo que
+no suene a que no hiciste el trabajo.**
 
 ---
 

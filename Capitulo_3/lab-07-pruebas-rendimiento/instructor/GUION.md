@@ -25,8 +25,8 @@ ellos. Abajo está qué hacer si te sale al revés.
 
 ### 🔴 El calentamiento, que decide si el Paso 1 se entiende
 
-**Corre una vez el perf-test antes de que entre la clase, y descarta el
-resultado:**
+**Corre el perf-test varias veces antes de que entre la clase, y descarta todos
+los resultados:**
 
 ```bash
 kafka-cli/perf-test.sh novatech.tuning.bench 50000
@@ -36,6 +36,12 @@ La primera corrida contra un clúster recién levantado arranca la JVM del
 contenedor en frío y sale **muchísimo** peor que las siguientes. Medido: en una
 tanda en frío la latencia media de la línea base fue de 196 ms; en la misma
 máquina, ya caliente, fue de 27 ms.
+
+🔴 **Y una sola corrida de calentamiento no basta.** En la tanda con la que se
+grabó este lab, el p50 tardó **seis corridas** en dejar de bajar: 199 → 111 → 73
+→ 84 → 123 → 62 ms. Corre seis y mira que el número deje de mejorar solo. Si
+arrancas la clase todavía en la rampa, el Paso 1 te va a dar un ruido enorme que
+no es ruido: es la máquina calentando.
 
 Si esa corrida en frío es la primera que ve la clase, el Paso 1 deja de mostrar
 «ruido» y pasa a mostrar un escalón gigante que se explica solo por el arranque.
@@ -50,10 +56,10 @@ cuarenta pestañas mete más ruido que el que vas a demostrar.
 
 | Bloque | Arranca en | Qué se muestra en pantalla | Min |
 |---|---|---|---|
-| 1 · El problema y la metáfora | minuto 0 | Nada. Se habla | 5 |
-| 2 · Medir dos veces sin tocar nada | minuto 5 | `perf-test.sh` dos veces, mismo comando | 4 |
-| 3 · Cambiar un parámetro y medir | minuto 9 | `perf-test.sh --linger-ms 10`, dos veces | 3 |
-| 4 · Un par más, la tabla y los `acks` | minuto 12 | El tercer par, y el análisis. **Aquí está el lab** | 6 |
+| 1 · El problema y la metáfora | minuto 0 | Nada. Se habla | 4 |
+| 2 · Medir dos veces sin tocar nada | minuto 4 | `perf-test.sh` dos veces, mismo comando | 4 |
+| 3 · Cambiar un parámetro y medir | minuto 8 | `perf-test.sh --linger-ms 10`, dos veces | 3 |
+| 4 · Un par más, la tabla y los `acks` | minuto 11 | El tercer par, y el análisis. **Aquí está el lab** | 7 |
 | 5 · Cierre | minuto 18 | Nada. Se habla | 2 |
 | **Total de dictado** | | | **20** |
 
@@ -61,13 +67,13 @@ cuarenta pestañas mete más ruido que el que vas a demostrar.
 
 | Reloj | Cuánto | Cómo se obtuvo |
 |---|---|---|
-| **Ejecución pura** | **9 s** | 🟢 **Medido**, las seis corridas del recorrido, 23-ago-2026 |
+| **Ejecución pura** | **10 s** | 🟢 **Medido**, las seis corridas del recorrido, 23-ago-2026 |
 | **Espera** | **0 s** | 🟢 Este laboratorio **no tiene ninguna**. Cada comando devuelve en dos segundos |
 | **Dictado** | **20 min** | 🟡 **Estimado**, no medido. 🔴 Es el que manda |
 
 🔴 **La ausencia de espera es lo que hay que administrar aquí, y es al revés que
 en el Lab 05.** Allá había cuatro minutos de hueco que llenar; aquí los seis
-comandos se acaban en nueve segundos y te quedan **trece minutos de pura
+comandos se acaban en diez segundos y te quedan **trece minutos de pura
 explicación**. Si vas rápido, en el minuto ocho te quedaste sin laboratorio y con
 la clase mirando. **El Bloque 4 es el laboratorio**, y hay que llegar ahí con
 tiempo, no con prisa.
@@ -92,7 +98,7 @@ un número puede no significar nada.
 
 ---
 
-## Bloque 1 · minuto 0 · El problema y la metáfora — 5 min
+## Bloque 1 · minuto 0 · El problema y la metáfora — 4 min
 
 **En pantalla no hay nada.** Este bloque es solo palabra.
 
@@ -107,11 +113,18 @@ un número puede no significar nada.
 > cambio empeoró el clúster, vuélvanlo atrás.
 >
 > Las dos mediciones son reales. Las dos salieron de este laboratorio y las van
-> a ver en pantalla en diez minutos. Y la conclusión está **al revés**: ese
-> cambio, medido bien, mejora el throughput **todas** las veces.
+> a ver en pantalla en diez minutos. Y la conclusión **no se sostiene** — pero
+> ojo, tampoco se sostendría la contraria. Si los números hubieran salido al
+> revés y la reunión hubiera decidido «el cambio funciona, déjenlo», habrían
+> estado **igual de equivocados**.
 >
 > No porque alguien mintiera. Porque nadie en esa reunión sabía **cuánto se
-> mueve ese número cuando no se cambia nada**.»
+> mueve ese número cuando no se cambia nada**. Y sin eso, ninguna de las dos
+> conclusiones vale.
+>
+> Hoy vamos a medir eso primero. Y les adelanto el final, porque no es el que
+> esperan: **vamos a terminar sin poder afirmar que el cambio sirva.** Ese va a
+> ser el resultado, y es el resultado que casi nadie les muestra.»
 
 ### La metáfora, ya redactada
 
@@ -150,7 +163,7 @@ número**. Vale la pena decirlo así de literal.
 
 ---
 
-## Bloque 2 · minuto 5 · Medir dos veces sin tocar nada — 4 min
+## Bloque 2 · minuto 4 · Medir dos veces sin tocar nada — 4 min
 
 **En pantalla:** el mismo comando, dos veces.
 
@@ -164,22 +177,23 @@ la clase vea que es el mismo comando.
 **Qué salió en la corrida medida:**
 
 ```
-50000 records sent, 114155.251142 records/sec (21.77 MB/sec), 60.98 ms avg latency, 216.00 ms max latency, 67 ms 50th, 91 ms 95th, 94 ms 99th, 96 ms 99.9th.
-50000 records sent, 104166.666667 records/sec (19.87 MB/sec), 62.30 ms avg latency, 244.00 ms max latency, 73 ms 50th, 89 ms 95th, 94 ms 99th, 96 ms 99.9th.
+50000 records sent, 114942.528736 records/sec (21.92 MB/sec), 60.03 ms avg latency, 197.00 ms max latency, 64 ms 50th, 92 ms 95th, 97 ms 99th, 101 ms 99.9th.
+50000 records sent, 96899.224806 records/sec (18.48 MB/sec), 74.98 ms avg latency, 234.00 ms max latency, 80 ms 50th, 122 ms 95th, 132 ms 99th, 140 ms 99.9th.
 ```
 
 ### Qué decir
 
-> «Mismo comando. Mismo tópico. Nada tocado. Y el throughput se movió casi un
-> **nueve por ciento**.
+> «Mismo comando. Mismo tópico. Nada tocado. Y el throughput se movió un
+> **quince coma siete por ciento**.
 >
 > Eso que acaban de ver es **el ruido de esta máquina**, y ya está medido.
-> Anótenlo, porque lo vamos a usar en tres minutos: a partir de ahora, cualquier
+> Anótenlo, porque lo vamos a usar en siete minutos: a partir de ahora, cualquier
 > mejora que yo les anuncie que sea más chica que esto, no es una mejora. Es la
 > corrida siguiente.»
 
-🔴 **Escribe ese porcentaje en la pizarra.** El Bloque 4 lo usa como vara, y si
-no está a la vista el golpe se pierde.
+🔴 **Escribe ese porcentaje en la pizarra, grande, y no lo borres hasta el final
+de la clase.** Todo el Bloque 4 es esa cifra contra las otras. Si no está a la
+vista, el bloque no funciona — literalmente no hay con qué comparar.
 
 🔴 **No pases de aquí sin que hayan visto que los dos números no coinciden.** Si
 por casualidad te salieron casi iguales, **corre una tercera**.
@@ -194,7 +208,7 @@ por casualidad te salieron casi iguales, **corre una tercera**.
 
 ---
 
-## Bloque 3 · minuto 9 · Cambiar un parámetro. Uno solo — 3 min
+## Bloque 3 · minuto 8 · Cambiar un parámetro. Uno solo — 3 min
 
 **En pantalla:** el mismo comando con un flag más, dos veces.
 
@@ -205,7 +219,9 @@ por casualidad te salieron casi iguales, **corre una tercera**.
 > sube o baja? ¿Y la latencia?»
 
 Van a decir que el throughput sube y la latencia empeora. **Guarda las dos
-respuestas**: la primera se confirma en el Bloque 4 y la segunda **no**.
+respuestas en la pizarra.** En el Bloque 4 no se va a poder confirmar **ninguna
+de las dos**, y ese es el golpe: no porque la clase se equivocara, sino porque
+los datos no alcanzan para darles la razón ni para quitársela.
 
 ### Se ejecuta
 
@@ -216,8 +232,8 @@ kafka-cli/perf-test.sh novatech.tuning.bench 50000 --linger-ms 10
 Dos veces, igual que antes.
 
 ```
-50000 records sent, 118764.845606 records/sec (22.65 MB/sec), 56.61 ms avg latency, 224.00 ms max latency, 63 ms 50th, 75 ms 95th, 80 ms 99th, 82 ms 99.9th.
-50000 records sent, 117096.018735 records/sec (22.33 MB/sec), 65.78 ms avg latency, 214.00 ms max latency, 75 ms 50th, 89 ms 95th, 92 ms 99th, 94 ms 99.9th.
+50000 records sent, 118764.845606 records/sec (22.65 MB/sec), 62.85 ms avg latency, 204.00 ms max latency, 71 ms 50th, 85 ms 95th, 89 ms 99th, 92 ms 99.9th.
+50000 records sent, 110375.275938 records/sec (21.05 MB/sec), 65.93 ms avg latency, 220.00 ms max latency, 65 ms 50th, 106 ms 95th, 110 ms 99th, 112 ms 99.9th.
 ```
 
 ### 🔴 Lo que hay que decir aquí y no en el bloque siguiente
@@ -234,32 +250,37 @@ bloque 4 pierde el golpe.
 
 ---
 
-## Bloque 4 · minuto 12 · Un par más, la tabla y los `acks` — 6 min
+## Bloque 4 · minuto 11 · Un par más, la tabla y los `acks` — 7 min
 
 🔴 **Este bloque es el laboratorio.** Los tres anteriores fueron la excusa para
 llegar aquí. No lo apures y no lo recortes.
 
+🔴 **Y este bloque termina en «no se distingue».** Léelo entero antes de la clase.
+El instinto de todo relator es cerrar con una victoria, y aquí la victoria es
+justamente no cerrar con una. Si improvisas, vas a anunciar la mejora del 14 % —
+que es exactamente lo que la clase vino a desaprender.
+
 ### Primero, la trampa: parece que ya está
 
-Escribe solo la columna del throughput, con las cuatro corridas que ya hay:
+Pon las cuatro corridas juntas en pantalla y **no** las interpretes todavía.
 
 | | records/sec |
 |---|---|
-| Base 1 | **114 155** |
-| Base 2 | 104 167 |
-| `linger` 1 | 118 765 |
-| `linger` 2 | 117 096 |
+| Base 1 | **114 943** |
+| Base 2 | 96 899 |
+| `linger.ms=10` 1 | 118 765 |
+| `linger.ms=10` 2 | 110 375 |
 
-> «Las dos tuneadas le ganan a las dos base. ¿Listo, concluimos que funciona?»
+> «Miren. Las dos tuneadas están arriba de la peor base. ¿Cerramos? ¿Escribo la
+> lámina que dice que `linger.ms` mejoró el clúster?»
 
-Deja que digan que sí. Y entonces:
+Deja que digan que sí. Alguno va a dudar. **Ese es el momento.**
 
-> «Miren la distancia entre la **mejor base**, ciento catorce mil, y la **peor
-> tuneada**, ciento diecisiete mil. Son un dos coma seis por ciento.
+> «Y ahora miren la pizarra: el ruido que medimos sin tocar nada era del
+> **quince coma siete por ciento**. La distancia entre mi mejor base y mi mejor
+> tuneada es del **tres**. **Cinco veces más chica que el ruido que ya medí.**
 >
-> Y ahora miren la pizarra: el ruido que medimos sin tocar nada era del **nueve**.
-> **La diferencia que quiero celebrar es tres veces más chica que el ruido que ya
-> medí.** Con estas cuatro corridas no puedo concluir nada.»
+> Con estas cuatro corridas no puedo concluir nada. Necesito más.»
 
 ### Se ejecuta: un par más, uno detrás del otro
 
@@ -269,66 +290,137 @@ kafka-cli/perf-test.sh novatech.tuning.bench 50000 --linger-ms 10
 ```
 
 ```
-50000 records sent, 106157.112527 records/sec (20.25 MB/sec), 60.67 ms avg latency, 237.00 ms max latency, 67 ms 50th, 82 ms 95th, 85 ms 99th, 86 ms 99.9th.
-50000 records sent, 111607.142857 records/sec (21.29 MB/sec), 60.97 ms avg latency, 223.00 ms max latency, 66 ms 50th, 81 ms 95th, 88 ms 99th, 92 ms 99.9th.
+50000 records sent, 117096.018735 records/sec (22.33 MB/sec), 60.65 ms avg latency, 205.00 ms max latency, 68 ms 50th, 83 ms 95th, 87 ms 99th, 89 ms 99.9th.
+50000 records sent, 120192.307692 records/sec (22.92 MB/sec), 46.60 ms avg latency, 206.00 ms max latency, 49 ms 50th, 70 ms 95th, 76 ms 99th, 79 ms 99.9th.
 ```
 
 ### Lectura uno · los rangos sueltos engañan en las dos direcciones
 
-> «Ahora tengo seis corridas. Miren los rangos sueltos: la base va de ciento
-> cuatro a ciento catorce mil; la tuneada, de ciento once a ciento diecinueve.
-> **Se pisan.**
->
-> Y fíjense en esto: mi **mejor** corrida base, ciento catorce mil, le gana a mi
-> **peor** corrida tuneada, ciento once mil. El que corriera solo esas dos se
-> iría diciendo que el tuning empeoró el clúster — **que es exactamente la
-> reunión con la que empezamos la clase.**
->
-> Y el que corriera la base dos contra la tuneada uno se iría diciendo que
-> mejoró un catorce por ciento. Las dos conclusiones salen de datos reales y las
-> dos están mal.»
+```
+base        96 899 ────────────────── 117 096
+linger              110 375 ───────────────── 120 192      se pisan
+```
 
-### Lectura dos · pareado sí se puede afirmar
+> «Mi **mejor** corrida base, 117 096, le gana a mi **peor** corrida tuneada,
+> 110 375. Un compañero de ustedes que hubiera corrido justo esas dos se va a la
+> reunión a decir que **el tuning empeoró el clúster**.
+>
+> Y otro que hubiera corrido la base 2 contra la tuneada 3 se va a la misma
+> reunión a decir que **mejoró un veinticuatro por ciento**.
+>
+> Los dos midieron de verdad. Los dos están mirando datos reales. Y los dos
+> están mal. Esa reunión es la del capítulo 1.»
 
-Ahora la tabla que sí sirve, cada par medido uno detrás del otro:
+### Lectura dos · pareado se ve mejor, y todavía no alcanza
 
 | Par | Base | `linger.ms=10` | Diferencia |
 |---|---|---|---|
-| 1 | 114 155 | 118 765 | **+4,0 %** |
-| 2 | 104 167 | 117 096 | **+12,4 %** |
-| 3 | 106 157 | 111 607 | **+5,1 %** |
+| 1 | 114 943 | 118 765 | **+3,3 %** |
+| 2 | 96 899 | 110 375 | **+13,9 %** |
+| 3 | 117 096 | 120 192 | **+2,6 %** |
 
-> «Tres de tres. No hay ningún par donde el tuneado pierda.
+> «Ahora comparo de a pares, cada uno medido pegado al otro. **Tres de tres.**
+> `linger.ms=10` no perdió ni uno.
 >
-> **Eso** sí lo puedo afirmar. Y miren lo que hizo falta para poder decirlo: no
-> una métrica más fina, no un comando más listo. **Repetir.**»
+> ¿Ahora sí escribo la lámina?»
 
-🔴 **La conclusión no es «`linger.ms` da un 12 % más».** Ese 12 % es un par. Es
-«ganó los tres pares, con mejoras de entre 4 % y 12 %» — más fea, y la única
-defendible. Dilo con esas palabras.
+**Deja que digan que sí.** Esta vez van a estar mucho más seguros que la primera,
+y con razón: tres de tres suena a evidencia.
 
-**Y ahora vuelve a la predicción del Bloque 3**, donde dijeron que la latencia
-empeoraría:
+🔴 **Y aquí va el golpe del laboratorio. Señala la pizarra.**
 
-> «Latencia media: sesenta y uno, cincuenta y siete, sesenta y dos, sesenta y
-> seis, sesenta y uno, sesenta y uno. Ahí no pasa nada: el tuneado gana un par y
-> pierde dos. **`linger.ms` movió el throughput y no movió la latencia**, y eso
-> también hay que decirlo, aunque el libro sugiera otra cosa.»
-
-### Lectura tres · el promedio esconde los casos malos
-
-Deja de comparar corridas y quédate en **una sola línea**, la primera:
-
-> «Promedio: sesenta y un milisegundos. p99: noventa y cuatro. Máximo:
-> **doscientos dieciséis**. Misma corrida, mismos cincuenta mil mensajes.
+> «Tres coma tres por ciento. Trece coma nueve. Dos coma seis.
 >
-> Hubo un mensaje que tardó tres veces y media el promedio. Si su tablero muestra
-> el promedio, ese mensaje **no aparece en ninguna parte** — y es justo el que el
-> usuario nota, porque es el que se quedó esperando.
+> Y el ruido que medimos al principio, **sin cambiar absolutamente nada**, fue
+> de quince coma siete.
 >
-> Por eso el rendimiento se mira en percentiles. El promedio les dice cómo le fue
-> al sistema. El p99 les dice cómo le fue **al peor de cada cien usuarios**. Los
-> acuerdos de nivel de servicio se escriben con percentiles, nunca con
+> **Las tres ganancias caben dentro de mi propio ruido.** Gané tres de tres con
+> victorias que son más chicas que lo que esta máquina se mueve sola cuando no
+> la toco. Eso no es un efecto. Es una moneda que salió cara tres veces.»
+
+Escríbelo en la pizarra, debajo del 15,7 %:
+
+```
+ruido, sin tocar nada    ├──────────── 15,7 % ────────────┤
+par 1                    ├── 3,3 % ──┤
+par 2                    ├────────── 13,9 % ──────────┤
+par 3                    ├─ 2,6 % ─┤
+```
+
+### Lectura tres · la respuesta, que no es la que esperan
+
+> «Para poder escribir esta guía corrimos **diez pares más**, con el clúster
+> caliente y alternando el orden. ¿El resultado?
+>
+> **Cinco a cinco.**
+>
+> Medias: 115 699 contra 113 739. Diferencias por par de menos quince a más
+> diecisiete por ciento, repartidas alrededor de cero.»
+
+> «Así que la respuesta honesta de este laboratorio, y la única que yo puedo
+> defender, es: **en esta máquina, con esta carga, `linger.ms=10` no se distingue
+> de la línea base.**
+>
+> No digo que sea peor. Digo que si el efecto existe, es más chico que mi error
+> de medición, y con estas herramientas **no lo puedo ver**.»
+
+🔴 **Aquí se hace el silencio, y hay que sostenerlo.** Alguien va a preguntar
+«¿entonces el laboratorio salió mal?». Es la mejor pregunta de la clase.
+
+> «No. Éste es **el** resultado. Y es el que casi nunca les van a mostrar.
+>
+> Cuando alguien tunea un parámetro y no encuentra nada, no hace la lámina. La
+> lámina se hace cuando el número salió lindo. Por eso todas las láminas de
+> tuning que ustedes han visto dicen que el tuning funcionó — **no porque
+> siempre funcione, sino porque las otras no se presentan.**
+>
+> Lo que yo les acabo de mostrar es lo que un ingeniero le lleva a su jefe:
+> *medí, repetí trece veces, y la diferencia es más chica que mi error de
+> medición. Si quieres que la persiga, necesito un banco de pruebas que se
+> parezca a producción.* Esa frase vale más que un catorce por ciento que se cae
+> la primera vez que alguien lo repite.»
+
+### Y para que no se vayan con que nada se puede medir
+
+🔴 **Importante, no lo saltes.** Sin esto, la clase se va con «medir no sirve»,
+que es la lección contraria.
+
+> «¿Quiere decir que nada se puede medir? No. Miren esto, que también está
+> medido, y es `batch.size`:
+>
+> ```
+> latencia media   base    66 ─────────── 107 ms
+>                  64 KB   17 ──── 43 ms
+> ```
+>
+> Estos dos rangos **no se tocan**. No necesité pares, ni estadística, ni trece
+> corridas: se ve a simple vista. **Así se ve un efecto de verdad.**
+>
+> Y la regla que se llevan de aquí: **cuando hay que pelear con el ruido para
+> encontrar una mejora, casi siempre la mejora no está.** Lo que es grande, se
+> ve.»
+
+### Lectura cuatro · el promedio esconde los casos malos
+
+Ahora no compares corridas: quédate dentro de **una sola línea**, la primera.
+
+| Métrica de la misma corrida | Valor |
+|---|---|
+| Latencia media | 60,03 ms |
+| Latencia p99 | 97 ms |
+| Latencia máxima | **197 ms** |
+
+> «El promedio dice sesenta milisegundos. Pero uno de cada cien mensajes tardó
+> más de noventa y siete, y hubo al menos uno que tardó **ciento noventa y
+> siete: más del triple del promedio**.
+>
+> Si su tablero muestra el promedio, ese mensaje **no aparece en ninguna parte**
+> — y es exactamente el que el usuario nota, porque es el que se quedó
+> esperando.
+>
+> Por eso el rendimiento se vigila en percentiles. El promedio les dice cómo le
+> fue al sistema. El p99 les dice cómo le fue **al peor de cada cien usuarios**.
+> Los acuerdos de nivel de servicio se escriben con percentiles, nunca con
 > promedios.»
 
 ### Y los `acks`, que se explican aquí y no se ejecutan
@@ -355,17 +447,22 @@ ya tiene una tabla delante y ya sabe que un número puede no significar nada.
 > velocidad — es qué se pierde cuando un broker se cae. Eso se elige por riesgo,
 > no por benchmark.»
 
+Fíjate que `acks` cae redondo aquí: es el **segundo** ejemplo del día de una
+medición que no separa, y la clase ya tiene el marco para leerlo.
+
 ### 🔴 Si en tu clase los números salen distintos
 
-Van a salir distintos. Lo que se demuestra es la **relación**, y esta es la guía
-de rescate:
+Van a salir distintos, y **no importa**. Esta es la gracia del lab tal como
+quedó: la conclusión ya no depende de quién gane los pares, sino de comparar las
+ganancias contra el ruido. Esa comparación funciona con cualquier número.
 
 | Lo que te salió | Qué decir |
 |---|---|
-| El tuneado gana los tres pares | Es lo esperado. Sigue el guion |
-| El tuneado pierde uno de los tres | **Mejor material todavía.** «Dos de tres no alcanza. ¿Qué haríamos en serio? Más pares.» Corre uno más en vivo: cuesta cuatro segundos |
-| El tuneado pierde dos o tres | **Dilo, no lo tapes.** «En esta máquina, hoy, no se distingue. Eso es un resultado, no un fracaso — y es más honesto que la lámina de la reunión del principio» |
-| Todo sale parejísimo | Máquina descargada. La lección de fondo —repetir antes de concluir— se sostiene igual |
+| El tuneado gana los tres pares | Es lo que salió en la corrida grabada. Sigue el guion tal cual |
+| El tuneado pierde los tres | **Igual de bueno.** «Ni siquiera necesito el argumento del ruido: perdió. Aunque miren cuánto perdió, y compárenlo con la pizarra» |
+| Salen repartidos, 2-1 o 1-2 | **El mejor caso.** La conclusión llega sola: «ni siquiera gana siempre» |
+| Una ganancia **supera** tu ruido, y por mucho | Dilo y no lo escondas: «esto sí es más grande que mi ruido. ¿Alcanza con un par? No. ¿Qué haría en serio? Más pares». Corre uno más en vivo: cuesta cuatro segundos |
+| El ruido del Paso 1 te salió chiquito (1-2 %) | 🔴 **El único caso incómodo**, porque entonces las ganancias sí lo superan. Corre la base dos o tres veces más: el ruido casi siempre es mayor de lo que muestran dos corridas. Si aun así queda chico, usa la tanda de control de la guía —los diez pares, 5 a 5— como el dato que cierra |
 
 **Nunca fuerces la conclusión que dice el guion si tus números dicen otra cosa.**
 Este es el único lab del curso donde eso puede pasar, y donde admitirlo en voz
@@ -375,22 +472,31 @@ alta *es* la clase.
 
 ## Bloque 5 · minuto 18 · Cierre — 2 min
 
-### Las cuatro reglas
+### Las reglas
 
 Léelas de la guía, sección **6 · QUÉ QUEDÓ**. La que hay que subrayar es la
-**tercera**:
+**3 bis**, que es la de hoy:
 
-> «Compara pares, no rangos, y mide los dos el mismo día. Lo que se afirma es
-> **cuántos pares ganó**, no cuánto ganó el mejor par. Y comparar la corrida de
-> hoy contra un número anotado el mes pasado es comparar ruido: la máquina, la
-> carga y hasta lo que había abierto cambiaron.»
+> «Una mejora solo cuenta si es más grande que su ruido. Ganar tres pares de
+> tres no es evidencia si cada victoria cabe dentro de lo que la máquina se mueve
+> sola. Antes de anunciar una mejora, pongan la ganancia al lado del ruido que
+> midieron. Si no lo supera, la respuesta correcta es **no se distingue** — y esa
+> respuesta es un resultado, no un fracaso.»
 
 ### La pregunta con la que se van
 
-> «La próxima vez que alguien les muestre un número de rendimiento, ¿cuál es la
-> primera pregunta?»
+> «La próxima vez que alguien les muestre un número de rendimiento, ¿cuáles son
+> las preguntas?»
 
-*(¿Comparado con qué, y cuántas veces lo mediste?)*
+*(¿Comparado con qué, cuántas veces lo mediste, y cuánto se mueve solo?)*
+
+### 🔴 Y la frase que cierra el laboratorio
+
+> «Hoy no encontramos la mejora que fuimos a buscar. Quiero que se vayan con eso
+> bien claro, porque es lo raro de esta clase.
+>
+> El que nunca reporta un *no se distingue* no es que tenga mejores parámetros.
+> **Es que no está midiendo el ruido.**»
 
 ### 🔴 La frase que hay que decir en voz alta
 
@@ -413,17 +519,26 @@ Este guion **es** el recorte, y no hay bloque de reserva. Si aun así te vas de
    Devuelve ~1,5 min.
 2. El bloque de los `acks` dentro del Bloque 4 se enuncia en dos frases —que no
    se distinguen aquí y por qué— sin la tabla de riesgo. Devuelve ~1,5 min.
-3. La lectura tres —el promedio y la cola— se enuncia en una frase y se manda a
-   leer. Devuelve ~2 min. **Es lo último que se toca.**
+3. La lectura cuatro —el promedio y la cola— se enuncia en una frase y se manda
+   a leer. Devuelve ~2 min.
+4. El contraste con `batch.size` se enuncia sin la tabla: «hay un parámetro que
+   sí se distingue a simple vista, está en la guía». Devuelve ~1 min. **Es lo
+   último que se toca**, y si lo botas asegúrate de decir la frase, porque sin
+   ella la clase se va con «medir no sirve».
 
-**Los bloques 2 y 3, y las lecturas uno y dos del Bloque 4, no se recortan**: son
-la demostración entera.
+🔴 **Los bloques 2 y 3, y las lecturas uno, dos y tres del Bloque 4, no se
+recortan**: son la demostración entera. La lectura tres —el 5 a 5 y el «no se
+distingue»— es la conclusión del laboratorio; sin ella el lab no tiene final.
 
 ## Si sobra tiempo
 
-Te va a sobrar: la máquina se toma nueve segundos. Antes de improvisar, lo que
+Te va a sobrar: la máquina se toma diez segundos. Antes de improvisar, lo que
 más rinde es **correr un cuarto y un quinto par** delante de la clase y agregarlos
-a la tabla. Cada par cuesta cuatro segundos y cada uno refuerza el punto.
+a la tabla. Cada par cuesta cuatro segundos, y con la conclusión de hoy cada par
+nuevo refuerza el punto **salga como salga**: si gana, se compara contra el ruido;
+si pierde, es una victoria del tuneado que se evaporó. 🔴 **Alterna el orden**
+—el tuneado primero en los pares nuevos— y dilo en voz alta: es el diseño
+experimental de la tanda de control, y explicarlo cuesta treinta segundos.
 
 Después de eso, *Para profundizar B* (`batch.size`) es lo que mejor engancha,
 porque mueve **la latencia y no el throughput** — justo al revés que el del

@@ -14,7 +14,10 @@ El equipo de infraestructura de NovaTech necesita dimensionar el clúster antes 
 
 *"Necesito saber cuánto throughput aguanta el clúster produciendo y consumiendo, cuál es la latencia, y qué parámetros mover para exprimirlo. Mídelo en serio, con números."*
 
-Tu misión: medir empíricamente el rendimiento de producción y consumo con las herramientas de perf-test, y tunear los parámetros del cliente (batch, linger, acks, compresión, fetch) para encontrar el punto óptimo.
+Tu misión: medir el rendimiento con las herramientas de perf-test y decidir, con
+los números en la mano, **si un cambio de tuning se puede afirmar o no**. Spoiler
+del recorrido: con el parámetro que vamos a mover, la respuesta medida es que
+**no se distingue** — y aprender a reportar eso es el laboratorio.
 
 ---
 
@@ -25,8 +28,9 @@ Tu misión: medir empíricamente el rendimiento de producción y consumo con las
 - Cuánto se mueve una medición de rendimiento **cuando no cambias nada**, y por
   qué eso hay que medirlo antes de tunear
 - Medir throughput y latencia con `kafka-producer-perf-test`
-- Cómo `linger.ms` cambia el throughput, y por qué eso solo se puede afirmar
-  comparando **pares repetidos**, no rangos sueltos
+- Por qué una mejora **solo cuenta si es más grande que ese ruido**, y por qué
+  ganar tres comparaciones de tres puede no ser evidencia de nada
+- Cómo se reporta un **«no se distingue»** sin que suene a trabajo no hecho
 - Por qué el rendimiento se vigila en percentiles y no en promedios
 - Por qué se mueve **un parámetro a la vez**
 
@@ -35,8 +39,8 @@ Tu misión: medir empíricamente el rendimiento de producción y consumo con las
 - Los tres niveles de `acks`, medidos — el recorrido los explica sin
   ejecutarlos, y aquí están las nueve corridas que muestran por qué en este
   clúster no se distinguen
-- `batch.size`, que mueve la latencia y no el throughput — al revés que el
-  parámetro del recorrido
+- `batch.size`, el único parámetro del lab cuyo efecto **sí** sobrevive al ruido
+  — y lo hace en la latencia, no en el throughput
 - Compresión `lz4` y `zstd`
 - Combinar parámetros, y por qué se hace al final
 - El lado del consumidor con `kafka-consumer-perf-test`, y la trampa del
