@@ -2,7 +2,9 @@
 
 **Curso**: Administración de Confluent Apache Kafka (SUNAT)  
 **Unidad**: 3 - Configuración del clúster, tópicos y rendimiento  
-**Duración estimada**: ~60 minutos
+**Duración estimada**: **20 minutos de dictado en clase** (`instructor/GUION.md`)  
+~60 minutos si haces el laboratorio completo por tu cuenta, incluida la sección
+*Para profundizar* de la guía
 
 ---
 
@@ -18,12 +20,25 @@ Tu misión: medir empíricamente el rendimiento de producción y consumo con las
 
 ## ¿Qué vas a aprender?
 
-- Cómo `batch.size` y `linger.ms` afectan el throughput
-- Diferencia entre `acks=0`, `acks=1` y `acks=all` (medida en vivo)
-- Medir throughput y latencia de producción con `kafka-producer-perf-test`
-- Medir throughput de consumo con `kafka-consumer-perf-test`
-- Cómo el `fetch.size` y la compresión afectan el rendimiento
-- Particionadores y su impacto en el throughput
+**En el recorrido de clase:**
+
+- Cuánto se mueve una medición de rendimiento **cuando no cambias nada**, y por
+  qué eso hay que medirlo antes de tunear
+- Medir throughput y latencia con `kafka-producer-perf-test`
+- Cómo `batch.size` cambia la latencia, y por qué su efecto en el throughput
+  **no se puede afirmar** con dos corridas
+- Por qué el rendimiento se vigila en percentiles y no en promedios
+- Por qué se mueve **un parámetro a la vez**
+
+**En la sección *Para profundizar* de la guía**, con su comando y su salida real:
+
+- Los tres niveles de `acks`, medidos — y por qué en este clúster no se
+  distinguen
+- Compresión `lz4` y `zstd`
+- Combinar parámetros, y por qué se hace al final
+- El lado del consumidor con `kafka-consumer-perf-test`, y la trampa del
+  `rebalance.time.ms`
+- Particionado por clave y *hot partitioning*
 
 ---
 
@@ -46,7 +61,8 @@ chmod +x bin/*.sh kafka-cli/*.sh infra/scripts/*.sh
 bin/start-lab.sh
 ```
 
-Luego abre `guia/01-tuning-batch-y-linger.md`.
+Luego abre `guia/01-medir-y-comparado-con-que.md`, o `practica/PASOS.md` si
+prefieres el recorrido en seco.
 
 ---
 
