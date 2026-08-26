@@ -28,7 +28,7 @@ ficha_op "DETENER EL LAB 05" \
     'cuando terminas por hoy y quieres liberarle memoria a Docker'
 
 echo -e "${YELLOW}[NovaTech] Deteniendo contenedores del clúster...${NC}"
-docker compose -f "$COMPOSE_FILE" stop
+compose stop
 
 echo ""
 echo -e "${GREEN}[OK] Clúster NovaTech detenido correctamente.${NC}"
