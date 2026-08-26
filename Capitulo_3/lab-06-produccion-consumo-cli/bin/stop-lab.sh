@@ -9,7 +9,7 @@ set -euo pipefail
 source "$(dirname "$0")/common.sh"
 
 # ============================================================
-# NovaTech Logistics - Lab 01: Detener laboratorio
+# NovaTech Logistics - Lab 06: Detener laboratorio
 # Detiene los contenedores preservando los volúmenes de datos
 # ============================================================
 
@@ -28,7 +28,7 @@ ficha_op "DETENER EL LAB 06" \
     'cuando terminas por hoy y quieres liberarle memoria a Docker'
 
 echo -e "${YELLOW}[NovaTech] Deteniendo contenedores del clúster...${NC}"
-docker compose -f "$COMPOSE_FILE" stop
+compose stop
 
 echo ""
 echo -e "${GREEN}[OK] Clúster NovaTech detenido correctamente.${NC}"

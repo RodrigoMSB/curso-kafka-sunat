@@ -9,7 +9,7 @@ set -euo pipefail
 source "$(dirname "$0")/common.sh"
 
 # ============================================================
-# NovaTech Logistics - Lab 02: Iniciar laboratorio
+# NovaTech Logistics - Lab 06: Iniciar laboratorio
 # ============================================================
 
 # Colores
@@ -36,7 +36,7 @@ echo "║     ██║ ╚████║╚██████╔╝ ╚██�
 echo "║     ╚═╝  ╚═══╝ ╚═════╝   ╚═══╝  ╚═╝  ╚═╝                ║"
 echo "║              T E C H   L O G I S T I C S                ║"
 echo "║                                                          ║"
-echo "║     Lab 02: Pub/Sub y Consumer Groups en acción          ║"
+echo "║     Lab 06: Producción y consumo desde CLI               ║"
 echo "║                                                          ║"
 echo "╚══════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
@@ -69,9 +69,9 @@ echo -e "${YELLOW}[1/5] Levantando contenedores del clúster NovaTech...${NC}"
 #     colisionan ("Conflict: container name already in use").
 # (2) docker compose down -v --remove-orphans del proyecto actual.
 botar_contenedores_del_curso "start-lab" kafka-broker-1 kafka-broker-2 kafka-broker-3 kafbat-ui gps-producer || exit 1
-docker compose -f "$COMPOSE_FILE" down -v --remove-orphans 2>/dev/null || true
+compose down -v --remove-orphans 2>/dev/null || true
 
-docker compose -f "$COMPOSE_FILE" up -d
+compose up -d
 
 echo ""
 echo -e "${YELLOW}[2/5] Esperando a que los brokers estén operativos...${NC}"
@@ -98,7 +98,7 @@ done
 
 if [ "$BROKERS_READY" -lt 3 ]; then
     echo -e "${RED}[ERROR] Timeout: solo ${BROKERS_READY}/3 brokers están operativos después de ${TIMEOUT}s${NC}"
-    echo -e "${RED}  Revisa los logs con: docker compose -f ${COMPOSE_FILE} logs${NC}"
+    echo -e "${RED}  Revisa los logs con: cd infra && docker compose logs${NC}"
     exit 1
 fi
 
@@ -135,7 +135,7 @@ else
 fi
 
 echo ""
-echo -e "${YELLOW}[5/5] Inicializando tópico de eventos para Lab 02...${NC}"
+echo -e "${YELLOW}[5/5] Inicializando tópico de eventos para el Lab 06...${NC}"
 bash "$(dirname "$0")/../infra/scripts/init-events-topic.sh"
 
 echo ""

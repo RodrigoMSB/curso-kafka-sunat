@@ -9,7 +9,7 @@ set -euo pipefail
 source "$(dirname "$0")/common.sh"
 
 # ============================================================
-# NovaTech Logistics - Lab 01: Reiniciar laboratorio
+# NovaTech Logistics - Lab 06: Reiniciar laboratorio
 # Elimina todos los contenedores, volúmenes y redes
 # ============================================================
 
@@ -40,7 +40,7 @@ fi
 
 echo ""
 echo -e "${YELLOW}[NovaTech] Eliminando contenedores, volúmenes y redes...${NC}"
-docker compose -f "$COMPOSE_FILE" down -v --remove-orphans
+compose down -v --remove-orphans
 
 echo ""
 echo -e "${GREEN}[OK] Laboratorio reiniciado completamente.${NC}"
