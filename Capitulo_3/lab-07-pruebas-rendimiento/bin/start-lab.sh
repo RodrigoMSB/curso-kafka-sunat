@@ -69,9 +69,9 @@ echo -e "${YELLOW}[1/5] Levantando contenedores del clúster NovaTech...${NC}"
 #     colisionan ("Conflict: container name already in use").
 # (2) docker compose down -v --remove-orphans del proyecto actual.
 botar_contenedores_del_curso "start-lab" kafka-broker-1 kafka-broker-2 kafka-broker-3 kafbat-ui gps-producer || exit 1
-docker compose -f "$COMPOSE_FILE" down -v --remove-orphans 2>/dev/null || true
+compose down -v --remove-orphans 2>/dev/null || true
 
-docker compose -f "$COMPOSE_FILE" up -d
+compose up -d
 
 echo ""
 echo -e "${YELLOW}[2/5] Esperando a que los brokers estén operativos...${NC}"
@@ -98,7 +98,7 @@ done
 
 if [ "$BROKERS_READY" -lt 3 ]; then
     echo -e "${RED}[ERROR] Timeout: solo ${BROKERS_READY}/3 brokers están operativos después de ${TIMEOUT}s${NC}"
-    echo -e "${RED}  Revisa los logs con: docker compose -f ${COMPOSE_FILE} logs${NC}"
+    echo -e "${RED}  Revisa los logs con: cd infra && docker compose logs${NC}"
     exit 1
 fi
 

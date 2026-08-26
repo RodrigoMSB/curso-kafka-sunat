@@ -24,6 +24,40 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m'
 
+# ── Invocar docker compose sin pasarle rutas absolutas ──
+# En Git Bash, `pwd` devuelve /c/KAFKA/... y ese formato NO le sirve a
+# docker.exe, que es un binario de Windows: lo resuelve contra la raiz del
+# disco y produce C:\c\KAFKA\..., una ruta que no existe. El sintoma medido
+# en la VM de Netec, al arrancar este lab, fue:
+#
+#   open C:\c\KAFKA\curso-kafka-sunat\...\infra\docker-compose.yml:
+#   The system cannot find the path specified.
+#
+# Es el mismo defecto que la SPEC-75 arreglo en los labs 08 a 14; alli se
+# manifestaba en el --env-file y aqui en el -f, porque compose valida el
+# --env-file primero y estos labs no le pasaban ninguno.
+#
+# Ojo, porque son DOS problemas opuestos y este archivo necesita los dos:
+# MSYS_NO_PATHCONV=1 (arriba) protege las rutas que deben llegar intactas AL
+# CONTENEDOR, como /var/lib/kafka/data. Aqui el problema es al reves -- una
+# ruta del HOST que docker.exe tiene que entender -- y esa misma variable lo
+# empeora, porque impide la traduccion.
+#
+# La solucion es no darle ninguna ruta: se entra al directorio y se usan
+# nombres relativos. El `cd` es un builtin de bash, asi que la ruta absoluta
+# se resuelve dentro del shell y nunca cruza a docker.exe. El subshell
+# mantiene el cambio de directorio local a esta funcion.
+#
+# El -f se va: dentro de infra/, compose encuentra su docker-compose.yml solo.
+# El -p pasa a ser explicito: hoy el nombre del proyecto sale del .env y las
+# dos formas resuelven igual, pero el alcance de un `down -v` lo da el
+# proyecto y eso no se deja implicito (tests/CONVENCIONES-TEST.md).
+DIR_INFRA="$(cd "$(dirname "${BASH_SOURCE[0]}")/../infra" && pwd)"
+PROYECTO="$(grep '^COMPOSE_PROJECT_NAME=' "$DIR_INFRA/.env" 2>/dev/null | cut -d= -f2 | tr -d ' \r')"
+compose() {  # <subcomando de docker compose>...
+    ( cd "$DIR_INFRA" && docker compose --env-file .env -p "$PROYECTO" "$@" )
+}
+
 # ── Detectar un broker disponible ──
 # Recorre los brokers del 1 al 3 y devuelve el nombre del primero
 # que está corriendo. Si ninguno está vivo, retorna 1.
