@@ -2,7 +2,7 @@
 
 **Curso**: Administración de Confluent Apache Kafka (SUNAT)  
 **Unidad**: 4 - Avanzado, ecosistema, HA/DR y seguridad  
-**Duración estimada**: ~60 minutos
+**Duración estimada**: 20 minutos de dictado · 19 segundos de ejecución medidos (10 de ellos, esperando al conector)
 
 ---
 
@@ -50,7 +50,14 @@ bin/start-lab.sh
 
 ⏰ La primera vez tarda 3-5 minutos (incluye descarga de imágenes + instalación del plugin JDBC).
 
-Luego abre `guia/01-arquitectura-connect.md`.
+Luego abre la guía: [`guia/01-connect-y-quien-creo-ese-topico.md`](guia/01-connect-y-quien-creo-ese-topico.md).
+
+| Carpeta | Para qué |
+|---|---|
+| `guia/` | El recorrido de clase, con la explicación antes de cada comando |
+| `instructor/GUION.md` | Lo que el relator usa en pantalla: qué decir, qué preguntar, y el tiempo por bloque |
+| `practica/PASOS.md` | Los comandos en seco, para repetir el lab solo después de la clase |
+| `soluciones/` | Respuestas de referencia |
 
 ---
 
