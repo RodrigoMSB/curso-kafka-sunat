@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><link rel="stylesheet" href="estilo-alumno.css"></head>
+<body>
+
+<div class="portada">
+  <div class="kicker">C U R S O &nbsp; D E &nbsp; A D M I N I S T R A C I Ó N &nbsp; D E &nbsp; K A F K A</div>
+  <div class="labnum">LABORATORIO 03</div>
+  <h1>¿Y quién<br>dice que esa<br>es la config?</h1>
+  <div class="sub">Configuración efectiva de un broker.<br>Guía para hacerlo por tu cuenta, paso a paso</div>
+  <div class="meta">
+    Confluent Platform 8.2.0 · Kafka 4.2 en modo KRaft · 3 brokers<br>
+    Duración estimada · 45 minutos<br>
+    NovaTech Logistics · caso de estudio
+  </div>
+</div>
+
+<h2>Antes de empezar</h2>
+
+<h3>Qué vas a lograr</h3>
+
+<p>Al final de esta guía vas a haber <b>cambiado un parámetro de un servidor en caliente</b>, vas a haber comprobado que el cambio funciona, y vas a haber visto que <b>el archivo de configuración no se enteró de nada</b>.</p>
+
+<p>Ese hueco entre lo que el archivo dice y lo que el servidor hace tiene nombre, y es la causa de una clase entera de incidentes.</p>
+
+<div class="afirmacion">
+  <span class="rot">Lo que este laboratorio demuestra</span>
+  <div class="txt">El archivo dice lo que alguien declaró. Solo el broker sabe lo que está usando.</div>
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · <i>drift</i> de configuración</span>
+  La <b>distancia entre lo que está escrito y lo que está corriendo</b>. Aparece cada vez que alguien cambia algo en caliente y no lo escribe en ningún sitio. <b>No hay ninguna alarma que avise de que existe</b>, y solo se descubre comparando las dos cosas a mano.
+</div>
+
+<h3>Qué necesitas tener listo</h3>
+
+<table>
+<tr><th>Requisito</th><th>Cómo lo compruebas</th></tr>
+<tr><td>Haber hecho los laboratorios 01 y 02</td><td>Hoy se da por sabido qué es un <code>docker-compose.yml</code> y qué es un quórum</td></tr>
+<tr><td>Docker Desktop corriendo, con 6 GB de RAM</td><td>Ajustes de Docker Desktop, pestaña <i>Resources</i></td></tr>
+<tr><td>Git Bash abierto</td><td><code>cd Capitulo_3/lab-03-configuracion-brokers</code></td></tr>
+<tr><td>Los puertos 9092, 9093 y 9094 libres</td><td>El paso 1 te avisa si no lo están</td></tr>
+</table>
+
+<h3>El caso</h3>
+
+<div class="caja">
+  <p>Un viernes por la tarde alguien de <b>NovaTech Logistics</b> sube un parámetro del broker en caliente para salir de un atasco. Funciona, el atasco se resuelve, y nadie lo escribe en ninguna parte.</p>
+  <p>Tres meses después el servidor se reinicia por un corte de luz. <b>El parámetro vuelve a su valor de antes</b>, porque el archivo nunca supo del cambio, y el atasco vuelve. Nadie relaciona una cosa con la otra, porque entre las dos hay tres meses.</p>
+  <p style="margin-bottom:0">El problema no fue el cambio en caliente, que estuvo bien hecho. <b>El problema es que nadie sabe leer las tres capas de la configuración de un broker</b>, y por eso nadie podía ver que el archivo y el servidor decían cosas distintas.</p>
+</div>
+
+<div class="caja ojo">
+  <span class="rot">Un aviso · desde aquí cambia la metáfora del curso</span>
+  <p>Hasta el laboratorio 02 veníamos hablando de <b>camiones y flota</b>. Servía muy bien para explicar la identidad del clúster y el quórum.</p>
+  <p style="margin-bottom:0"><b>Desde este laboratorio Kafka es un restaurante</b>, porque lo que viene se explica mejor con mozos y comandas que con camiones. <b>No te has equivocado de material.</b> Es el mismo curso, y la metáfora se queda en el restaurante de aquí hasta el final.</p>
+</div>
+
+<div class="caja abuelita">
+  <span class="rot">La metáfora · las tres capas, en el restaurante</span>
+  <p>El <b>mozo</b> que toma y entrega los pedidos es el <b>broker</b>, o sea el servidor. Un <b>tipo de comanda</b> es el <b>tópico</b>. Los <b>sectores del salón</b> son las <b>particiones</b>.</p>
+  <p>Y hoy nos interesa <b>cómo llega una instrucción a la cocina</b>, que pasa por tres formas distintas.</p>
+  <p style="margin-bottom:0">Está <b>la pizarra del menú del día</b>, que escribe el dueño. Está <b>la comanda impresa</b> que sale del sistema y llega a la cocina. Y está <b>lo que el cocinero tiene de verdad en la plancha ahora mismo</b>. Casi siempre las tres coinciden. <b>El día que no coinciden, hay que saber cuál manda.</b></p>
+</div>
+
+<h3>Las tres etapas, en Kafka</h3>
+
+<table>
+<tr><th>Etapa</th><th>Dónde vive</th><th>En el restaurante</th></tr>
+<tr><td><b>1 · Lo que escribes</b></td><td><code>docker-compose.yml</code>, como <code>KAFKA_NODE_ID: 1</code></td><td>La pizarra del menú</td></tr>
+<tr><td><b>2 · Lo que se tradujo</b></td><td><code>/etc/kafka/kafka.properties</code>, como <code>node.id=1</code></td><td>La comanda impresa</td></tr>
+<tr><td><b>3 · Lo que el broker usa</b></td><td>En memoria, y se le pregunta al clúster</td><td>Lo que hay en la plancha</td></tr>
+</table>
+
+<p><b>Las etapas 1 y 2 se leen en archivos. La etapa 3 se le pregunta al servidor.</b> Y esa diferencia es todo el laboratorio.</p>
+
+<div class="caja tecnico">
+  <span class="rot">La regla de traducción de la etapa 1 a la 2</span>
+  <p>En la imagen de Confluent no editas un <code>server.properties</code> a mano. Declaras variables <code>KAFKA_*</code> en tu compose y <b>la imagen las traduce al arrancar</b>.</p>
+  <p style="margin-bottom:0">La regla son tres pasos. <b>Quitar el prefijo <code>KAFKA_</code>, pasar a minúsculas, y cambiar cada <code>_</code> por un punto.</b></p>
+</div>
+
+<table>
+<tr><th>Variable de entorno</th><th>Propiedad resultante</th></tr>
+<tr><td><code>KAFKA_NODE_ID</code></td><td><code>node.id</code></td></tr>
+<tr><td><code>KAFKA_PROCESS_ROLES</code></td><td><code>process.roles</code></td></tr>
+<tr><td><code>KAFKA_LOG_DIRS</code></td><td><code>log.dirs</code></td></tr>
+<tr><td><code>KAFKA_MIN_INSYNC_REPLICAS</code></td><td><code>min.insync.replicas</code></td></tr>
+</table>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 1 de 7</span>Levantar el clúster</h2>
+
+<h3>Los comandos</h3>
+
+<pre>cd Capitulo_3/lab-03-configuracion-brokers
+chmod +x bin/*.sh kafka-cli/*.sh
+bin/start-lab.sh</pre>
+
+<div class="desglose">
+<div><span class="flag">bin/start-lab.sh</span> — levanta el clúster de tres brokers del laboratorio 02. <b>Hoy no vas a escribir ningún compose</b>, porque el trabajo es leer, no construir</div>
+</div>
+
+<h3>Comprueba que están los tres</h3>
+
+<pre>docker ps --filter name=kafka-broker</pre>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p style="margin-bottom:0">Salen <b>tres líneas</b> con <code>Up</code>, y los puertos 9092, 9093 y 9094.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si algo falla al levantar</span>
+  <p style="margin-bottom:0">Es lo mismo del laboratorio 02. <b>Docker apagado</b>, ábrelo. <b><code>port is already allocated</code></b>, hay otro lab del curso arriba y hay que bajarlo. <b>Timeout de brokers</b>, sube Docker a 6 GB.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 2 de 7</span>Etapa 2 · encontrar el archivo que manda</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>La etapa 1 ya la conoces, porque son las variables <code>KAFKA_*</code> que escribiste en el laboratorio 02. Vamos directo a la etapa 2, <b>a buscar en qué archivo acabaron</b>.</p>
+
+<p>Y ahí hay una sorpresa que a mucha gente le cuesta una tarde.</p>
+
+<h3>El comando</h3>
+
+<pre>kafka-cli/list-config-files.sh</pre>
+
+<div class="desglose">
+<div><span class="flag">kafka-cli/list-config-files.sh</span> — un envoltorio del curso. Lista los <code>.properties</code> del contenedor <b>y además le pregunta al proceso de Kafka con cuál de ellos arrancó de verdad</b>. Esa respuesta no se deduce, sale de la línea de comandos del <code>java</code> que está corriendo</div>
+</div>
+
+<div class="salida-rot">Los archivos que hay</div>
+<div class="salida">/etc/kafka/broker.properties
+/etc/kafka/connect-console-sink.properties
+/etc/kafka/connect-console-source.properties
+/etc/kafka/connect-distributed.properties
+/etc/kafka/connect-file-sink.properties
+/etc/kafka/connect-file-source.properties
+/etc/kafka/connect-mirror-maker.properties
+/etc/kafka/connect-standalone.properties
+/etc/kafka/consumer.properties
+/etc/kafka/controller.properties
+/etc/kafka/kafka.properties
+/etc/kafka/producer.properties
+/etc/kafka/server.properties</div>
+
+<p><b>Trece archivos.</b> Y ahí, en la lista, está <code>server.properties</code>, que es el nombre que cualquiera diría si le preguntas cuál usa un broker de Kafka.</p>
+
+<h3>Ahora pregúntale al proceso</h3>
+
+<pre>docker exec kafka-broker-1 sh -c "ps -o args= -C java | tr ' ' '\n' | grep properties"</pre>
+
+<div class="desglose">
+<div><span class="flag">ps -o args= -C java</span> — la línea de comandos completa del proceso <code>java</code> que está corriendo</div>
+<div><span class="flag">tr ' ' '\n'</span> — parte esa línea en una palabra por renglón, porque es larguísima</div>
+<div><span class="flag">grep properties</span> — se queda con la única que nos interesa. <b>Esto no es una suposición, es lo que el proceso tiene en su línea de arranque</b></div>
+</div>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">/etc/kafka/kafka.properties</div>
+
+<div class="caja ojo">
+  <span class="rot">Aquí está la sorpresa</span>
+  <p><b>El broker no arrancó con <code>server.properties</code>.</b> Arrancó con <code>kafka.properties</code>, que está en la lista pero no es el nombre que nadie esperaría.</p>
+  <p style="margin-bottom:0">Y ese archivo <b>no lo escribió nadie</b>. <b>Lo genera la imagen al arrancar</b>, traduciendo las variables <code>KAFKA_*</code> de tu compose. Si apagas el contenedor y miras la imagen, ahí solo hay <b>doce</b> archivos. El decimotercero nace con el arranque.</p>
+</div>
+
+<h3>Compruébalo tú</h3>
+
+<pre>docker exec kafka-broker-1 sh -c "ls /etc/kafka/*.properties | wc -l"
+docker run --rm confluentinc/cp-kafka:8.2.0 sh -c "ls /etc/kafka/*.properties | wc -l"</pre>
+
+<div class="desglose">
+<div><span class="flag">docker exec</span> — dentro del contenedor <b>que está corriendo</b></div>
+<div><span class="flag">docker run --rm</span> — un contenedor nuevo de la misma imagen, que ejecuta el <code>ls</code> y muere. <b>Como no arranca Kafka, nadie genera el archivo</b></div>
+</div>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">13     <- el contenedor corriendo
+12     <- la misma imagen, sin arrancar Kafka</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p><b>Trece contra doce</b>, y el proceso apunta a <code>kafka.properties</code>.</p>
+  <p style="margin-bottom:0">Retén esto, porque en el laboratorio 08b, sobre un servidor RHEL de verdad, vas a ver que ahí son <b>doce</b> y el archivo que manda <b>sí</b> es <code>server.properties</code>. <b>El decimotercero es una cosa de la imagen de Docker, no de Kafka.</b></p>
+</div>
+
+<h3>Y mira la traducción, con tus propias variables</h3>
+
+<pre>docker exec kafka-broker-1 sh -c \
+    "grep -E '^(node.id|process.roles|log.dirs|min.insync.replicas)=' /etc/kafka/kafka.properties"</pre>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">log.dirs=/var/lib/kafka/data
+min.insync.replicas=2
+node.id=1
+process.roles=broker,controller</div>
+
+<div class="caja tecnico">
+  <span class="rot">Las huellas que delatan al archivo real</span>
+  <p style="margin-bottom:0">Fíjate en <code>log.dirs=/var/lib/kafka/data</code> y en el <code>node.id=1</code>. <b>Esos valores los pusiste tú en el compose.</b> La distribución de Kafka no puede saber dónde quieres los datos ni cómo se llama tu contenedor. <b>Si un archivo trae tus decisiones, es el que se generó a partir de lo que escribiste.</b> Es la forma de reconocerlo en un servidor que no conoces.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el <code>ps</code> no devuelve nada</span>
+  <p style="margin-bottom:0">El proceso <code>java</code> no está corriendo, o sea que el broker está caído. Míralo con <code>docker ps --filter name=kafka-broker</code> y con <code>docker logs kafka-broker-1 | tail -20</code>.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 3 de 7</span>Etapa 3 · preguntarle al broker qué está usando</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>El archivo dice lo que se declaró. Ahora vamos a preguntarle al servidor <b>qué está usando de verdad, y de dónde salió cada valor</b>.</p>
+
+<div class="concepto">
+  <span class="rot">Concepto · configuración efectiva</span>
+  El valor que el broker <b>tiene cargado en memoria en este momento</b>, con la anotación de <b>de dónde vino</b>. Un broker tiene cientos de parámetros y tú declaraste unos pocos. Todos los demás están ahí, con su valor de fábrica, decidiendo cosas.
+</div>
+
+<h3>El comando</h3>
+
+<pre>kafka-cli/describe-broker-config.sh 1</pre>
+
+<div class="desglose">
+<div><span class="flag">kafka-cli/describe-broker-config.sh</span> — envoltorio del curso. Por dentro llama a <code>kafka-configs --describe --entity-type brokers --all</code></div>
+<div><span class="flag">1</span> — de qué broker. <b>Cada uno tiene la suya</b>, y no tienen por qué coincidir</div>
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">El comando real, el que vas a escribir en SUNAT</span>
+  <pre style="margin-bottom:0">kafka-configs --bootstrap-server kafka-broker-1:29092 \
+    --describe --entity-type brokers --entity-name 1 --all</pre>
+</div>
+
+<div class="desglose">
+<div><span class="flag">--entity-type brokers</span> — preguntamos por un broker, no por un tópico</div>
+<div><span class="flag">--entity-name 1</span> — por cuál</div>
+<div><span class="flag">--all</span> — <b>trae todos los parámetros, no solo los que alguien cambió.</b> Sin esta bandera la salida sale casi vacía y da la impresión falsa de que el broker no tiene configuración</div>
+</div>
+
+<h3>Los tres orígenes que hay que saber leer</h3>
+
+<table>
+<tr><th>Origen</th><th>Significa</th><th>Para cambiarlo</th></tr>
+<tr><td><code>DEFAULT_CONFIG</code></td><td>Nadie lo tocó. Es el valor de fábrica</td><td>Hay que declararlo</td></tr>
+<tr><td><code>STATIC_BROKER_CONFIG</code></td><td>Vino del archivo, o sea de tus <code>KAFKA_*</code></td><td><b>Exige reiniciar el broker</b></td></tr>
+<tr><td><code>DYNAMIC_BROKER_CONFIG</code></td><td>Se cambió en caliente, por la API</td><td>Se cambia otra vez en caliente</td></tr>
+</table>
+
+<div class="salida-rot">Tres propiedades de la salida, para comparar</div>
+<div class="salida">log.retention.hours=168 sensitive=false
+  synonyms={DEFAULT_CONFIG:log.retention.hours=168}
+
+min.insync.replicas=2 sensitive=false
+  synonyms={DYNAMIC_DEFAULT_BROKER_CONFIG:min.insync.replicas=2,
+            STATIC_BROKER_CONFIG:min.insync.replicas=2,
+            DEFAULT_CONFIG:min.insync.replicas=1}
+
+num.partitions=1 sensitive=false
+  synonyms={DEFAULT_CONFIG:num.partitions=1}</div>
+
+<div class="caja ojo">
+  <span class="rot">Cómo se lee la lista de <code>synonyms</code>, y es la clave del laboratorio</span>
+  <p><b>De esa lista manda el primero.</b> Los de más abajo están tapados.</p>
+  <p>Mira <code>min.insync.replicas</code>. El valor efectivo es <b>2</b>, y abajo del todo se ve que <b>el de fábrica era 1</b>. Tu declaración lo tapó.</p>
+  <p style="margin-bottom:0">Y compáralo con <code>log.retention.hours</code>, que trae <b>un solo origen</b>. Eso significa que nadie lo tocó nunca, ni tú ni nadie. Es de fábrica y punto.</p>
+</div>
+
+<h3>Cuenta los orígenes de toda la salida</h3>
+
+<pre>docker exec kafka-broker-1 kafka-configs \
+    --bootstrap-server kafka-broker-1:29092 \
+    --describe --entity-type brokers --entity-name 1 --all \
+    | grep -c DEFAULT_CONFIG</pre>
+
+<p>Repítelo cambiando <code>DEFAULT_CONFIG</code> por <code>STATIC_BROKER_CONFIG</code> y por <code>DYNAMIC_BROKER_CONFIG</code>.</p>
+
+<div class="salida-rot">Lo que salió en la corrida medida</div>
+<div class="salida">DEFAULT_CONFIG          263
+STATIC_BROKER_CONFIG     16
+DYNAMIC_BROKER_CONFIG     0
+
+líneas totales           321</div>
+
+<div class="rescate">
+  <span class="rot">Si la salida sale casi vacía, con tres o cuatro líneas</span>
+  <p style="margin-bottom:0">Se te perdió el <code>--all</code>. <b>Sin esa bandera Kafka solo lista lo que alguien cambió</b>, y en un broker recién levantado eso es casi nada. La impresión que da es que el broker no tiene configuración, y es exactamente la lectura equivocada que este laboratorio existe para corregir.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si los <code>DYNAMIC</code> no te salen en cero</span>
+  <p>Alguien dejó un cambio en caliente puesto, y lo más probable es que hayas sido tú en una corrida anterior. Míralo:</p>
+  <pre>kafka-cli/describe-broker-config.sh 1 | grep DYNAMIC</pre>
+  <p style="margin-bottom:0"><b>No es un problema para seguir</b>, pero conviene limpiarlo con <code>kafka-cli/alter-broker-config.sh 1 &lt;propiedad&gt; --delete</code> para que el paso 6 se vea limpio. <b>Y fíjate en lo que acaba de pasar</b>, porque es el laboratorio entero en una frase. Encontraste un cambio que nadie había escrito en ninguna parte.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p><b>Los <code>DYNAMIC</code> están en cero</b>, porque todavía nadie cambió nada en caliente. Ese cero es tu punto de partida.</p>
+  <p style="margin-bottom:0">Y mira la proporción. <b>Declaraste dieciséis cosas y el broker está decidiendo con doscientas sesenta y tres que no miraste nunca.</b> A ti los números te pueden salir algo distintos.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 4 de 7</span>El drift · la propiedad que el archivo no conoce</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Aquí empieza el momento del laboratorio. Vamos a elegir una propiedad que <b>tú nunca declaraste</b>, comprobar que el archivo no sabe nada de ella, y cambiarla en caliente.</p>
+
+<p>La propiedad es <code>num.replica.fetchers</code>, que es <b>cuántos hilos usa el broker para copiar réplicas de otros brokers</b>. Es la que se sube cuando la replicación va lenta, y la vas a volver a ver en el laboratorio 08.</p>
+
+<h3>Pregúntale al archivo si la conoce</h3>
+
+<pre>docker exec kafka-broker-1 sh -c \
+    "grep -c num.replica.fetchers /etc/kafka/kafka.properties"</pre>
+
+<div class="desglose">
+<div><span class="flag">grep -c</span> — la <code>-c</code> cuenta cuántas líneas coinciden, en vez de mostrarlas</div>
+</div>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">0</div>
+
+<p><b>Cero.</b> Nunca la escribiste, así que no está en la etapa 2.</p>
+
+<h3>Y ahora pregúntale al broker</h3>
+
+<pre>kafka-cli/describe-broker-config.sh 1 | grep num.replica.fetchers</pre>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">num.replica.fetchers=1 sensitive=false
+  synonyms={DEFAULT_CONFIG:num.replica.fetchers=1}</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p><b>El archivo dice que no la conoce y el broker dice que vale 1.</b> Las dos cosas son ciertas a la vez.</p>
+  <p style="margin-bottom:0">Su valor viene de fábrica, y por eso el único origen que aparece es <code>DEFAULT_CONFIG</code>.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 5 de 7</span>El broker te dice que no</h2>
+
+<h3>Antes de ejecutar, apuesta</h3>
+
+<div class="caja">
+  <p style="margin-bottom:0">Vas a subirla de 1 a 4. <b>Escribe tu apuesta antes de teclear.</b> ¿Kafka acepta cualquier número, o hay un límite?</p>
+</div>
+
+<h3>El comando</h3>
+
+<pre>kafka-cli/alter-broker-config.sh 1 num.replica.fetchers 4</pre>
+
+<div class="desglose">
+<div><span class="flag">kafka-cli/alter-broker-config.sh</span> — envoltorio del curso. Por dentro llama a <code>kafka-configs --alter</code>. <b>Este envoltorio no te protege del error a propósito</b>, porque el error es la lección</div>
+<div><span class="flag">1</span> — sobre qué broker</div>
+<div><span class="flag">num.replica.fetchers 4</span> — la propiedad y su valor nuevo</div>
+</div>
+
+<div class="salida-rot">Lo que sale · una pared de texto Java, y aquí están las dos líneas que importan</div>
+<div class="salida">org.apache.kafka.common.errors.InvalidRequestException: Invalid value
+org.apache.kafka.common.config.ConfigException: Dynamic thread count update
+validation failed for num.replica.fetchers=4, value should not be greater
+than double the current value 1 for configuration Invalid dynamic configuration</div>
+
+<div class="caja tecnico">
+  <span class="rot">Cómo se lee un error de Java, y sirve para todo el curso</span>
+  <p><b>Las dos primeras líneas, y sáltate la traza.</b> Todo lo que empieza por <code>at org.apache…</code> es el recorrido interno del programa y no te dice nada útil.</p>
+  <p style="margin-bottom:0">Aquí el motivo está completo en la segunda línea. <b>El valor no puede ser más del doble del actual</b>, y el actual es 1.</p>
+</div>
+
+<div class="caja ojo">
+  <span class="rot">Y esto no es un tropiezo tuyo · es la lección del paso</span>
+  <p><b>Los cambios dinámicos tienen su propia validación</b>, y hay un broker vivo del otro lado diciéndote <i>eso no, así no</i>.</p>
+  <p style="margin-bottom:0">Un <code>server.properties</code> en disco <b>no te contesta</b>. Puedes escribir cualquier disparate y no te enteras hasta el reinicio, que es cuando el broker no arranca. <b>Un broker corriendo te lo dice en el momento.</b></p>
+</div>
+
+<h3>Ahora el mismo cambio, dentro del límite</h3>
+
+<p>El doble de 1 es 2:</p>
+
+<pre>kafka-cli/alter-broker-config.sh 1 num.replica.fetchers 2</pre>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">Completed updating config for broker 1.</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>El primer comando <b>falló con el motivo escrito en la segunda línea</b>, y el segundo dijo <code>Completed updating config for broker 1.</code></p>
+  <p style="margin-bottom:0"><b>Compara con tu apuesta.</b> Si dijiste que aceptaba cualquier número, acabas de aprender algo que no estaba en ninguna documentación que hayas leído.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el segundo comando también falla</span>
+  <p style="margin-bottom:0">Comprueba el valor actual con <code>kafka-cli/describe-broker-config.sh 1 | grep num.replica.fetchers</code>. <b>El límite es el doble de lo que valga ahora</b>, así que si en algún intento anterior quedó en otro número, el techo se movió.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 6 de 7</span>El drift, en pantalla</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>El cambio entró. Ahora hay que mirar <b>las dos etapas por separado</b>, y ahí está todo el laboratorio.</p>
+
+<h3>Primero, la etapa 3 · lo que el broker usa</h3>
+
+<pre>kafka-cli/describe-broker-config.sh 1 | grep num.replica.fetchers</pre>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">num.replica.fetchers=2 sensitive=false
+  synonyms={DYNAMIC_BROKER_CONFIG:num.replica.fetchers=2,
+            DEFAULT_CONFIG:num.replica.fetchers=1}</div>
+
+<p><b>Aparecieron los dos orígenes.</b> El <code>DEFAULT_CONFIG</code> de fábrica sigue ahí abajo, con su 1, y el <code>DYNAMIC_BROKER_CONFIG</code> le gana encima con el 2. <b>El primero de la lista es el que manda.</b></p>
+
+<h3>Ahora la etapa 2 · el archivo</h3>
+
+<pre>docker exec kafka-broker-1 sh -c \
+    "grep -c num.replica.fetchers /etc/kafka/kafka.properties"</pre>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">0</div>
+
+<div class="afirmacion">
+  <span class="rot">Ahí está el drift</span>
+  <div class="txt">La etapa 3 se movió y la etapa 2 ni se enteró.</div>
+</div>
+
+<div class="caja abuelita">
+  <span class="rot">En el restaurante</span>
+  <p style="margin-bottom:0">Le gritaste a la cocina <b>«esa salsa, sin sal»</b>. El cocinero te hizo caso y el plato salió sin sal. <b>Y la pizarra del menú sigue diciendo lo mismo que decía.</b> Mañana entra otro cocinero, lee la pizarra, y la sal vuelve.</p>
+</div>
+
+<div class="caja sunat">
+  <span class="rot">Qué significa esto para SUNAT</span>
+  <p>Un cambio dinámico <b>sobrevive a lo que el broker haga en caliente y no sobrevive necesariamente a todo</b>. Vive en los metadatos del clúster, no en tu compose ni en tu repositorio de configuración.</p>
+  <p style="margin-bottom:0">Y de ahí sale la regla operativa. <b>Todo cambio en caliente se escribe además en el archivo, en el mismo turno</b>, aunque no haga falta reiniciar para que tome efecto. Si no, el que reconstruya ese servidor desde el repositorio va a levantar otro servidor distinto, y nadie va a saber por qué.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p><b>Puedes señalar dos salidas que se contradicen y explicar por qué las dos son correctas.</b></p>
+  <p style="margin-bottom:0">El archivo dice lo que se declaró. El broker dice lo que está usando. <b>Solo la segunda es la verdad operativa.</b></p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 7 de 7</span>Dejarlo como estaba</h2>
+
+<h3>El comando</h3>
+
+<pre>kafka-cli/alter-broker-config.sh 1 num.replica.fetchers --delete</pre>
+
+<div class="desglose">
+<div><span class="flag">--delete</span> — quita el cambio dinámico. <b>No pone la propiedad en cero</b>, la devuelve al valor que tenía antes de que la tocaras</div>
+</div>
+
+<h3>Comprueba que volvió</h3>
+
+<pre>kafka-cli/describe-broker-config.sh 1 | grep num.replica.fetchers</pre>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">num.replica.fetchers=1 sensitive=false
+  synonyms={DEFAULT_CONFIG:num.replica.fetchers=1}</div>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p><b>El <code>DYNAMIC_BROKER_CONFIG</code> desapareció de la lista</b> y volvió a quedar solo el <code>DEFAULT_CONFIG</code>, con su 1.</p>
+  <p style="margin-bottom:0">Ese es el camino que hay que saber reconocer. <b>Un <code>--delete</code> devuelve el valor al de la capa de abajo</b>, que casi nunca es el que alguien quería.</p>
+</div>
+
+<div class="np"></div>
+<h2>Lo que aprendiste</h2>
+
+<div class="regla"><span class="num">1</span>
+<b>El archivo que manda no siempre se llama <code>server.properties</code>.</b><br>
+En la imagen de Confluent el broker arranca con <code>kafka.properties</code>, que genera la imagen al encenderse traduciendo tus variables <code>KAFKA_*</code>. En un servidor RHEL con el paquete instalado, sí es <code>server.properties</code>. <b>Se comprueba mirando la línea de arranque del proceso, no adivinando.</b>
+</div>
+
+<div class="regla"><span class="num">2</span>
+<b>De la lista de <code>synonyms</code> manda el primero.</b><br>
+Los de más abajo están tapados, pero siguen ahí y reaparecen cuando quitas el de arriba. Leer esa lista de arriba abajo es leer la historia de quién tocó ese parámetro.
+</div>
+
+<div class="regla"><span class="num">3</span>
+<b>Un broker vivo valida y te contesta. Un archivo no.</b><br>
+Los cambios dinámicos tienen su propia validación, y el broker rechaza lo que no puede hacer explicando por qué. En un archivo puedes escribir cualquier cosa, y te enteras en el próximo reinicio.
+</div>
+
+<div class="regla"><span class="num">4</span>
+<b>Todo cambio en caliente se escribe además en el archivo.</b><br>
+En el mismo turno, aunque no haga falta reiniciar. Si no, el drift queda instalado y el que reconstruya ese servidor va a levantar otro distinto sin saberlo.
+</div>
+
+<div class="np"></div>
+<h2>Para profundizar</h2>
+
+<h3>A · La traducción, en los dos sentidos</h3>
+
+<p>Toma <b>tres</b> variables <code>KAFKA_*</code> del compose del laboratorio 02 y <b>predice la propiedad resultante antes de verificarla</b>. Después haz el camino inverso, eligiendo una propiedad del archivo y reconstruyendo qué variable la generó.</p>
+
+<pre>docker exec kafka-broker-1 sh -c "grep -E '^(tu.propiedad)=' /etc/kafka/kafka.properties"</pre>
+
+<p><b>Lo que hay que mirar.</b> La regla no tiene excepciones, y por eso se puede predecir. Quitar <code>KAFKA_</code>, minúsculas, y <code>_</code> a punto.</p>
+
+<h3>B · Los tres brokers no tienen la misma configuración</h3>
+
+<pre>kafka-cli/describe-broker-config.sh 1 | grep -E "^  (node.id|broker.id)="
+kafka-cli/describe-broker-config.sh 2 | grep -E "^  (node.id|broker.id)="
+kafka-cli/describe-broker-config.sh 3 | grep -E "^  (node.id|broker.id)="</pre>
+
+<div class="salida-rot">Lo que sale · recortado a lo ancho</div>
+<div class="salida">broker 1   node.id=1  synonyms={STATIC_BROKER_CONFIG:node.id=1}
+broker 2   node.id=2  synonyms={STATIC_BROKER_CONFIG:node.id=2}
+broker 3   node.id=3  synonyms={STATIC_BROKER_CONFIG:node.id=3}</div>
+
+<p><b>Lo que hay que mirar.</b> Tres valores distintos, y los tres con origen <code>STATIC_BROKER_CONFIG</code>, porque salieron del compose. <b>La configuración es por broker.</b> Un cambio dinámico en el 1 no toca al 2 ni al 3. <b>Es la causa de los clústeres que se comportan distinto según a qué broker le pegue el cliente</b>, y de los incidentes más difíciles de reproducir que vas a ver.</p>
+
+<h3>C · Un cambio dinámico para todo el clúster</h3>
+
+<p>Existe una tercera forma, que aplica a todos los brokers a la vez:</p>
+
+<pre>docker exec kafka-broker-1 kafka-configs \
+    --bootstrap-server kafka-broker-1:29092 \
+    --alter --entity-type brokers --entity-default \
+    --add-config num.replica.fetchers=2</pre>
+
+<div class="desglose">
+<div><span class="flag">--entity-default</span> — <b>en vez de <code>--entity-name 1</code></b>. Se aplica a todos los brokers que no tengan un valor propio</div>
+</div>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">Completed updating default config for brokers in the cluster.</div>
+
+<p>Y al describirlo:</p>
+
+<div class="salida">num.replica.fetchers=2 sensitive=false
+  synonyms={DYNAMIC_DEFAULT_BROKER_CONFIG:num.replica.fetchers=2,
+            DEFAULT_CONFIG:num.replica.fetchers=1}</div>
+
+<p><b>Lo que hay que mirar.</b> Aparece como <code>DYNAMIC_DEFAULT_BROKER_CONFIG</code>, que es un <b>cuarto origen</b>, distinto del <code>DYNAMIC_BROKER_CONFIG</code> del recorrido. <b>Ya lo habías visto sin buscarlo</b>, en el paso 3, en la línea de <code>min.insync.replicas</code>.</p>
+
+<p>Para deshacerlo, el mismo comando con <code>--delete-config</code>:</p>
+
+<pre>docker exec kafka-broker-1 kafka-configs \
+    --bootstrap-server kafka-broker-1:29092 \
+    --alter --entity-type brokers --entity-default \
+    --delete-config num.replica.fetchers</pre>
+
+<h3>D · Qué es <i>read-only</i> y qué no</h3>
+
+<p>No todos los parámetros se pueden cambiar en caliente. Pruébalo con uno que no:</p>
+
+<pre>kafka-cli/alter-broker-config.sh 1 log.dirs /otra/ruta</pre>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">org.apache.kafka.common.errors.InvalidRequestException:
+Cannot update these configs dynamically: Set(log.dirs)</div>
+
+<p><b>Lo que hay que mirar.</b> El mensaje es <b>distinto del que viste en el paso 5</b>. Aquel decía que el valor no era válido. Este dice que <b>esa propiedad no se puede cambiar en caliente, punto</b>, sea cual sea el valor.</p>
+
+<p><code>log.dirs</code> es <i>read-only</i>. <b>Cambiar dónde viven los datos con el broker corriendo no tiene sentido</b>, y Kafka prefiere no dejarte. Los <i>read-only</i> exigen editar el archivo y reiniciar, que es justamente lo que en un clúster se planifica.</p>
+
+<h3>E · El reporte del laboratorio</h3>
+
+<p><code>plantillas/reporte-entregable.md</code>, con las respuestas de referencia en <code>soluciones/reporte-resuelto.md</code>.</p>
+
+<h2>Antes de cerrar</h2>
+
+<div class="caja ojo">
+  <span class="rot">Deja el terreno limpio</span>
+  <p><b>Comprueba primero que no dejaste ningún cambio dinámico puesto</b>, que es exactamente la higiene que este laboratorio enseña:</p>
+  <pre>kafka-cli/describe-broker-config.sh 1 | grep DYNAMIC</pre>
+  <p>Si devuelve algo que tú pusiste, quítalo con <code>--delete</code>. Y después:</p>
+  <pre style="margin-bottom:0">bin/stop-mi-cluster.sh</pre>
+</div>
+
+<div class="caja sunat">
+  <span class="rot">Lo que te llevas</span>
+  <p style="margin-bottom:0">La próxima vez que alguien diga «pero si en la configuración dice X», ya sabes cuál es la pregunta. <b>¿En cuál de las tres, y se lo preguntaste al broker o lo leíste en un archivo?</b></p>
+</div>
+
+</body></html>

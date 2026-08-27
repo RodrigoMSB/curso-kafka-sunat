@@ -58,10 +58,10 @@ git pull</pre>
 </div>
 
 <div class="caja abuelita">
-  <span class="rot">La metáfora del curso · el restaurante</span>
-  <p>De aquí en adelante Kafka es <b>un restaurante</b>. El <b>mozo</b> que toma y entrega los pedidos es el <b>broker</b>, o sea el servidor. Un <b>tipo de comanda</b> es el <b>tópico</b>. Los <b>sectores del salón</b> son las <b>particiones</b>. Las <b>libretas de respaldo</b> que copian cada comanda son las <b>réplicas</b>.</p>
-  <p>Hoy hay <b>tres mozos</b> en el salón, y entre ellos hay uno que es el <b>jefe de turno</b>. No atiende más mesas que los demás. Lo que hace es <b>decidir quién atiende qué sector</b>, y llevar la cuenta.</p>
-  <p style="margin-bottom:0">Y el jefe de turno no se nombra a dedo. <b>Los tres mozos lo eligen entre ellos</b>, y para eso tienen que estar de acuerdo la mayoría. Eso es el <b>quórum</b>.</p>
+  <span class="rot">La metáfora · seguimos en la empresa de transporte</span>
+  <p>En el laboratorio 01 encendiste <b>un camión</b>. Cada <b>camión</b> es un <b>servidor</b>, y la <b>flota</b> entera es el <b>clúster</b>. El nombre de la empresa pintado en la puerta es la <b>identidad del clúster</b>, y todos los camiones de la flota llevan el mismo.</p>
+  <p>Hoy la flota tiene <b>tres camiones</b>, y entre sus conductores hay uno que es <b>el jefe de flota del turno</b>. No carga más que los demás. Lo que hace es <b>decidir qué carga lleva cada uno</b>, y llevar la cuenta.</p>
+  <p style="margin-bottom:0">Y el jefe de flota no se nombra a dedo. <b>Los tres se ponen de acuerdo entre ellos</b>, y para eso hace falta la mayoría. Eso es el <b>quórum</b>.</p>
 </div>
 
 <div class="np"></div>
@@ -73,7 +73,7 @@ git pull</pre>
 
 <div class="caja abuelita">
   <span class="rot">Para entenderlo mejor</span>
-  Es <b>el nombre del restaurante bordado en el uniforme.</b> Los tres mozos llevan el mismo. Si uno trae otro nombre bordado, no trabaja aquí.
+  Es <b>el nombre de la empresa pintado en la puerta del camión.</b> Los tres de la flota llevan el mismo. Si uno trae otro nombre pintado, no es de esta flota.
 </div>
 
 <h3>El comando</h3>
@@ -131,7 +131,7 @@ code mi-cluster/docker-compose.yml</pre>
 
 <div class="concepto">
   <span class="rot">Concepto · quórum de controladores</span>
-  La lista de <b>quiénes tienen derecho a votar</b> cuando hay que elegir jefe de turno. Se escribe como <code>id@servidor:puerto</code>, separados por comas. <b>Tiene que ser idéntica en los tres servidores</b>, porque si uno tiene una lista distinta, cree que la elección es otra.
+  La lista de <b>quiénes tienen derecho a votar</b> cuando hay que elegir jefe de flota. Se escribe como <code>id@servidor:puerto</code>, separados por comas. <b>Tiene que ser idéntica en los tres servidores</b>, porque si uno tiene una lista distinta, cree que la elección es otra.
 </div>
 
 <div class="caja tecnico">
@@ -223,7 +223,7 @@ cd ..</pre>
 
 <h3>Comprueba que están vivos</h3>
 
-<p><b>Espera unos 30 segundos</b>, porque los tres tienen que encontrarse y elegir jefe de turno.</p>
+<p><b>Espera unos 30 segundos</b>, porque los tres tienen que encontrarse y elegir jefe de flota.</p>
 
 <pre>docker ps --filter name=kafka-broker</pre>
 
@@ -264,7 +264,7 @@ kafka-broker-1   Up 7 seconds   0.0.0.0:9092->9092/tcp</div>
 
 <h3>Qué vamos a hacer</h3>
 
-<p>Los tres están arriba. Ahora hay que preguntarle al clúster <b>quién es el jefe de turno y desde cuándo</b>, que es la consulta que vas a hacer en producción cada vez que algo vaya raro.</p>
+<p>Los tres están arriba. Ahora hay que preguntarle al clúster <b>quién es el jefe de flota y desde cuándo</b>, que es la consulta que vas a hacer en producción cada vez que algo vaya raro.</p>
 
 <h3>El comando</h3>
 
@@ -304,7 +304,7 @@ CurrentObservers:       []</div>
 <table>
 <tr><th>Campo</th><th>Qué dice</th></tr>
 <tr><td><code>ClusterId</code></td><td>El identificador que generaste en el paso 1. <b>Compruébalo, tiene que ser el tuyo</b></td></tr>
-<tr><td><code>LeaderId</code></td><td>Quién es el jefe de turno ahora mismo. <b>A ti te puede salir el 2 o el 3</b>, porque la elección es entre iguales</td></tr>
+<tr><td><code>LeaderId</code></td><td>Quién es el jefe de flota ahora mismo. <b>A ti te puede salir el 2 o el 3</b>, porque la elección es entre iguales</td></tr>
 <tr><td><code>LeaderEpoch</code></td><td><b>El número de turno.</b> Sube en uno cada vez que hay una elección nueva. Es el campo del paso 6</td></tr>
 <tr><td><code>HighWatermark</code></td><td>Hasta dónde llegó el registro de metadatos que los tres comparten. Avanza solo, con el tiempo</td></tr>
 <tr><td><code>CurrentVoters</code></td><td><b>Los tres que tienen derecho a votar.</b> Es la lista que escribiste en el paso 2</td></tr>
@@ -345,8 +345,8 @@ CurrentObservers:       []</div>
 
 <div class="concepto">
   <span class="rot">Concepto · réplica e ISR</span>
-  Una <b>réplica</b> es cada una de las copias de una partición, viviendo en un servidor distinto. Son las libretas de respaldo.<br><br>
-  El <b>ISR</b> (<i>In-Sync Replicas</i>) es <b>cuáles de esas copias están al día en este momento</b>. Son los que marcaron tarjeta. <b>Esta es la columna que vas a mirar en el paso 6</b>, cuando falte uno.
+  Una <b>réplica</b> es cada una de las copias de una partición, viviendo en un servidor distinto. Es la <b>copia del manifiesto de carga</b> que va en otro camión, por si uno se pierde.<br><br>
+  El <b>ISR</b> (<i>In-Sync Replicas</i>) es <b>cuáles de esas copias están al día en este momento</b>. Son <b>los que marcaron tarjeta hoy</b>. <b>Esta es la columna que vas a mirar en el paso 6</b>, cuando falte uno.
 </div>
 
 <h3>El comando</h3>
@@ -390,7 +390,7 @@ CurrentObservers:       []</div>
 </div>
 
 <div class="np"></div>
-<h2><span class="paso">Paso 6 de 7</span>Matar al jefe de turno</h2>
+<h2><span class="paso">Paso 6 de 7</span>Matar al jefe de flota</h2>
 
 <h3>Qué vamos a hacer</h3>
 
@@ -406,7 +406,7 @@ CurrentObservers:       []</div>
 LeaderId:               2
 LeaderEpoch:            3</div>
 
-<p><b>Anota los dos números.</b> En este ejemplo el jefe de turno es el <b>2</b> y el turno va por el <b>3</b>. A ti te van a salir otros.</p>
+<p><b>Anota los dos números.</b> En este ejemplo el jefe de flota es el camión <b>2</b> y el turno va por el <b>3</b>. A ti te van a salir otros.</p>
 
 <h3>Ahora apágalo</h3>
 
@@ -449,7 +449,7 @@ CurrentObservers:       []</div>
 
 <h3>Cómo se lee, y son tres cosas</h3>
 
-<p><b>Uno. Cambió el jefe de turno.</b> Era el 2 y ahora es el 3. <b>Nadie ejecutó un comando de elección.</b> Los dos que quedaban lo hicieron solos.</p>
+<p><b>Uno. Cambió el jefe de flota.</b> Era el 2 y ahora es el 3. <b>Nadie ejecutó un comando de elección.</b> Los dos que quedaban lo hicieron solos.</p>
 
 <p><b>Dos. Subió el número de turno.</b> El <code>LeaderEpoch</code> pasó de 3 a 4. Ese número es la manera que tiene Kafka de saber qué órdenes son del turno actual y cuáles son de un turno viejo. <b>Si un servidor que estuvo desconectado vuelve dando órdenes del turno 3, se las ignoran.</b></p>
 
@@ -499,7 +499,7 @@ CurrentObservers:       []</div>
 <p>El servidor vuelve. La pregunta que casi todo el mundo contesta mal es <b>si recupera el liderazgo que tenía</b>.</p>
 
 <div class="caja">
-  <p style="margin-bottom:0"><b>Piénsalo antes de ejecutar.</b> Era el jefe de turno, tiene todos los datos, su disco está intacto. ¿Vuelve a mandar?</p>
+  <p style="margin-bottom:0"><b>Piénsalo antes de ejecutar.</b> Era el jefe de flota, tiene todos los datos, su disco está intacto. ¿Vuelve a mandar?</p>
 </div>
 
 <h3>El comando</h3>
@@ -526,7 +526,7 @@ NodeId  DirectoryId             LogEndOffset  Lag  Status
 <div class="caja tecnico">
   <span class="rot">La respuesta es no, y mira los tres números</span>
   <p><b>El <code>LeaderId</code> sigue siendo 3.</b> El 2 volvió y no reclamó nada.</p>
-  <p><b>El <code>LeaderEpoch</code> sigue en 4.</b> No hubo elección nueva, porque no hacía falta. Ya había jefe de turno.</p>
+  <p><b>El <code>LeaderEpoch</code> sigue en 4.</b> No hubo elección nueva, porque no hacía falta. Ya había jefe de flota.</p>
   <p style="margin-bottom:0"><b>El 2 volvió como <code>Follower</code>, con <code>Lag</code> en 0.</b> Se puso al día en segundos y se sentó a copiar.</p>
 </div>
 
@@ -636,7 +636,7 @@ java.net.UnknownHostException: kafka-broker-3: Name or service not known</div>
 <pre>docker exec kafka-broker-1 kafka-metadata-quorum \
     --bootstrap-server kafka-broker-1:29092 describe --status</pre>
 
-<p><b>Se cuelga.</b> Esa consulta se la hace al jefe de turno, y no hay. Córtala con <code>Ctrl+C</code>.</p>
+<p><b>Se cuelga.</b> Esa consulta se la hace al jefe de flota, y no hay. Córtala con <code>Ctrl+C</code>.</p>
 
 <div class="caja tecnico">
   <span class="rot">La regla que sale de estas tres pruebas</span>

@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><link rel="stylesheet" href="estilo-alumno.css"></head>
+<body>
+
+<div class="portada">
+  <div class="kicker">C U R S O &nbsp; D E &nbsp; A D M I N I S T R A C I Ó N &nbsp; D E &nbsp; K A F K A</div>
+  <div class="labnum">LABORATORIO 04</div>
+  <h1>¿Y por qué<br>conecta y<br>después falla?</h1>
+  <div class="sub">Listeners y advertised listeners.<br>Guía para hacerlo por tu cuenta, paso a paso</div>
+  <div class="meta">
+    Confluent Platform 8.2.0 · Kafka 4.2 en modo KRaft · 3 brokers<br>
+    Duración estimada · 45 minutos<br>
+    NovaTech Logistics · caso de estudio
+  </div>
+</div>
+
+<h2>Antes de empezar</h2>
+
+<h3>Qué vas a lograr</h3>
+
+<p>Al final de esta guía vas a haber lanzado <b>dos veces el mismo cliente, en la misma red, contra el mismo broker</b>. Una vez va a funcionar y la otra no. <b>Lo único distinto va a ser la dirección por la que entra.</b></p>
+
+<p>Este es el error más común de Kafka en producción, y el más desconcertante, porque <b>la primera conexión funciona</b> y eso hace pensar que la configuración está bien.</p>
+
+<div class="afirmacion">
+  <span class="rot">Lo que este laboratorio demuestra</span>
+  <div class="txt">El mismo cliente, la misma red y el mismo broker. Una dirección funciona y la otra no.</div>
+</div>
+
+<h3>Qué necesitas tener listo</h3>
+
+<table>
+<tr><th>Requisito</th><th>Cómo lo compruebas</th></tr>
+<tr><td>Haber hecho los laboratorios 02 y 03</td><td>Hoy se da por sabido qué es el archivo <code>kafka.properties</code> y cómo se lee</td></tr>
+<tr><td>Docker Desktop corriendo, con 6 GB de RAM</td><td>Ajustes de Docker Desktop, pestaña <i>Resources</i></td></tr>
+<tr><td>Git Bash abierto</td><td><code>cd Capitulo_3/lab-04-multibroker-advertised-listeners</code></td></tr>
+<tr><td>Los puertos 9092, 9093 y 9094 libres</td><td>El paso 1 te avisa si no lo están</td></tr>
+</table>
+
+<h3>El caso</h3>
+
+<div class="caja">
+  <p>El equipo de <b>NovaTech Logistics</b> despliega su primera aplicación contra el clúster. En las pruebas de conexión todo responde. El equipo da el visto bueno.</p>
+  <p>En el primer despliegue de verdad, la aplicación arranca, <b>conecta</b>, y a los pocos segundos empieza a escupir errores de desconexión contra unas direcciones que nadie escribió en su configuración.</p>
+  <p>Alguien dice la frase que va a costar dos días. <b><i>El bootstrap responde, así que Kafka está bien configurado.</i></b></p>
+  <p style="margin-bottom:0">No lo está. Y el motivo es que <b>la dirección por la que un cliente entra la primera vez no es la que usa después</b>, y casi nadie sabe eso hasta que le pasa.</p>
+</div>
+
+<div class="caja abuelita">
+  <span class="rot">La metáfora · las puertas y la tarjeta</span>
+  <p>El <b>mozo</b> es el <b>broker</b>, el <b>tipo de comanda</b> es el <b>tópico</b>, los <b>sectores del salón</b> son las <b>particiones</b>.</p>
+  <p>El local tiene <b>varias puertas</b>. La de la calle, para los clientes. La de servicio, para los proveedores. Y una interna, para hablar entre el salón y la cocina. <b>Esas son los <code>listeners</code></b>, y son las puertas que el local abre.</p>
+  <p style="margin-bottom:0">Y aparte están <b>las tarjetas de visita</b>, que dicen por dónde volver. <b>Esas son los <code>advertised.listeners</code></b>. El local no reparte una sola tarjeta. Reparte <b>una distinta según a quién se la da</b>.</p>
+</div>
+
+<div class="caja ojo">
+  <span class="rot">Y aquí está la trampa del laboratorio</span>
+  <p>Una de las tarjetas dice <b>«aquí al lado»</b>.</p>
+  <p style="margin-bottom:0">Para quien está en el mismo edificio, <b>«aquí al lado» es una dirección perfectamente válida</b>. Para quien está en otro edificio, «aquí al lado» apunta a su propio edificio, <b>y ahí no hay ningún restaurante</b>. La tarjeta no está mal escrita. Está escrita <b>para otro público</b>.</p>
+  <p style="margin-bottom:0"><b>En Kafka esa tarjeta dice <code>localhost</code>.</b></p>
+</div>
+
+<h3>Los dos conceptos, uno al lado del otro</h3>
+
+<div class="concepto">
+  <span class="rot">Concepto · <code>listeners</code></span>
+  Las <b>puertas que el broker abre</b> y en las que se pone a escuchar. Es una lista de <code>nombre://interfaz:puerto</code>. Aquí aparece el <code>0.0.0.0</code>, que significa «escucho por todas las interfaces de red que tengo».
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · <code>advertised.listeners</code></span>
+  Las <b>direcciones que el broker le entrega al cliente</b> para todo lo que venga después de la primera conexión. <b>Nunca lleva <code>0.0.0.0</code></b>, porque una dirección que se le da a otro tiene que ser una a la que ese otro pueda llegar.
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">La asimetría que hay que retener</span>
+  <p style="margin-bottom:0">El <code>0.0.0.0</code> aparece <b>del lado que abre</b> y no aparece nunca <b>del lado que publica</b>. Si lo ves en un <code>advertised.listeners</code>, ese clúster está roto y todavía no se ha notado.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 1 de 7</span>Levantar el clúster</h2>
+
+<h3>Los comandos</h3>
+
+<pre>cd Capitulo_3/lab-04-multibroker-advertised-listeners
+chmod +x bin/*.sh kafka-cli/*.sh
+bin/start-lab.sh</pre>
+
+<div class="desglose">
+<div><span class="flag">bin/start-lab.sh</span> — levanta los tres brokers con los listeners ya separados. <b>Hoy no vas a romper nada</b>, porque el fallo se puede provocar sobre un clúster sano</div>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p style="margin-bottom:0"><code>docker ps --filter name=kafka-broker</code> saca <b>tres líneas</b> con <code>Up</code>, en los puertos 9092, 9093 y 9094.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si algo falla al levantar</span>
+  <p style="margin-bottom:0">Lo mismo del laboratorio 02. <b>Docker apagado</b>, ábrelo. <b><code>port is already allocated</code></b>, hay otro lab del curso arriba. <b>Timeout</b>, sube Docker a 6 GB.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 2 de 7</span>Leer la tarjeta de presentación</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Mirar las dos líneas del broker que deciden todo lo de hoy. <b>Se parecen mucho y dicen cosas distintas.</b></p>
+
+<h3>El comando</h3>
+
+<pre>kafka-cli/check-listeners.sh</pre>
+
+<div class="desglose">
+<div><span class="flag">kafka-cli/check-listeners.sh</span> — envoltorio del curso. Saca del <code>kafka.properties</code> las dos líneas que importan y te explica en qué se diferencian</div>
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">El comando real, con lo que aprendiste en el laboratorio 03</span>
+  <pre style="margin-bottom:0">docker exec kafka-broker-1 sh -c \
+  "grep -E '^(listeners|advertised.listeners)' /etc/kafka/kafka.properties"</pre>
+</div>
+
+<div class="salida-rot">Lo que sale para el broker 1</div>
+<div class="salida">listeners=PLAINTEXT://kafka-broker-1:29092,CONTROLLER://kafka-broker-1:39092,
+          EXTERNAL://0.0.0.0:9092
+
+advertised.listeners=PLAINTEXT://kafka-broker-1:29092,
+                     EXTERNAL://localhost:9092</div>
+
+<h3>Cómo se leen, línea por línea</h3>
+
+<table>
+<tr><th>Nombre</th><th>Puerto</th><th>Para quién</th><th>Qué publica</th></tr>
+<tr><td><code>PLAINTEXT</code></td><td>29092</td><td>Los otros brokers y los contenedores de la red</td><td><code>kafka-broker-1:29092</code></td></tr>
+<tr><td><code>CONTROLLER</code></td><td>39092</td><td>El quórum, y solo el quórum</td><td><b>Nada.</b> No aparece en la tarjeta</td></tr>
+<tr><td><code>EXTERNAL</code></td><td>9092</td><td>Los clientes de tu máquina</td><td><code>localhost:9092</code></td></tr>
+</table>
+
+<div class="caja ojo">
+  <span class="rot">Tres cosas que hay que notar en estas dos líneas</span>
+  <p><b>Uno.</b> El <code>EXTERNAL</code> abre en <code>0.0.0.0:9092</code> y publica <code>localhost:9092</code>. <b>Abre por todas las interfaces y anuncia una sola dirección.</b></p>
+  <p><b>Dos.</b> El <code>CONTROLLER</code> <b>no aparece en <code>advertised.listeners</code></b>. Nadie fuera del quórum tiene por qué saber cómo llegar a él.</p>
+  <p style="margin-bottom:0"><b>Tres.</b> Los nombres <code>PLAINTEXT</code>, <code>CONTROLLER</code> y <code>EXTERNAL</code> <b>los eligió quien escribió el compose</b>. No son palabras reservadas de Kafka. Lo que sí es obligatorio es que cada nombre aparezca en el <code>listener.security.protocol.map</code>.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>Puedes decir, sin mirar, <b>cuál de las dos líneas lleva <code>0.0.0.0</code> y por qué la otra no puede llevarlo</b>.</p>
+  <p style="margin-bottom:0">Y ves que el <code>EXTERNAL</code> publica <code>localhost</code>. <b>Retén esa palabra</b>, porque es la que explica todo lo que viene.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 3 de 7</span>El mapa · qué le devuelve el broker a un cliente</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Este paso no tiene comandos. <b>Es el modelo mental que hace que el resto del laboratorio se entienda</b>, y sin él el paso 5 parece magia negra.</p>
+
+<div class="concepto">
+  <span class="rot">Concepto · <i>bootstrap</i></span>
+  La <b>primera conexión</b> que un cliente hace contra un clúster, con la dirección que tú le escribiste en su configuración. <b>Su único propósito es pedir el mapa.</b> Después de eso, esa dirección no se vuelve a usar.
+</div>
+
+<h3>Lo que pasa cuando un cliente se conecta, en tres tiempos</h3>
+
+<div class="caja tecnico">
+  <span class="rot">Tiempo 1 · el cliente pregunta</span>
+  <p style="margin-bottom:0">El cliente abre una conexión a la dirección de <i>bootstrap</i> que tú le diste y pide los metadatos del clúster. <b>En este momento el broker todavía no tiene identidad para el cliente</b>, y en los mensajes de error aparece como <code>id: -1</code>.</p>
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">Tiempo 2 · el broker le devuelve el mapa</span>
+  <p style="margin-bottom:0">El broker contesta con <b>la lista de todos los brokers del clúster</b>, cada uno con su identificador y <b>con la dirección que ese broker tiene en su <code>advertised.listeners</code></b>, en el listener por el que entró la consulta.</p>
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">Tiempo 3 · el cliente abre conexiones directas</span>
+  <p style="margin-bottom:0"><b>Y aquí está todo.</b> El cliente <b>descarta la dirección de bootstrap</b> y abre una conexión nueva <b>a cada dirección del mapa</b>. Porque cada partición tiene su líder en un broker concreto, y el cliente tiene que hablar directamente con ese.</p>
+</div>
+
+<div class="caja ojo">
+  <span class="rot">La consecuencia, y es la del caso</span>
+  <p><b>El bootstrap puede funcionar y todo lo demás fallar.</b> Son dos conexiones distintas, a dos direcciones distintas, y solo la primera es la que tú escribiste.</p>
+  <p style="margin-bottom:0">Por eso <b><i>«el bootstrap responde»</i> no dice absolutamente nada sobre si el clúster está bien configurado.</b> Dice que una de las dos direcciones funciona.</p>
+</div>
+
+<h3>Mira las tres tarjetas del clúster</h3>
+
+<pre>for n in 1 2 3; do
+  docker exec kafka-broker-$n sh -c \
+    "grep '^advertised.listeners' /etc/kafka/kafka.properties"
+done</pre>
+
+<div class="salida-rot">Lo que sale · el mapa que el clúster va a entregar</div>
+<div class="salida">broker-1  advertised.listeners=PLAINTEXT://kafka-broker-1:29092,EXTERNAL://localhost:9092
+broker-2  advertised.listeners=PLAINTEXT://kafka-broker-2:29093,EXTERNAL://localhost:9093
+broker-3  advertised.listeners=PLAINTEXT://kafka-broker-3:29094,EXTERNAL://localhost:9094</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>Entiendes que <b>un cliente que entre por el <code>EXTERNAL</code> va a recibir tres direcciones <code>localhost</code></b>, con tres puertos distintos.</p>
+  <p style="margin-bottom:0">Y que uno que entre por el <code>PLAINTEXT</code> va a recibir <b>tres nombres de contenedor</b>. <b>Mismo clúster, dos mapas distintos.</b></p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 4 de 7</span>Comprobar el alcance desde tu máquina</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Antes de provocar el fallo, hay que establecer que <b>la puerta externa sí está abierta</b>. Si no, después no sabríamos si el problema es la tarjeta o la puerta.</p>
+
+<h3>El comando</h3>
+
+<pre>bash -c 'exec 3<>/dev/tcp/localhost/9092 && echo "EXTERNAL alcanzable desde el host"'</pre>
+
+<div class="desglose">
+<div><span class="flag">/dev/tcp/localhost/9092</span> — un truco de Bash. <b>No es un archivo de verdad</b>, es una forma de abrir una conexión TCP sin instalar nada</div>
+<div><span class="flag">exec 3&lt;&gt;</span> — abre esa conexión en el descriptor 3. <b>Si el puerto no responde, el comando falla y no imprime nada</b></div>
+</div>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">EXTERNAL alcanzable desde el host</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p><b>Salió la frase.</b> El puerto 9092 responde desde tu máquina, que es exactamente el público para el que se escribió esa tarjeta.</p>
+  <p style="margin-bottom:0">Eso es lo que van a usar las aplicaciones Java del laboratorio 09, que corren en tu máquina y no en un contenedor.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si no imprime nada</span>
+  <p style="margin-bottom:0">El puerto no responde. Comprueba con <code>docker ps --filter name=kafka-broker</code> que el broker 1 esté <code>Up</code> y que en <code>PORTS</code> aparezca <code>0.0.0.0:9092-&gt;9092/tcp</code>. Si no aparece, el contenedor está corriendo pero no publicó el puerto.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 5 de 7</span>El fallo clásico, en vivo</h2>
+
+<div class="caja ojo">
+  <span class="rot">Este es el paso del laboratorio</span>
+  <p style="margin-bottom:0"><b>No vamos a romper nada.</b> El clúster está sano y va a seguir sano. Lo único que cambia es <b>desde dónde entra el cliente y por qué puerta</b>.</p>
+</div>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Lanzar un cliente <b>dentro de la red del clúster</b> y hacerlo entrar por el puerto <b>externo</b>, el 9092. O sea, darle a un vecino la tarjeta escrita para los de fuera.</p>
+
+<h3>Primero, el nombre de la red</h3>
+
+<pre>kafka-cli/show-network.sh</pre>
+
+<div class="desglose">
+<div><span class="flag">kafka-cli/show-network.sh</span> — Docker Compose le antepone el nombre del proyecto a la red, así que <b>no es un nombre fijo</b> y hay que preguntarlo</div>
+</div>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">novatech-lab04_mi-cluster-network</div>
+
+<div class="rescate">
+  <span class="rot">Si <code>show-network.sh</code> no devuelve nada</span>
+  <p>El clúster no está arriba, o su red se llama de otra forma. Sácala tú:</p>
+  <pre>docker inspect kafka-broker-1 --format '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}'</pre>
+  <p style="margin-bottom:0">Ese nombre es el que va en el <code>--network</code> del comando siguiente.</p>
+</div>
+
+<h3>Ahora el cliente, por el puerto externo</h3>
+
+<pre>kafka-cli/test-connection.sh kafka-broker-1 9092</pre>
+
+<div class="desglose">
+<div><span class="flag">kafka-cli/test-connection.sh</span> — lanza un contenedor cliente <b>dentro de la red del clúster</b> y le hace pedir la lista de APIs del broker</div>
+<div><span class="flag">kafka-broker-1</span> — a qué broker le habla. <b>Por su nombre de contenedor, que dentro de la red sí resuelve</b></div>
+<div><span class="flag">9092</span> — <b>el puerto EXTERNAL. Ahí está el experimento</b></div>
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">El comando real que corre por debajo</span>
+  <pre style="margin-bottom:0">docker run --rm --network novatech-lab04_mi-cluster-network \
+    confluentinc/cp-kafka:8.2.0 \
+    kafka-broker-api-versions --bootstrap-server kafka-broker-1:9092</pre>
+</div>
+
+<div class="desglose">
+<div><span class="flag">--network &lt;red&gt;</span> — <b>el cliente arranca DENTRO de la red del clúster</b>, no en tu máquina. Es un vecino</div>
+<div><span class="flag">--rm</span> — el contenedor del cliente se borra solo al terminar</div>
+</div>
+
+<div class="salida-rot">Lo que salió en la corrida medida</div>
+<div class="salida">WARN [LegacyAdminClient clientId=admin-1] Connection to node 2
+  (localhost/127.0.0.1:9093) could not be established. Node may not be available.
+WARN [LegacyAdminClient clientId=admin-1] Connection to node 1
+  (localhost/127.0.0.1:9092) could not be established. Node may not be available.
+WARN [LegacyAdminClient clientId=admin-1] Connection to node 3
+  (localhost/127.0.0.1:9094) could not be established. Node may not be available.
+
+localhost:9093 (id: 2 rack: null isFenced: false) -> ERROR: DisconnectException
+localhost:9094 (id: 3 rack: null isFenced: false) -> ERROR: DisconnectException
+localhost:9092 (id: 1 rack: null isFenced: false) -> ERROR: DisconnectException</div>
+
+<h3>Cómo se lee, y es la lectura más importante del laboratorio</h3>
+
+<div class="caja ojo">
+  <span class="rot">Mira los identificadores · <code>id: 2</code>, <code>id: 1</code>, <code>id: 3</code></span>
+  <p><b>El bootstrap funcionó.</b> Y se prueba con eso.</p>
+  <p>Si el bootstrap hubiera fallado, el cliente no sabría que existen tres brokers, no sabría sus números, y no sabría que ninguno está <code>isFenced</code>. <b>Todo eso lo aprendió del mapa</b>, o sea del tiempo 2 del paso 3.</p>
+  <p style="margin-bottom:0"><b>Lo que falló es el tiempo 3.</b> El cliente tomó las tres direcciones del mapa, que decían <code>localhost:9092</code>, <code>localhost:9093</code> y <code>localhost:9094</code>, y abrió conexiones contra ellas. <b>Y para ese contenedor, <code>localhost</code> es él mismo.</b> Ahí no hay ningún Kafka.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p><b>Las tres líneas de error nombran <code>localhost</code>, una dirección que tú no escribiste en ninguna parte del comando.</b></p>
+  <p style="margin-bottom:0">Esa dirección se la dio el broker. <b>Y es correcta, para otro público.</b></p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si en vez de eso ves <code>id: -1</code></span>
+  <p>Entonces falló <b>el bootstrap</b>, que es un fallo distinto y anterior. <b>Ese <code>-1</code> significa «todavía no sé quién es este broker»</b>, o sea que el cliente nunca llegó a recibir el mapa.</p>
+  <p style="margin-bottom:0">Casi siempre es que el contenedor no arrancó dentro de la red del clúster. Comprueba el nombre de la red con <code>kafka-cli/show-network.sh</code> y vuelve a intentarlo.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el comando funciona y no falla nada</span>
+  <p style="margin-bottom:0">Comprueba que le pasaste el puerto <b>9092</b> y no el 29092. Con el interno funciona, y ese es el paso 6.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 6 de 7</span>El mismo cliente, por la puerta de dentro</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p><b>Cambiar un número.</b> Nada más. El mismo comando, el mismo contenedor, la misma red, el mismo broker.</p>
+
+<h3>El comando</h3>
+
+<pre>kafka-cli/test-connection.sh kafka-broker-1 29092</pre>
+
+<div class="desglose">
+<div><span class="flag">29092</span> — <b>el puerto PLAINTEXT, el interno.</b> Es la única diferencia con el paso 5</div>
+</div>
+
+<div class="salida-rot">Lo que salió en la corrida medida</div>
+<div class="salida">kafka-broker-3:29094 (id: 3 rack: null isFenced: false) -> (
+	Produce(0): 0 to 13 [usable: 13],
+	InitProducerId(22): 0 to 5 [usable: 5],
+	DescribeProducers(61): 0 [usable: 0],
+	...</div>
+
+<div class="caja tecnico">
+  <span class="rot">Compara las dos salidas, y fíjate en la dirección</span>
+  <p>En el paso 5 el cliente recibió <code>localhost:9092</code> y no pudo llegar. <b>Aquí recibió <code>kafka-broker-3:29094</code></b>, que es un nombre que la red de Docker sí resuelve, y llegó sin problema.</p>
+  <p style="margin-bottom:0"><b>El clúster no cambió. El cliente no cambió. Cambió la tarjeta que le tocó.</b></p>
+</div>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p>Sale <b>la lista larga de APIs</b> en vez de tres errores. <b>Aquí lo largo es la buena noticia.</b></p>
+  <p style="margin-bottom:0">Y las direcciones que aparecen son <b>nombres de contenedor</b>, no <code>localhost</code>.</p>
+</div>
+
+<div class="afirmacion">
+  <span class="rot">Lo que acabas de demostrar</span>
+  <div class="txt">El mismo cliente, la misma red y el mismo broker. Una dirección funciona y la otra no.</div>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 7 de 7</span>La pregunta que hay que saber contestar</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Cerrar el laboratorio con la conversación real, la del caso.</p>
+
+<div class="caja">
+  <p><b>Un colega te dice</b>, <i>«el bootstrap responde, así que Kafka está bien configurado»</i>.</p>
+  <p style="margin-bottom:0"><b>Escribe tu respuesta antes de seguir leyendo.</b> Tienes todo lo que hace falta.</p>
+</div>
+
+<div class="caja sunat">
+  <span class="rot">La respuesta, con lo que mediste</span>
+  <p>El bootstrap prueba que <b>una</b> dirección funciona, que es la que tú escribiste en la configuración del cliente. <b>No prueba nada sobre las direcciones que el broker le va a devolver</b>, que son otras y no están en la configuración de nadie.</p>
+  <p style="margin-bottom:0">Y lo viste en pantalla. <b>El bootstrap del paso 5 funcionó</b> —el cliente supo que había tres brokers, con sus números— <b>y las tres conexiones siguientes fallaron</b>.</p>
+</div>
+
+<h3>Y la pregunta operativa que sale de ahí</h3>
+
+<div class="caja ojo">
+  <span class="rot">Un <code>advertised.listeners</code> no es correcto o incorrecto · lo es para un público</span>
+  <table style="margin-bottom:0">
+  <tr><th>Público</th><th>Listener que le sirve</th><th>Qué tiene que publicar</th></tr>
+  <tr><td>Aplicaciones en tu máquina</td><td><code>EXTERNAL</code></td><td><code>localhost:9092</code></td></tr>
+  <tr><td>Otros brokers y contenedores de la red</td><td><code>PLAINTEXT</code></td><td><code>kafka-broker-1:29092</code></td></tr>
+  <tr><td>Clientes de otra máquina de la red corporativa</td><td>Uno más, con la <b>IP o el nombre DNS del servidor</b></td><td>Ni <code>localhost</code> ni el nombre del contenedor</td></tr>
+  </table>
+</div>
+
+<p><b>Esa tercera fila es la de SUNAT</b>, y es la que no existe en este laboratorio. Un clúster que solo publica <code>localhost</code> funciona perfectamente en la máquina del desarrollador y no sirve para nadie más.</p>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p>Puedes contestar, sin mirar, <b>qué prueba y qué no prueba una conexión de bootstrap exitosa</b>.</p>
+  <p style="margin-bottom:0">Y sabes cuál es la primera pregunta ante un cliente que conecta y después falla. <b>¿Qué direcciones le está devolviendo el broker, y ese cliente puede llegar a ellas?</b></p>
+</div>
+
+<div class="np"></div>
+<h2>Lo que aprendiste</h2>
+
+<div class="regla"><span class="num">1</span>
+<b>La dirección por la que entras no es la que usas después.</b><br>
+El bootstrap sirve para pedir el mapa y se descarta. Todo lo demás va a las direcciones que el broker devolvió, que son las de su <code>advertised.listeners</code> y no están en la configuración de tu cliente.
+</div>
+
+<div class="regla"><span class="num">2</span>
+<b>«El bootstrap responde» no dice nada sobre la configuración.</b><br>
+Lo viste en pantalla. El bootstrap funcionó, el cliente supo que había tres brokers con sus números, y las tres conexiones siguientes fallaron contra direcciones que él no eligió.
+</div>
+
+<div class="regla"><span class="num">3</span>
+<b>Un <code>advertised.listeners</code> es correcto para un público, no en absoluto.</b><br>
+<code>localhost:9092</code> es perfecto para una aplicación en tu máquina e inservible para un contenedor. La pregunta nunca es «¿está bien?», sino «¿quién lo va a leer y puede llegar ahí?».
+</div>
+
+<div class="regla"><span class="num">4</span>
+<b>El <code>0.0.0.0</code> va del lado que abre, nunca del lado que publica.</b><br>
+En <code>listeners</code> significa «escucho por todas mis interfaces». En <code>advertised.listeners</code> no significa nada útil, porque es una dirección que otro tiene que poder usar.
+</div>
+
+<div class="np"></div>
+<h2>Para profundizar</h2>
+
+<h3>A · El cliente que ni siquiera llega al bootstrap</h3>
+
+<p>Es el fallo <b>anterior</b> al del paso 5, y conviene saber distinguirlos. Lanza el mismo cliente <b>sin</b> <code>--network</code>, o sea fuera de la red del clúster:</p>
+
+<pre>docker run --rm confluentinc/cp-kafka:8.2.0 \
+    kafka-broker-api-versions --bootstrap-server localhost:9092</pre>
+
+<div class="salida-rot">Lo que salió en la corrida medida</div>
+<div class="salida">WARN Connection to node -1 (localhost/127.0.0.1:9092) could not be established.
+WARN Bootstrap broker localhost:9092 (id: -1 rack: null isFenced: false) disconnected
+java.lang.RuntimeException: Request METADATA failed on brokers
+  [localhost:9092 (id: -1 rack: null isFenced: false)]</div>
+
+<div class="caja tecnico">
+  <span class="rot">Compara este error con el del paso 5, porque es el mismo síntoma con otra causa</span>
+  <p><b>Aquí el identificador es <code>-1</code>.</b> El cliente nunca supo quién era ese broker, porque el bootstrap no llegó a completarse.</p>
+  <p>En el paso 5 los identificadores eran <b>1, 2 y 3</b>, o sea que el bootstrap sí funcionó.</p>
+  <p style="margin-bottom:0"><b>Ese número es el diagnóstico.</b> Con <code>-1</code>, revisa la dirección de bootstrap y la conectividad. Con un número real, revisa el <code>advertised.listeners</code>.</p>
+</div>
+
+<p><b>Y ojo con una cosa</b>, porque este contenedor tampoco está en tu máquina. Aunque el puerto 9092 responda desde tu Mac o tu Windows, <b>para este contenedor <code>localhost</code> es él mismo</b>, igual que en el paso 5. Es la misma lección desde otro ángulo.</p>
+
+<h3>B · Colapsar dos listeners en el mismo puerto</h3>
+
+<p>Baja tu clúster de trabajo, edita <code>mi-cluster/docker-compose.yml</code> y ponle al broker 1 el mismo puerto en dos listeners:</p>
+
+<pre>KAFKA_LISTENERS: 'PLAINTEXT://kafka-broker-1:9092,CONTROLLER://kafka-broker-1:9092'</pre>
+
+<p>Levanta y mira los logs:</p>
+
+<pre>docker logs kafka-broker-1 2>&1 | tail -30</pre>
+
+<div class="salida-rot">Lo que sale · medido con esa configuración exacta</div>
+<div class="salida">Exception in thread "main" java.lang.IllegalArgumentException: requirement
+failed: Each listener must have a different port, listeners:
+[PLAINTEXT://kafka-broker-1:9092, CONTROLLER://kafka-broker-1:9092]
+  at kafka.utils.CoreUtils$.checkDuplicateListenerPorts(CoreUtils.scala:130)</div>
+
+<p><b>Lo que hay que mirar.</b> El contenedor <b>termina con código 1 y no llega a arrancar</b>. Y el mensaje es de los buenos, porque dice exactamente qué pasa y te lista los dos listeners que chocan.</p>
+
+<p>Dos listeners no pueden compartir puerto, porque el broker no tendría forma de saber qué protocolo habla cada conexión que entra. Fíjate además en dónde falla, <b>en <code>checkDuplicateListenerPorts</code></b>. Es una validación que Kafka hace antes de levantar nada. <b>Restaura la configuración antes de seguir.</b></p>
+
+<h3>C · Anunciar una dirección que el cliente no resuelve</h3>
+
+<p>Es el reto que convierte el paso 5 en un cambio de configuración de verdad. Baja el clúster y ponle al broker 1:</p>
+
+<pre>KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka-broker-1:29092,EXTERNAL://kafka-broker-1:9092'</pre>
+
+<p>Ahora el <code>EXTERNAL</code> se anuncia con el <b>nombre interno del contenedor</b> en vez de con <code>localhost</code>. Levanta, y prueba las dos direcciones:</p>
+
+<pre>kafka-cli/check-listeners.sh
+kafka-cli/test-connection.sh kafka-broker-1 9092</pre>
+
+<div class="caja">
+  <p style="margin-bottom:0"><b>Predice antes de ejecutar</b>, que aquí está la gracia. Con esa tarjeta, ¿quién va a poder conectar y quién no? El cliente de dentro de la red, el de tu máquina, o los dos. <b>Escríbelo antes de correr los comandos.</b></p>
+</div>
+
+<p>Y compruébalo con las dos pruebas que ya sabes hacer. La de dentro de la red es <code>test-connection.sh kafka-broker-1 9092</code>, y la de tu máquina es el <code>/dev/tcp</code> del paso 4 seguido de una aplicación real.</p>
+
+<p><b>La pista está en el recorrido.</b> En el paso 5 viste que lo que decide si un cliente llega no es el puerto, sino <b>si puede resolver la dirección que el broker le devolvió</b>. Aplica esa regla a los dos públicos y vas a saber la respuesta antes de teclear.</p>
+
+<div class="caja ojo">
+  <span class="rot">Y ahí está la lección completa</span>
+  <p style="margin-bottom:0">Con este cambio <b>no arreglas nada. Cambias de público.</b> Por eso los clústeres de producción publican <b>varios</b> listeners a la vez, uno por cada tipo de cliente que tienen que atender. <b>Restaura la configuración cuando termines.</b></p>
+</div>
+
+<h3>D · El reporte del laboratorio</h3>
+
+<p><code>plantillas/reporte-entregable.md</code>, con las respuestas de referencia en <code>soluciones/reporte-resuelto.md</code> y en <code>soluciones/respuestas-desafio.md</code>.</p>
+
+<h2>Antes de cerrar</h2>
+
+<div class="caja ojo">
+  <span class="rot">Deja el terreno limpio</span>
+  <p><b>Si hiciste los bloques B o C de la sección anterior, restaura primero el compose</b>, o el laboratorio siguiente va a arrancar con un clúster mal configurado y no vas a saber por qué.</p>
+  <pre style="margin-bottom:0">bin/stop-mi-cluster.sh</pre>
+</div>
+
+<div class="caja sunat">
+  <span class="rot">Lo que te llevas</span>
+  <p style="margin-bottom:0">La próxima vez que una aplicación conecte y después falle, ya no vas a mirar la configuración del cliente. Vas a mirar <b>qué direcciones le está devolviendo el broker</b>, con <code>check-listeners.sh</code> o con un <code>grep</code> al <code>kafka.properties</code>, y vas a preguntarte si ese cliente concreto puede llegar a ellas.</p>
+</div>
+
+</body></html>
