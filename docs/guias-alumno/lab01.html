@@ -67,7 +67,7 @@ git pull</pre>
 
 <div class="concepto">
   <span class="rot">Concepto · imagen</span>
-  Una <b>imagen</b> es un paquete que trae un programa y todo lo que necesita para funcionar. Cuando la ejecutas, se convierte en un <b>contenedor</b>: una copia viva de ese paquete, corriendo.
+  Una <b>imagen</b> es un paquete que trae un programa y todo lo que necesita para funcionar. Cuando la ejecutas, se convierte en un <b>contenedor</b>, que es una copia viva de ese paquete, corriendo.
 </div>
 
 <h3>El comando</h3>
@@ -91,7 +91,7 @@ Después:
 
 <div class="check">
   <span class="rot">Vas bien si…</span>
-  Viste los cuatro pasos numerados y terminó sin errores. <b>Si el paso [1/4] se demora varios minutos, es porque está descargando la imagen por primera vez</b> — son unos 800 MB y solo pasa una vez.
+  Viste los cuatro pasos numerados y terminó sin errores. <b>Si el paso [1/4] se demora varios minutos, es porque está descargando la imagen por primera vez.</b> Son unos 800 MB y solo pasa una vez.
 </div>
 
 <div class="caja tecnico">
@@ -105,7 +105,7 @@ Después:
 
 <h3>Qué vamos a hacer</h3>
 
-<p>La imagen trae un archivo de configuración de ejemplo. <b>No es el que va a usar nuestro servidor</b> — el nuestro lo armamos nosotros. Pero mirarlo sirve para ver qué decisiones trae Kafka por defecto.</p>
+<p>La imagen trae un archivo de configuración de ejemplo. <b>Ese no es el que va a usar nuestro servidor.</b> El nuestro lo armamos nosotros. Pero mirarlo sirve para ver qué decisiones trae Kafka por defecto.</p>
 
 <div class="caja abuelita">
   <span class="rot">Para entenderlo mejor</span>
@@ -152,7 +152,7 @@ listeners=PLAINTEXT://:9092,CONTROLLER://:9093</div>
     sh -c "grep '^log.dirs' /etc/kafka/server.properties"</pre>
 
 <div class="desglose">
-<div><span class="flag">sh -c "…"</span> — abre una consola dentro del contenedor para ejecutar lo que va entre comillas. <b>Hace falta porque el <code>grep</code> tiene que correr allá adentro</b></div>
+<div><span class="flag">sh -c "…"</span> — abre una consola dentro del contenedor para ejecutar lo que va entre comillas. <b>Hace falta porque el <code>grep</code> tiene que correr ahí dentro</b></div>
 <div><span class="flag">grep '^log.dirs'</span> — busca las líneas que <b>empiezan</b> por <code>log.dirs</code>. El símbolo <code>^</code> significa «principio de línea»; sin él saldrían también los comentarios que la mencionan de paso</div>
 </div>
 
@@ -161,7 +161,7 @@ listeners=PLAINTEXT://:9092,CONTROLLER://:9093</div>
 
 <div class="caja ojo">
   <span class="rot">Aquí hay dos cosas importantes</span>
-  <p><b>La primera es una trampa de nombre.</b> En Kafka, «log» no significa los mensajes que escupe un programa. <b>El log ES la base de datos de Kafka</b>: el registro donde queda escrito cada mensaje. <code>log.dirs</code> dice dónde vive ese registro en el disco.</p>
+  <p><b>La primera es una trampa de nombre.</b> En Kafka, «log» no significa los mensajes que escupe un programa. <b>El log ES la base de datos de Kafka</b>, el registro donde queda escrito cada mensaje. <code>log.dirs</code> dice dónde vive ese registro en el disco.</p>
   <p style="margin-bottom:0"><b>La segunda es dónde lo pone el ejemplo:</b> en <code>/tmp</code>, que en Linux es una carpeta que se vacía al reiniciar el sistema. <b>Un servidor que guarda sus datos ahí los pierde en el próximo reinicio.</b> Por eso este archivo es un ejemplo y no una configuración de producción.</p>
 </div>
 
@@ -303,7 +303,7 @@ docker compose up -d</pre>
 
 <div class="rescate">
   <span class="rot">Si dice Restarting</span>
-  <p>Significa que el servidor arranca y se muere en bucle. <b>Casi siempre es el <code>CLUSTER_ID</code> mal pegado</b> — un espacio de más, una comilla que se perdió.</p>
+  <p>Significa que el servidor arranca y se muere en bucle. <b>Casi siempre es el <code>CLUSTER_ID</code> mal pegado.</b> Un espacio de más, o una comilla que se perdió.</p>
   <p style="margin-bottom:0">Míralo tú mismo con: <code>docker logs kafka-broker</code></p>
 </div>
 
@@ -324,7 +324,7 @@ docker exec kafka-broker kafka-broker-api-versions \
 <div class="check">
   <span class="rot">Vas bien si…</span>
   <p>Sale <b>una lista larga</b> de operaciones. <b>Aquí lo largo es la buena noticia:</b> si el servidor estuviera caído verías una sola línea corta con un error.</p>
-  <p style="margin-bottom:0">Fíjate en la primera línea: dice <code>id: 1</code> —el número de este servidor— y <code>isFenced: false</code>, que significa que está habilitado para atender clientes.</p>
+  <p style="margin-bottom:0">Fíjate en la primera línea. Dice <code>id: 1</code>, que es el número de este servidor, y <code>isFenced: false</code>, que significa que está habilitado para atender clientes.</p>
 </div>
 
 <div class="np"></div>
@@ -426,7 +426,7 @@ cd ..</pre>
 
 <div class="check">
   <span class="rot">Vas bien si…</span>
-  Salen tres líneas con <code>Removed</code>: el contenedor, el volumen y la red. <b>Y las tres llevan el prefijo <code>novatech-lab01</code></b> — el comando solo tocó lo suyo.
+  Salen tres líneas con <code>Removed</code>: el contenedor, el volumen y la red. <b>Y las tres llevan el prefijo <code>novatech-lab01</code>.</b> El comando solo tocó lo suyo.
 </div>
 
 <h3>Genera una identidad nueva</h3>
@@ -490,7 +490,7 @@ Y si encuentra una distinta a la esperada, se niega a partir. Prefiere no arranc
 
 <div class="regla"><span class="num">2</span>
 <b>El factor de replicación no puede superar el número de servidores.</b><br>
-Con uno, el máximo es 1. Con tres, puedes pedir 3 — y en producción es lo que corresponde.
+Con uno, el máximo es 1. Con tres, puedes pedir 3, y en producción es lo que corresponde.
 </div>
 
 <div class="regla"><span class="num">3</span>
