@@ -1,10 +1,36 @@
 // Renderiza una guia de alumno (HTML) a PDF usando Chrome headless por CDP.
 //
-// Por que no wkhtmltopdf: el proyecto esta archivado desde 2023 y ya no
-// existe formula ni cask en Homebrew. Chrome headless produce el mismo
-// resultado y soporta el pie de pagina con numeracion via footerTemplate.
-//
 //   node render-pdf.mjs <entrada.html> <salida.pdf> "<texto del pie izquierdo>"
+//
+// ── POR QUE EXISTE ESTE ARCHIVO ──────────────────────────────────────────
+//
+// El encargo original pedia generar los PDF con wkhtmltopdf:
+//
+//   wkhtmltopdf --enable-local-file-access --encoding utf-8 \
+//       --footer-font-size 7 --footer-font-name Helvetica \
+//       --footer-left "Lab NN · <titulo corto>" \
+//       --footer-right "[page]" --footer-spacing 6 \
+//       labNN.html labNN.pdf
+//
+// Eso ya no se puede. wkhtmltopdf esta ARCHIVADO desde 2023: el repositorio
+// no acepta cambios y Homebrew retiro tanto la formula como el cask, asi que
+// en macOS no hay forma de instalarlo sin bajar un binario suelto de un
+// proyecto sin mantenimiento.
+//
+// Este script lo reemplaza con Chrome headless manejado por el protocolo
+// DevTools (CDP). No usa ninguna dependencia de npm: Node 22 ya trae fetch y
+// WebSocket, que es todo lo que hace falta para hablar con el navegador.
+//
+// La equivalencia con la linea original es exacta:
+//
+//   --footer-font-size 7 / --footer-font-name Helvetica  -> el footerTemplate
+//   --footer-left "..."                                  -> el argumento 3
+//   --footer-right "[page]"                              -> <span class="pageNumber">
+//   los margenes del @page del CSS                       -> la constante MARGIN
+//
+// Y hay una ventaja sobre wkhtmltopdf, que usaba un WebKit de 2012: Chrome
+// renderiza SVG y CSS moderno sin limitaciones, asi que las guias pueden
+// llevar diagramas de verdad.
 
 import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';

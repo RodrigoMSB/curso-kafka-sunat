@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><link rel="stylesheet" href="estilo-alumno.css"></head>
+<body>
+
+<div class="portada">
+  <div class="kicker">C U R S O &nbsp; D E &nbsp; A D M I N I S T R A C I Ó N &nbsp; D E &nbsp; K A F K A</div>
+  <div class="labnum">LABORATORIO 08b</div>
+  <h1>Kafka sin<br>Docker<br>adelante</h1>
+  <div class="sub">Instalación sobre RHEL 9 con yum.<br>Guía para hacerlo por tu cuenta, paso a paso</div>
+  <div class="meta">
+    Confluent Platform 8.2.0 · RHEL 9 (UBI) · un solo nodo<br>
+    Duración estimada · 45 minutos<br>
+    NovaTech Logistics · caso de estudio
+  </div>
+</div>
+
+<h2>Antes de empezar</h2>
+
+<h3>Qué vas a lograr</h3>
+
+<p>En los laboratorios anteriores ejecutaste comandos reales de Kafka contra clústeres reales. Nada de eso fue una simulación. <b>Pero hubo una capa que no viste nunca, porque Docker la tapa entera.</b></p>
+
+<p>Hoy vas a instalar Kafka con <code>yum</code> en un servidor RHEL 9, a editar su <code>server.properties</code> con un editor de texto, a arrancarlo con <code>systemd</code>, y a terminar ejecutando <b>los mismos comandos de los laboratorios 01 y 02, sin <code>docker exec</code> adelante</b>.</p>
+
+<div class="afirmacion">
+  <span class="rot">Lo que este laboratorio demuestra</span>
+  <div class="txt">Los cuarenta comandos son exactamente los mismos. Lo único que cambia es la capa de abajo.</div>
+</div>
+
+<p><b>Si al final dices «es lo mismo, pero sin Docker adelante», el laboratorio cumplió.</b></p>
+
+<h3>Tres cosas dichas de frente antes de empezar</h3>
+
+<div class="caja tecnico">
+  <span class="rot">Uno · el sistema es RHEL 9 de verdad</span>
+  <p style="margin-bottom:0">La imagen base es <b>UBI 9</b> (<i>Universal Base Image</i>), la imagen oficial de Red Hat, libre y sin suscripción. No es Rocky ni AlmaLinux, que son compatibles pero no son RHEL. <b>Es RHEL</b>, y lo vas a comprobar tú mismo.</p>
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">Dos · instalamos el broker, no la plataforma completa</span>
+  <p>En producción SUNAT instala <b><code>confluent-platform</code></b>, que arrastra Schema Registry, ksqlDB, Connect y Control Center. Son unos 2,4 GB para un laboratorio de un solo broker.</p>
+  <p style="margin-bottom:0">Aquí instalamos <b><code>confluent-kafka</code></b>, el broker empaquetado por Confluent, que trae <b>exactamente los mismos comandos</b>. El procedimiento, o sea el repositorio, la clave GPG y el <code>yum install</code>, <b>es idéntico al de producción</b>. Lo único que cambia es el nombre del paquete.</p>
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">Tres · <code>systemd</code> corre dentro de un contenedor</span>
+  <p style="margin-bottom:0">Este laboratorio monta el árbol de cgroups del sistema para que <code>systemd</code> pueda arrancar dentro del contenedor. Es lo mínimo que necesita. <b>No usa <code>--privileged</code> y no agrega ninguna capacidad</b>, así que el contenedor tiene los mismos permisos que cualquier otro lab del curso. En un servidor real esto no hace falta, porque allí <code>systemd</code> <b>es</b> el sistema.</p>
+</div>
+
+<h3>Qué necesitas tener listo</h3>
+
+<table>
+<tr><th>Requisito</th><th>Cómo lo compruebas</th></tr>
+<tr><td>Docker Desktop corriendo</td><td>Solo para levantar el servidor. Después no lo vuelves a usar</td></tr>
+<tr><td>Conexión a internet</td><td>La primera vez, el servidor se construye descargando el paquete del repositorio de Confluent</td></tr>
+<tr><td>Git Bash abierto</td><td><code>cd Capitulo_3/lab-08b-instalacion-rhel</code></td></tr>
+<tr><td>Haber hecho los laboratorios 01, 02 y 03</td><td>Hoy se comparan sus salidas con las de aquí, línea por línea</td></tr>
+</table>
+
+<div class="caja abuelita">
+  <span class="rot">La metáfora · hoy abres el local vacío</span>
+  <p>En los trece laboratorios anteriores trabajaste en <b>un restaurante llave en mano</b>. Llegabas, encendías las luces y ya estaba todo. La cocina instalada, el gas conectado, el personal contratado.</p>
+  <p>Hoy <b>abres el local vacío</b>. Hay que contratar el suministro, que es el <b>repositorio</b>. Instalar la cocina, que es el <b>paquete</b>. Escribir en el reglamento a qué hora se enciende, que es el <b>servicio de systemd</b>. Y decir <b>quién tiene la llave</b>, que es el usuario del sistema.</p>
+  <p style="margin-bottom:0"><b>Y la carta es exactamente la misma.</b> Los mismos platos, los mismos nombres, la misma preparación. Esa es la afirmación del laboratorio.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 1 de 7</span>Entrar al servidor</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Levantar el servidor RHEL y entrar en él. <b>Este paso tiene el único <code>docker</code> de todo el laboratorio.</b></p>
+
+<h3>Los comandos</h3>
+
+<pre>cd Capitulo_3/lab-08b-instalacion-rhel
+chmod +x bin/*.sh
+bin/start-lab.sh</pre>
+
+<div class="desglose">
+<div><span class="flag">bin/start-lab.sh</span> — construye la imagen de RHEL 9 con Kafka instalado por <code>yum</code>, levanta el contenedor y espera a que <code>systemd</code> termine de arrancar. <b>La primera vez tarda varios minutos</b>, porque descarga y compila la imagen. Las siguientes son inmediatas</div>
+</div>
+
+<div class="salida-rot">El final de lo que vas a ver · recortado</div>
+<div class="salida">  ✓ systemd operativo: running
+
+  Sistema:    RHEL 9 (UBI)
+  Paquete:    confluent-kafka-8.2.0-1.noarch
+  Comandos:   40 binarios kafka-* en /usr/bin
+  Servicio:   confluent-kafka esta inactive
+
+  El broker todavia NO esta encendido, y eso es a proposito:
+  formatear el almacenamiento y arrancar el servicio es el lab.
+
+  Entra al servidor:
+    docker exec -it kafka-rhel bash</div>
+
+<h3>Ahora entra</h3>
+
+<pre>docker exec -it kafka-rhel bash</pre>
+
+<div class="desglose">
+<div><span class="flag">docker exec -it</span> — la <code>-i</code> mantiene la entrada abierta y la <code>-t</code> te da una terminal. <b>Juntas son las que te dan una consola interactiva</b></div>
+<div><span class="flag">kafka-rhel</span> — el nombre del servidor. <b>Fíjate en que no se llama <code>kafka-broker-1</code></b>, porque no es un broker de los labs anteriores. Es un servidor</div>
+<div><span class="flag">bash</span> — el programa que quieres ejecutar adentro, que es una consola</div>
+</div>
+
+<div class="caja ojo">
+  <span class="rot">A partir de aquí, olvídate de Docker</span>
+  <p style="margin-bottom:0"><b>Ese fue el único <code>docker</code> del laboratorio.</b> De ahora en adelante estás dentro de un servidor RHEL y todos los comandos son los de siempre. El prompt te lo va a recordar, porque dice <code>rhel9-kafka</code>.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>El prompt cambió y ahora nombra a <code>rhel9-kafka</code>. Compruébalo:</p>
+  <pre>cat /etc/redhat-release
+systemctl is-system-running</pre>
+  <div class="salida" style="margin-bottom:0">Red Hat Enterprise Linux release 9.8 (Plow)
+running</div>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si <code>start-lab.sh</code> falla construyendo la imagen</span>
+  <p><b>Casi siempre es la red.</b> El <code>yum install</code> baja el paquete de <code>packages.confluent.io</code>. Si estás detrás de un proxy corporativo, puede que no salga.</p>
+  <p style="margin-bottom:0">Vuelve a intentarlo. Docker reutiliza las capas que ya bajó, así que el segundo intento arranca donde se quedó el primero.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si dice algo sobre <code>cgroup</code> o <code>Read-only file system</code></span>
+  <p style="margin-bottom:0"><code>systemd</code> necesita escribir en el árbol de cgroups y no pudo. <b>No lo arregles con <code>--privileged</code></b>. Comprueba primero que estás usando Docker Desktop actualizado, y si persiste, avisa antes de cambiar el compose.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 2 de 7</span>De dónde sale Kafka sin Docker</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Sin Docker, Kafka sale de <b>un repositorio de paquetes</b>. Vamos a mirar el que quedó declarado en el servidor, porque cada línea de ese archivo importa en producción.</p>
+
+<div class="concepto">
+  <span class="rot">Concepto · repositorio de paquetes</span>
+  Un <b>servidor del que tu sistema se baja software</b>, con una lista de qué hay y una firma que prueba quién lo publicó. Es el equivalente de la tienda de aplicaciones del teléfono. En RHEL se declaran en <code>/etc/yum.repos.d/</code>, un archivo por repositorio.
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · paquete RPM</span>
+  La <b>unidad en que se instala software</b> en RHEL. Trae los binarios, los archivos de configuración, la definición del servicio y las instrucciones para crear el usuario que lo va a correr. <b>Todo eso lo hace una sola línea de <code>yum install</code></b>.
+</div>
+
+<h3>El comando</h3>
+
+<pre>cat /etc/yum.repos.d/confluent.repo</pre>
+
+<div class="desglose">
+<div><span class="flag">/etc/yum.repos.d/</span> — la carpeta donde RHEL guarda la lista de repositorios de los que puede instalar. <b>Un archivo por repositorio</b></div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">[Confluent]
+name=Confluent repository
+baseurl=https://packages.confluent.io/rpm/8.2
+gpgcheck=1
+gpgkey=https://packages.confluent.io/rpm/8.2/archive.key
+enabled=1</div>
+
+<table>
+<tr><th>Línea</th><th>Por qué importa en producción</th></tr>
+<tr><td><code>baseurl</code></td><td>La rama 8.2 del repositorio oficial de Confluent. <b>De aquí sale el software</b></td></tr>
+<tr><td><code>gpgkey</code></td><td>La clave pública con la que Confluent firma sus paquetes</td></tr>
+<tr><td><code>gpgcheck=1</code></td><td><b>No es decorativo.</b> Obliga a <code>yum</code> a verificar esa firma antes de instalar. Sin él, <code>yum</code> instalaría lo que sea que responda en esa URL</td></tr>
+</table>
+
+<h3>Qué quedó instalado</h3>
+
+<pre>rpm -q confluent-kafka
+rpm -qi confluent-kafka | grep -E "^(Name|Version|License)"</pre>
+
+<div class="desglose">
+<div><span class="flag">rpm -q</span> — pregunta si un paquete está instalado y con qué versión. <b>La <code>q</code> es de <i>query</i></b></div>
+<div><span class="flag">rpm -qi</span> — la ficha completa del paquete. Aquí la filtramos a tres líneas con <code>grep</code></div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">confluent-kafka-8.2.0-1.noarch
+
+Name        : confluent-kafka
+Version     : 8.2.0
+License     : Apache (v2)</div>
+
+<div class="caja tecnico">
+  <span class="rot">Sobre la versión fija</span>
+  <p style="margin-bottom:0">El repositorio sirve toda la rama 8.2 y hoy ya ofrece una versión más nueva que la 8.2.0. <b>El laboratorio la fija a propósito</b>, porque es la misma de los otros trece labs, y sin esa igualdad las salidas que vas a comparar en el paso 6 dejarían de calzar. <b>En producción se hace lo mismo, y por la misma razón.</b> Un clúster no se actualiza porque el repositorio publicó algo el martes.</p>
+</div>
+
+<h3>Dónde quedaron los comandos</h3>
+
+<pre>ls /usr/bin/kafka-* | head -8
+ls /usr/bin/kafka-* | wc -l</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">/usr/bin/kafka-acls
+/usr/bin/kafka-broker-api-versions
+/usr/bin/kafka-client-metrics
+/usr/bin/kafka-cluster
+/usr/bin/kafka-configs
+/usr/bin/kafka-console-consumer
+/usr/bin/kafka-console-producer
+/usr/bin/kafka-console-share-consumer
+
+40</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p><b>Cuarenta comandos, en <code>/usr/bin</code>, en el PATH.</b></p>
+  <p style="margin-bottom:0">Son exactamente los mismos cuarenta que hay dentro de la imagen <code>cp-kafka:8.2.0</code> que usaste en los labs 01 al 08. <b>Mismo nombre, misma cantidad, mismo origen.</b> Lo que cambió es que aquí no hay ningún contenedor delante. Son binarios del sistema, como <code>ls</code> o <code>grep</code>.</p>
+</div>
+
+<div class="caja">
+  <p style="margin-bottom:0"><b>Anota una respuesta.</b> ¿Cuántos de esos 40 comandos usaste ya en el curso?</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 3 de 7</span>Dónde está la configuración de verdad</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Este es el paso que conecta con el <b>laboratorio 03</b>, y conviene recordar qué pasó allí.</p>
+
+<div class="caja">
+  <p style="margin-bottom:0">En el lab 03 listaste los <code>.properties</code> de un broker en Docker y descubriste algo incómodo. <b>Había un archivo llamado <code>server.properties</code> que no era el que el broker estaba usando.</b> El que mandaba era <code>kafka.properties</code>, y no lo había escrito nadie. <b>Lo generaba la imagen al arrancar</b>, traduciendo las variables <code>KAFKA_*</code> de tu compose.</p>
+</div>
+
+<h3>Compruébalo aquí</h3>
+
+<pre>ls /etc/kafka/*.properties | wc -l</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">12</div>
+
+<div class="caja ojo">
+  <span class="rot">Doce, y en Docker son trece</span>
+  <p>En un contenedor de los labs anteriores <b>que esté corriendo</b>, ese mismo comando devuelve <b>13</b>. El decimotercero es <code>kafka.properties</code>, y <b>solo existe cuando el contenedor está encendido</b>. En la imagen apagada tampoco está, y ahí también son 12.</p>
+  <p style="margin-bottom:0"><b>Aquí no aparece nunca, porque nadie lo genera.</b></p>
+</div>
+
+<h3>Y ahora la diferencia que importa</h3>
+
+<pre>grep ExecStart /usr/lib/systemd/system/confluent-kafka.service</pre>
+
+<div class="desglose">
+<div><span class="flag">/usr/lib/systemd/system/</span> — donde viven las definiciones de los servicios que instala un paquete</div>
+<div><span class="flag">ExecStart</span> — la línea que dice <b>qué comando ejecuta systemd</b> al arrancar el servicio</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">ExecStart=/usr/bin/kafka-server-start /etc/kafka/server.properties</div>
+
+<div class="caja tecnico">
+  <span class="rot">Compáralo con lo que veías en Docker</span>
+  <p>En Docker el proceso arrancaba así:</p>
+  <div class="salida" style="margin-bottom:2.5mm">java ... kafka.Kafka /etc/kafka/kafka.properties      &lt;- el generado</div>
+  <p style="margin-bottom:0">Aquí arranca con <b><code>server.properties</code>, el archivo que vas a editar tú en el paso siguiente</b>. No hay traducción, no hay generación, no hay variable de entorno intermedia. <b>Lo que escribes es lo que lee el broker.</b></p>
+</div>
+
+<h3>Míralo antes de tocarlo</h3>
+
+<pre>grep -vE "^#|^$" /etc/kafka/server.properties | head -12</pre>
+
+<div class="desglose">
+<div><span class="flag">grep -vE "^#|^$"</span> — la <code>-v</code> invierte el filtro, así que <b>quita</b> las líneas que empiezan por <code>#</code>, que son comentarios, y las vacías. Sin esto el archivo son cientos de líneas casi todas comentadas</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">process.roles=broker,controller
+node.id=1
+controller.quorum.bootstrap.servers=localhost:9093
+listeners=PLAINTEXT://:9092,CONTROLLER://:9093
+inter.broker.listener.name=PLAINTEXT
+advertised.listeners=PLAINTEXT://localhost:9092,CONTROLLER://localhost:9093
+controller.listener.names=CONTROLLER
+listener.security.protocol.map=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,SSL:SSL,...
+num.network.threads=3
+num.io.threads=8
+socket.send.buffer.bytes=102400
+socket.receive.buffer.bytes=102400</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p><b>Reconoces todo.</b> <code>process.roles=broker,controller</code> es el nodo combinado del laboratorio 01. El <code>node.id</code>, los <code>listeners</code>, el <code>controller.listener.names</code>, todo eso lo escribiste como variables <code>KAFKA_*</code> en un compose.</p>
+  <p style="margin-bottom:0"><b>Aquí ya viene escrito, en su forma nativa, en un archivo de texto.</b></p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 4 de 7</span>Editar el archivo y formatear el disco</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Dos cambios en el <code>server.properties</code>, con un editor de texto. <b>Esto es lo que Docker no te dejaba hacer nunca.</b></p>
+
+<pre>vi /etc/kafka/server.properties</pre>
+
+<div class="caja tecnico">
+  <span class="rot">Si nunca usaste vi · lo mínimo para sobrevivir</span>
+  <table style="margin-bottom:0">
+  <tr><th>Para</th><th>Teclas</th></tr>
+  <tr><td>Buscar una línea</td><td><code>/</code> y el texto, después Enter</td></tr>
+  <tr><td>Empezar a escribir</td><td><code>i</code></td></tr>
+  <tr><td>Dejar de escribir</td><td><code>Esc</code></td></tr>
+  <tr><td>Guardar y salir</td><td><code>:wq</code> y Enter</td></tr>
+  <tr><td>Salir sin guardar, si te perdiste</td><td><code>Esc</code>, después <code>:q!</code> y Enter</td></tr>
+  </table>
+</div>
+
+<h3>Cambio 1 · el quórum, en la forma del laboratorio 02</h3>
+
+<p>Busca esta línea:</p>
+
+<div class="salida">controller.quorum.bootstrap.servers=localhost:9093</div>
+
+<p>Y déjala así:</p>
+
+<div class="salida">controller.quorum.voters=1@localhost:9093</div>
+
+<p><b>Es literalmente la propiedad que analizaste en el laboratorio 02</b>, con su formato <code>id@servidor:puerto</code>. Allí eran tres votantes y aquí es uno, porque este servidor está solo. <b>Escribirla a mano, en el archivo real, es distinto a verla generada.</b></p>
+
+<h3>Cambio 2 · dónde viven los datos</h3>
+
+<p>Busca:</p>
+
+<div class="salida">log.dirs=/tmp/kraft-combined-logs</div>
+
+<p>Y déjala así:</p>
+
+<div class="salida">log.dirs=/var/lib/kafka/data</div>
+
+<p><code>/tmp</code> se borra al reiniciar. <code>/var/lib/kafka/data</code> es la ruta que usaron todos los laboratorios anteriores, y en este servidor está sobre un disco que persiste. <b>Es la misma trampa que viste en el laboratorio 01</b>, ahora en el archivo de verdad.</p>
+
+<h3>Verifica tus cambios</h3>
+
+<pre>grep -E "^(process.roles|node.id|controller.quorum.voters|log.dirs)" \
+    /etc/kafka/server.properties</pre>
+
+<div class="salida-rot">Lo que tiene que salir</div>
+<div class="salida">process.roles=broker,controller
+node.id=1
+controller.quorum.voters=1@localhost:9093
+log.dirs=/var/lib/kafka/data</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>Salen <b>exactamente cuatro líneas</b>, y las dos que editaste dicen lo que tienen que decir.</p>
+  <p style="margin-bottom:0">Si <code>controller.quorum.voters</code> <b>no</b> aparece, es que dejaste la línea vieja con su nombre original. Vuelve al editor.</p>
+</div>
+
+<h3>Ahora formatea el almacenamiento</h3>
+
+<p>Es <b>el mismo comando del laboratorio 01</b>. Compáralo mentalmente con el que corriste allí.</p>
+
+<pre>runuser -u cp-kafka -- kafka-storage format \
+  --cluster-id MkU3OEVBNTcwNTJENDM2Qk \
+  --config /etc/kafka/server.properties</pre>
+
+<div class="desglose">
+<div><span class="flag">runuser -u cp-kafka --</span> — <b>ejecuta el comando como el usuario del servicio</b>, no como root. Si formateas como root, los archivos quedan de root y el servicio, que corre como <code>cp-kafka</code>, no va a poder escribir. <b>Es el error de permisos más común al instalar Kafka a mano</b></div>
+<div><span class="flag">kafka-storage format</span> — graba la identidad del clúster en el disco. Lo mismo que la imagen de Confluent hacía sola en el laboratorio 01</div>
+<div><span class="flag">--cluster-id</span> — la identidad. <b>Aquí va fija para que puedas comparar salidas con los otros labs</b></div>
+<div><span class="flag">--config /etc/kafka/server.properties</span> — el archivo que acabas de editar. <b>En Docker este argumento venía cocinado</b></div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver · la primera línea es larga y no importa</div>
+<div class="salida">Bootstrap metadata: BootstrapMetadata(records=[...metadata.version...])
+Formatting metadata directory /var/lib/kafka/data with metadata.version 4.2-IV1.</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  La segunda línea dice <b><code>Formatting metadata directory /var/lib/kafka/data</code></b>. <b>Esa ruta es la que tú escribiste</b>, y es la prueba de que el archivo que editaste es el que se está leyendo.
+</div>
+
+<div class="rescate">
+  <span class="rot">Si dice que el directorio ya está formateado</span>
+  <p style="margin-bottom:0">Ya lo hiciste antes, o estás repitiendo el laboratorio. <b>No es un problema, sigue al paso 5.</b> Si quieres empezar de cero de verdad, sal del servidor con <code>exit</code> y ejecuta <code>bin/reset-lab.sh</code>.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si dice <code>Permission denied</code></span>
+  <p style="margin-bottom:0">Se te olvidó el <code>runuser -u cp-kafka --</code> del principio, o el directorio quedó de root de un intento anterior. Arréglalo con <code>chown -R cp-kafka:confluent /var/lib/kafka/data</code> y repite.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 5 de 7</span>Arrancar el servicio</h2>
+
+<h3>El comando</h3>
+
+<pre>systemctl start confluent-kafka
+systemctl status confluent-kafka</pre>
+
+<div class="desglose">
+<div><span class="flag">systemctl start</span> — arranca el servicio <b>ahora</b></div>
+<div><span class="flag">systemctl status</span> — muestra cómo está. <b>Se sale con <code>q</code></b> si te deja en un paginador</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver · recortado</div>
+<div class="salida">● confluent-kafka.service - Apache Kafka - broker
+     Loaded: loaded (/usr/lib/systemd/system/confluent-kafka.service;
+             disabled; preset: disabled)
+     Active: active (running) since Thu 2026-08-27 17:02:58 UTC; 12s ago
+       Docs: http://docs.confluent.io/
+   Main PID: 416 (java)
+      Tasks: 122 (limit: 79998)
+     Memory: 389.7M (peak: 399.4M)
+        CPU: 4.055s</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · unidad de systemd</span>
+  Un <b>archivo de texto que le dice al sistema cómo se enciende un servicio</b>. Qué comando ejecutar, con qué usuario, qué hacer si se muere y cuánto esperarle al apagar. Lo instala el paquete, y vive en <code>/usr/lib/systemd/system/</code>. <b>En Docker su equivalente era el <code>entrypoint</code> de la imagen</b>, que no se puede leer tan fácil.
+</div>
+
+<h3>Lee la unidad completa, que es corta y lo dice todo</h3>
+
+<pre>cat /usr/lib/systemd/system/confluent-kafka.service</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">[Unit]
+Description=Apache Kafka - broker
+Documentation=http://docs.confluent.io/
+After=network.target
+
+[Service]
+Type=simple
+User=cp-kafka
+Group=confluent
+ExecStart=/usr/bin/kafka-server-start /etc/kafka/server.properties
+LimitNOFILE=1000000
+TimeoutStopSec=180
+Restart=no
+
+[Install]
+WantedBy=multi-user.target</div>
+
+<table>
+<tr><th>Línea</th><th>Qué significa, y por qué se revisa en producción</th></tr>
+<tr><td><code>User=cp-kafka</code></td><td><b>El broker no corre como root.</b> Si alguien lo compromete, no se lleva el servidor</td></tr>
+<tr><td><code>LimitNOFILE=1000000</code></td><td>Kafka abre un descriptor de archivo por segmento y por conexión. <b>Con el límite por defecto del sistema, un broker con carga real se cae</b></td></tr>
+<tr><td><code>TimeoutStopSec=180</code></td><td><code>systemd</code> le da tres minutos para cerrar ordenado antes de matarlo. <b>Cerrar ordenado es lo que evita la recuperación de logs al arrancar</b></td></tr>
+<tr><td><code>Restart=no</code></td><td><b>Si el broker muere, no se levanta solo.</b> En un clúster eso es deliberado. Prefieres enterarte</td></tr>
+</table>
+
+<h3>Dónde se miran los logs</h3>
+
+<pre>journalctl -u confluent-kafka -n 50
+ls /var/log/kafka/</pre>
+
+<div class="desglose">
+<div><span class="flag">journalctl -u &lt;servicio&gt;</span> — lo que <code>systemd</code> capturó de la salida del proceso</div>
+<div><span class="flag">-n 50</span> — las últimas cincuenta líneas</div>
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · el journal</span>
+  El <b>registro central de todo lo que pasa en el sistema</b>, que <code>systemd</code> mantiene. Cada servicio escribe ahí, y se consulta con <code>journalctl</code>. <b>Es el primer sitio donde se mira cuando un servicio no arranca</b>, y en el paso 7 vas a ver por qué.
+</div>
+
+<div class="salida-rot">El contenido de <code>/var/log/kafka/</code></div>
+<div class="salida">controller.log
+kafka-authorizer.log
+kafka-request.log
+kafkaServer-gc.log
+log-cleaner.log
+server.log
+state-change.log</div>
+
+<div class="caja tecnico">
+  <span class="rot">Dos caminos, y hay que conocer los dos</span>
+  <p style="margin-bottom:0"><code>journalctl</code> te da lo que <code>systemd</code> capturó. <b><code>/var/log/kafka/</code> son los archivos que escribe el propio Kafka</b>, con mucho más detalle y separados por tema. <b>En Docker esto era <code>docker logs</code> y punto</b>, todo mezclado en un solo flujo.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p><code>Active:</code> dice <b><code>active (running)</code></b> y el <code>Main PID</code> apunta a un proceso <code>java</code>.</p>
+  <p style="margin-bottom:0">Y en <code>/var/log/kafka/</code> hay <b>siete archivos</b>, con <code>server.log</code> y <code>controller.log</code> entre ellos.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si dice <code>Active: failed</code> nada más arrancar</span>
+  <p>Mira el journal, que es donde está el diagnóstico:</p>
+  <pre>journalctl -u confluent-kafka -n 30 --no-pager</pre>
+  <p><b>Las dos causas, por frecuencia.</b> Si menciona permisos o <code>/var/lib/kafka/data</code>, formateaste como root. Arréglalo con <code>chown -R cp-kafka:confluent /var/lib/kafka/data</code>.</p>
+  <p style="margin-bottom:0">Si menciona <code>controller.quorum</code>, la línea que editaste en el paso 4 tiene una errata. Vuelve al archivo.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 6 de 7</span>Los mismos comandos, sin envase</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p><b>Este es el corazón del laboratorio.</b> Todo lo que sigue lo ejecutaste ya en los laboratorios 01 y 02, con <code>docker exec</code> adelante. Ahora no.</p>
+
+<h3>La carta de servicios del broker</h3>
+
+<pre>kafka-broker-api-versions --bootstrap-server localhost:9092</pre>
+
+<div class="desglose">
+<div><span class="flag">sin <code>docker exec</code></span> — el comando está en el PATH, como <code>ls</code></div>
+<div><span class="flag">--bootstrap-server localhost:9092</span> — <b>aquí <code>localhost</code> es de verdad este servidor.</b> En los labs anteriores tenías que usar el nombre del contenedor y el puerto interno</div>
+</div>
+
+<div class="salida-rot">Las primeras líneas</div>
+<div class="salida">localhost:9092 (id: 1 rack: null isFenced: false) -> (
+	Produce(0): 0 to 13 [usable: 13],
+	Fetch(1): 4 to 18 [usable: 18],
+	ListOffsets(2): 1 to 11 [usable: 11],
+	Metadata(3): 0 to 13 [usable: 13],
+	OffsetCommit(8): 2 to 10 [usable: 10],</div>
+
+<h3>Crear, listar y describir un tópico</h3>
+
+<pre>kafka-topics --bootstrap-server localhost:9092 \
+  --create --topic novatech.lab08b.demo --partitions 3 --replication-factor 1
+
+kafka-topics --bootstrap-server localhost:9092 --list
+
+kafka-topics --bootstrap-server localhost:9092 \
+  --describe --topic novatech.lab08b.demo</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">WARNING: Due to limitations in metric names, topics with a period ('.') or
+underscore ('_') could collide. To avoid issues it is best to use either,
+but not both.
+Created topic novatech.lab08b.demo.
+
+novatech.lab08b.demo
+
+Topic: novatech.lab08b.demo  TopicId: WJJxTYAFR5qJ2gvd72VSAw  PartitionCount: 3
+  ReplicationFactor: 1  Configs: min.insync.replicas=1,segment.bytes=1073741824
+  Partition: 0  Leader: 1  Replicas: 1  Isr: 1
+  Partition: 1  Leader: 1  Replicas: 1  Isr: 1
+  Partition: 2  Leader: 1  Replicas: 1  Isr: 1</div>
+
+<p><b>Factor de replicación 1</b>, porque este servidor está solo. Es la misma limitación del laboratorio 01, y por la misma razón.</p>
+
+<h3>El quórum</h3>
+
+<pre>kafka-metadata-quorum --bootstrap-server localhost:9092 describe --status</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">ClusterId:              MkU3OEVBNTcwNTJENDM2Qk
+LeaderId:               1
+LeaderEpoch:            1
+HighWatermark:          50
+MaxFollowerLag:         0
+MaxFollowerLagTimeMs:   0
+CurrentVoters:          [{"id": 1, "endpoints": ["CONTROLLER://localhost:9093"]}]
+CurrentObservers:       []</div>
+
+<p>Es la misma salida del laboratorio 02, con <b>un votante en vez de tres</b>. Y ese <code>CONTROLLER://localhost:9093</code> es la línea que tú escribiste con <code>vi</code> en el paso 4.</p>
+
+<h3>Lado a lado</h3>
+
+<p>Estos mismos comandos se corrieron contra un broker en Docker, con la configuración del laboratorio 01 y el mismo <code>--cluster-id</code>. Este es el resultado.</p>
+
+<table>
+<tr><th>Comando</th><th>Diferencia entre Docker y RHEL</th></tr>
+<tr><td><code>kafka-broker-api-versions</code></td><td><b>Ninguna. Idénticas byte a byte</b></td></tr>
+<tr><td><code>kafka-topics --create</code></td><td><b>Ninguna. Idénticas byte a byte</b></td></tr>
+<tr><td><code>kafka-topics --describe</code></td><td>Solo el <code>TopicId</code>, que Kafka genera al azar en cada tópico</td></tr>
+<tr><td><code>kafka-metadata-quorum</code></td><td>Solo el <code>HighWatermark</code>, que es un contador que avanza con el tiempo, y el endpoint del controlador. En Docker era <code>CONTROLLER://kafka-broker:39092</code> y aquí es <code>CONTROLLER://localhost:9093</code>. <b>Es el nombre de host y el puerto que eligió cada laboratorio, no una diferencia de plataforma</b></td></tr>
+</table>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p><b>No encuentras ninguna diferencia atribuible a estar sobre RHEL en vez de sobre Docker.</b> Los comandos, los parámetros y las salidas son los mismos.</p>
+  <p style="margin-bottom:0">Eso es exactamente lo que el curso viene afirmando desde el laboratorio 01, y aquí queda demostrado.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 7 de 7</span>Lo que Docker escondía</h2>
+
+<h3>El usuario y los permisos</h3>
+
+<pre>ps -o user=,pid=,comm= -C java
+id cp-kafka
+ls -ld /var/lib/kafka/data</pre>
+
+<div class="desglose">
+<div><span class="flag">ps -C java</span> — busca los procesos que se llaman <code>java</code></div>
+<div><span class="flag">-o user=,pid=,comm=</span> — muestra solo tres columnas, <b>y el <code>=</code> al final de cada una quita el encabezado</b></div>
+<div><span class="flag">id &lt;usuario&gt;</span> — a qué grupos pertenece y con qué números</div>
+<div><span class="flag">ls -ld</span> — la <code>-d</code> muestra el <b>directorio en sí</b>, no lo que hay dentro</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">cp-kafka   416 java
+uid=998(cp-kafka) gid=998(confluent) groups=998(confluent)
+drwxr-xr-x 6 cp-kafka confluent 4096 Aug 27 17:03 /var/lib/kafka/data</div>
+
+<div class="caja sunat">
+  <span class="rot">Por qué esto es lo primero que se revisa</span>
+  <p style="margin-bottom:0">El paquete creó el usuario <code>cp-kafka</code> y el grupo <code>confluent</code> al instalarse. El broker corre con ese usuario y el directorio de datos le pertenece. <b>En producción esto es lo primero que se mira cuando un broker no arranca</b>, porque casi siempre alguien formateó o copió archivos como root.</p>
+</div>
+
+<h3>Dónde están los datos, en un disco de verdad</h3>
+
+<pre>ls /var/lib/kafka/data
+df -h /var/lib/kafka/data</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">__cluster_metadata-0
+bootstrap.checkpoint
+cleaner-offset-checkpoint
+log-start-offset-checkpoint
+meta.properties
+novatech.lab08b.demo-0
+novatech.lab08b.demo-1
+novatech.lab08b.demo-2
+recovery-point-offset-checkpoint
+replication-offset-checkpoint
+
+/dev/vda1       911G   64G  801G   8% /var/lib/kafka/data</div>
+
+<p><b>Un directorio por partición</b>, y ahí están las tres del tópico que creaste. Y <code>__cluster_metadata-0</code>, que es el log de KRaft de los laboratorios 01 y 02.</p>
+
+<p><b>Kafka se queda sin disco antes que sin memoria</b>, y ese <code>df</code> es la línea que se vigila en un servidor real.</p>
+
+<h3>Y ahora el <code>failed</code> que no es un fallo</h3>
+
+<p>Apaga el servicio de forma ordenada, tú mismo, y mira el estado:</p>
+
+<pre>systemctl stop confluent-kafka
+systemctl is-active confluent-kafka</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">failed</div>
+
+<div class="caja ojo">
+  <span class="rot"><code>failed</code>, después de un apagado ordenado que tú pediste</span>
+  <p>No es un error tuyo ni del laboratorio. <b>Es la unidad tal como la publica Confluent.</b></p>
+  <p style="margin-bottom:0"><code>kafka-server-start</code> termina con un código distinto de cero cuando recibe la señal de apagado, la unidad no declara <code>SuccessExitStatus</code>, y <code>systemd</code> lo anota como fallo. <b>En un servidor de SUNAT pasa exactamente igual.</b></p>
+</div>
+
+<h3>La prueba de que el apagado fue limpio</h3>
+
+<p>La da el propio Kafka la próxima vez que arranca:</p>
+
+<pre>systemctl start confluent-kafka
+journalctl -u confluent-kafka | grep "clean shutdown"</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">Skipping recovery of 3 logs from /var/lib/kafka/data since clean shutdown
+file was found (kafka.log.LogManager)</div>
+
+<p>Kafka encontró la marca de apagado limpio y <b>se saltó la recuperación de los logs</b>. Si el apagado hubiera sido sucio, aquí diría que está recuperando, y tardaría.</p>
+
+<div class="caja sunat">
+  <span class="rot">La lección, y vale para cualquier servicio</span>
+  <p style="margin-bottom:0"><b>Una palabra en <code>systemctl</code> no es un diagnóstico. El diagnóstico está en el journal.</b></p>
+</div>
+
+<h3>Y una última, que se confunde todo el tiempo</h3>
+
+<pre>systemctl is-enabled confluent-kafka</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">disabled</div>
+
+<p><code>start</code> enciende el servicio <b>ahora</b>. <code>enable</code> hace que arranque <b>al encender el servidor</b>. Son cosas distintas. <b>Si solo hiciste <code>start</code>, el día que ese servidor se reinicie el broker no vuelve.</b></p>
+
+<pre>systemctl enable confluent-kafka</pre>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p>Viste el <code>failed</code> tras un apagado que tú pediste, encontraste la línea de <code>clean shutdown</code> en el journal, y entiendes por qué <code>is-enabled</code> decía <code>disabled</code>.</p>
+  <p style="margin-bottom:0"><b>Anota una respuesta.</b> En tu clúster de SUNAT, ¿las unidades de Kafka están <code>enabled</code>?</p>
+</div>
+
+<div class="np"></div>
+<h2>Lo que aprendiste</h2>
+
+<div class="regla"><span class="num">1</span>
+<b>Los cuarenta comandos son los mismos.</b><br>
+Todo lo que aprendiste en trece laboratorios se aplica igual cuando le quitas el envase. Lo que cambia es la capa de abajo, o sea el paquete, el servicio, el archivo y el usuario. Y ésa es justamente la capa que administras en SUNAT.
+</div>
+
+<div class="regla"><span class="num">2</span>
+<b>En Docker no editas la configuración. En un servidor, sí.</b><br>
+La imagen traduce variables <code>KAFKA_*</code> a un <code>kafka.properties</code> que genera al arrancar. En RHEL el archivo es <code>server.properties</code>, lo escribes tú, y es el que el proceso lee. Sin intermediarios.
+</div>
+
+<div class="regla"><span class="num">3</span>
+<b>El usuario del servicio es lo primero que se revisa.</b><br>
+El broker corre como <code>cp-kafka</code>, no como root. Si formateas o copias archivos como root, el servicio no puede escribir y no arranca. Es el error de instalación más común.
+</div>
+
+<div class="regla"><span class="num">4</span>
+<b>Una palabra en <code>systemctl</code> no es un diagnóstico.</b><br>
+<code>failed</code> tras un apagado ordenado es normal en esta unidad. Y <code>enabled</code> y <code>active</code> son cosas distintas. La respuesta siempre está en el journal, no en la palabra.
+</div>
+
+<div class="np"></div>
+<h2>Para profundizar</h2>
+
+<h3>A · Comprobar que es RHEL de verdad</h3>
+
+<pre>cat /etc/redhat-release
+head -3 /etc/os-release</pre>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">Red Hat Enterprise Linux release 9.8 (Plow)
+
+NAME="Red Hat Enterprise Linux"
+VERSION="9.8 (Plow)"
+ID="rhel"</div>
+
+<p><b>Lo que hay que mirar.</b> Ese <code>ID="rhel"</code> es el que no tendría una distribución compatible. Rocky diría <code>ID="rocky"</code> y Alma diría <code>ID="almalinux"</code>. <b>Es la imagen oficial de Red Hat</b>, libre y sin suscripción.</p>
+
+<h3>B · Contar los comandos en los dos mundos</h3>
+
+<p>Sal del servidor con <code>exit</code> y compara desde tu máquina:</p>
+
+<pre>docker exec kafka-rhel sh -c 'ls /usr/bin/kafka-* | wc -l'
+docker run --rm confluentinc/cp-kafka:8.2.0 sh -c 'ls /usr/bin/kafka-* | wc -l'</pre>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">40
+40</div>
+
+<p><b>Lo que hay que mirar.</b> El mismo número, desde dos plataformas distintas. <b>Es la afirmación del laboratorio, en dos líneas.</b></p>
+
+<h3>C · El decimotercer archivo, comprobado</h3>
+
+<p>Es la parte del paso 3 que aquí no se puede ver, porque hace falta un contenedor de los otros labs corriendo. Levanta el laboratorio 02 y prueba:</p>
+
+<pre>docker exec kafka-broker-1 sh -c 'ls /etc/kafka/*.properties | wc -l'
+docker run --rm confluentinc/cp-kafka:8.2.0 sh -c 'ls /etc/kafka/*.properties | wc -l'
+docker exec kafka-rhel sh -c 'ls /etc/kafka/*.properties | wc -l'</pre>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">13     <- contenedor corriendo
+12     <- la misma imagen, apagada
+12     <- el servidor RHEL</div>
+
+<p>Y para ver cuál usa de verdad el contenedor:</p>
+
+<pre>docker exec kafka-broker-1 sh -c "ps -o args= -C java | tr ' ' '\n' | grep properties"</pre>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">/etc/kafka/kafka.properties</div>
+
+<p><b>Lo que hay que mirar.</b> El decimotercero es <code>kafka.properties</code>, <b>solo existe mientras el contenedor corre, y es el único que el proceso lee</b>. Ese archivo no existe en RHEL porque allí nadie lo genera.</p>
+
+<h3>D · Qué pasa si formateas como root</h3>
+
+<p>Es el error más común, y vale la pena provocarlo a propósito para reconocerlo:</p>
+
+<pre>systemctl stop confluent-kafka
+rm -rf /var/lib/kafka/data/*
+kafka-storage format --cluster-id MkU3OEVBNTcwNTJENDM2Qk \
+  --config /etc/kafka/server.properties
+ls -ld /var/lib/kafka/data/*
+systemctl start confluent-kafka
+systemctl is-active confluent-kafka</pre>
+
+<div class="desglose">
+<div><span class="flag">sin <code>runuser</code></span> — <b>ahí está la trampa.</b> El formateo lo hace root, así que los archivos quedan de root</div>
+</div>
+
+<p><b>Lo que hay que mirar.</b> El <code>ls -ld</code> muestra los archivos con dueño <code>root</code>, y el servicio no arranca. El journal lo dice. Para arreglarlo:</p>
+
+<pre>chown -R cp-kafka:confluent /var/lib/kafka/data
+systemctl start confluent-kafka</pre>
+
+<h3>E · Los logs por tema</h3>
+
+<pre>tail -20 /var/log/kafka/server.log
+tail -20 /var/log/kafka/controller.log</pre>
+
+<p><b>Lo que hay que mirar.</b> Son dos historias distintas del mismo arranque. <code>server.log</code> cuenta lo que hizo el broker y <code>controller.log</code> lo que hizo el controlador. <b>En Docker las dos venían mezcladas en <code>docker logs</code></b>, y separarlas es media hora menos de diagnóstico el día que algo falle.</p>
+
+<h2>Antes de cerrar</h2>
+
+<div class="caja ojo">
+  <span class="rot">Deja el terreno limpio</span>
+  <pre>exit                # salir del servidor RHEL
+bin/90-test-lab.sh  # ver el estado del laboratorio
+bin/stop-lab.sh     # apagar conservando tus datos y tu configuración</pre>
+  <p style="margin-bottom:0">Si vuelves con <code>bin/start-lab.sh</code>, el servidor se reanuda <b>tal como lo dejaste</b>, y tu <code>server.properties</code> editado sigue ahí. Para volver al servidor recién instalado y repetir el laboratorio desde cero, usa <code>bin/reset-lab.sh</code>.</p>
+</div>
+
+<div class="caja sunat">
+  <span class="rot">Lo que te llevas</span>
+  <p style="margin-bottom:0">Todo lo que aprendiste en trece laboratorios se aplica igual cuando le quitas el envase. <b>Lo que cambia es el paquete, el servicio, el archivo y el usuario.</b> Y ésa es, justamente, la capa que administras en SUNAT.</p>
+</div>
+
+</body></html>

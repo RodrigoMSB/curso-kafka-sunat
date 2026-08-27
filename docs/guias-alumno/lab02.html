@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><link rel="stylesheet" href="estilo-alumno.css"></head>
+<body>
+
+<div class="portada">
+  <div class="kicker">C U R S O &nbsp; D E &nbsp; A D M I N I S T R A C I Ó N &nbsp; D E &nbsp; K A F K A</div>
+  <div class="labnum">LABORATORIO 02</div>
+  <h1>¿Y si se<br>cae uno?</h1>
+  <div class="sub">Quórum KRaft y resiliencia.<br>Guía para hacerlo por tu cuenta, paso a paso</div>
+  <div class="meta">
+    Confluent Platform 8.2.0 · Kafka 4.2 en modo KRaft · 3 brokers<br>
+    Duración estimada · 60 minutos<br>
+    NovaTech Logistics · caso de estudio
+  </div>
+</div>
+
+<h2>Antes de empezar</h2>
+
+<h3>Qué vas a lograr</h3>
+
+<p>En el laboratorio 01 encendiste <b>un</b> servidor. Hoy vas a construir <b>tres que se coordinan entre ellos</b>, y después vas a <b>matar al que manda</b> para ver qué hace el clúster sin él.</p>
+
+<p>El plano lo escribes tú. Hay una plantilla con el primer servidor resuelto y dos huecos, y tu trabajo es completarla.</p>
+
+<div class="afirmacion">
+  <span class="rot">Lo que este laboratorio demuestra</span>
+  <div class="txt">Un clúster de tres aguanta perder uno. Y el que vuelve no recupera su puesto.</div>
+</div>
+
+<p>Son dos partes y las dos se ven en pantalla. <b>Aguanta perder uno</b>, porque vas a apagar al líder y el clúster va a seguir atendiendo. <b>Y el que vuelve no recupera su puesto</b>, porque cuando lo enciendas de nuevo va a entrar como seguidor, y el liderazgo se va a quedar donde está.</p>
+
+<h3>Qué necesitas tener listo</h3>
+
+<table>
+<tr><th>Requisito</th><th>Cómo lo compruebas</th></tr>
+<tr><td>Haber hecho el laboratorio 01</td><td>Hoy se da por sabido qué es un <code>CLUSTER_ID</code> y qué hace <code>docker compose up -d</code></td></tr>
+<tr><td>Docker Desktop corriendo, con 6 GB de RAM</td><td>Hoy son tres servidores. Ajustes de Docker Desktop, pestaña <i>Resources</i></td></tr>
+<tr><td>Git Bash abierto</td><td>Es la terminal que usamos en todo el curso</td></tr>
+<tr><td>Un editor de texto</td><td>VSCode con <code>code</code>, o <code>notepad</code>. Hoy vas a escribir bastante YAML</td></tr>
+<tr><td>Los puertos 9092, 9093 y 9094 libres</td><td>Uno por servidor</td></tr>
+</table>
+
+<div class="caja ojo">
+  <span class="rot">Antes de tocar nada · dos cosas</span>
+  <p><b>Uno.</b> Actualiza el repositorio:</p>
+  <pre>cd /c/KAFKA/curso-kafka-sunat
+git pull</pre>
+  <p><b>Dos.</b> Baja el laboratorio 01 si lo dejaste arriba, porque ocupa el puerto 9092:</p>
+  <pre style="margin-bottom:0">docker ps --filter name=kafka-broker</pre>
+</div>
+
+<h3>El caso</h3>
+
+<div class="caja">
+  <p>El servidor único que encendiste en el laboratorio 01 funciona. <b>Y no sirve para producción</b>, por una razón que no tiene vuelta. Si se cae, se cayó todo.</p>
+  <p>El director de tecnología de <b>NovaTech Logistics</b> lo dice de otra manera. <i>No me interesa que funcione. Me interesa qué pasa el día que uno de los servidores se apague, porque ese día va a llegar.</i></p>
+  <p style="margin-bottom:0">Hoy vas a montar tres y a provocar ese día tú mismo.</p>
+</div>
+
+<div class="caja abuelita">
+  <span class="rot">La metáfora del curso · el restaurante</span>
+  <p>De aquí en adelante Kafka es <b>un restaurante</b>. El <b>mozo</b> que toma y entrega los pedidos es el <b>broker</b>, o sea el servidor. Un <b>tipo de comanda</b> es el <b>tópico</b>. Los <b>sectores del salón</b> son las <b>particiones</b>. Las <b>libretas de respaldo</b> que copian cada comanda son las <b>réplicas</b>.</p>
+  <p>Hoy hay <b>tres mozos</b> en el salón, y entre ellos hay uno que es el <b>jefe de turno</b>. No atiende más mesas que los demás. Lo que hace es <b>decidir quién atiende qué sector</b>, y llevar la cuenta.</p>
+  <p style="margin-bottom:0">Y el jefe de turno no se nombra a dedo. <b>Los tres mozos lo eligen entre ellos</b>, y para eso tienen que estar de acuerdo la mayoría. Eso es el <b>quórum</b>.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 1 de 7</span>Generar la identidad del clúster</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Igual que en el laboratorio 01, el clúster necesita un identificador único. La diferencia es que hoy <b>ese mismo identificador va a ir en los tres servidores</b>, y tiene que ser idéntico en los tres.</p>
+
+<div class="caja abuelita">
+  <span class="rot">Para entenderlo mejor</span>
+  Es <b>el nombre del restaurante bordado en el uniforme.</b> Los tres mozos llevan el mismo. Si uno trae otro nombre bordado, no trabaja aquí.
+</div>
+
+<h3>El comando</h3>
+
+<pre>cd Capitulo_2/lab-02-validacion-quorum-resiliencia
+chmod +x bin/*.sh kafka-cli/*.sh
+kafka-cli/generate-cluster-id.sh</pre>
+
+<div class="desglose">
+<div><span class="flag">cd Capitulo_2/lab-02-validacion-quorum-resiliencia</span> — la carpeta del laboratorio. <b>Todos los comandos de esta guía salen de aquí</b></div>
+<div><span class="flag">chmod +x</span> — permiso de ejecución para los scripts, que en Git Bash a veces se pierde al clonar</div>
+<div><span class="flag">kafka-cli/generate-cluster-id.sh</span> — un script del curso. Por dentro ejecuta <code>kafka-storage random-uuid</code>. <b>No toca ningún clúster ni ningún disco</b></div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver · dentro de una caja explicativa</div>
+<div class="salida">YlCN8AhrTfWKst5eUgWhrg</div>
+
+<div class="caja ojo">
+  <span class="rot">Copia ese valor ahora</span>
+  <p><b>Lo vas a pegar tres veces en el paso siguiente.</b> Guárdalo en un bloc de notas.</p>
+  <p style="margin-bottom:0">Y usa el tuyo, no el del ejemplo. Cada ejecución genera uno distinto, de 22 caracteres.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  Tienes una cadena de <b>22 caracteres</b> copiada en algún sitio de donde la puedas pegar.
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 2 de 7</span>Armar el plano de los tres servidores</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Este es el paso largo del laboratorio, y el único donde escribes en vez de ejecutar. La plantilla trae <b>el servidor 1 resuelto</b> con dos huecos, y los servidores 2 y 3 los agregas tú copiando el patrón.</p>
+
+<h3>Copia la plantilla a tu carpeta de trabajo</h3>
+
+<pre>cp plantillas/docker-compose-3-brokers.template.yml mi-cluster/docker-compose.yml
+code mi-cluster/docker-compose.yml</pre>
+
+<div class="desglose">
+<div><span class="flag">cp &lt;origen&gt; &lt;destino&gt;</span> — copia la plantilla a <code>mi-cluster/</code>, que es tu carpeta de trabajo. <b>El comando no imprime nada, y en Unix el silencio significa que salió bien</b></div>
+<div><span class="flag">code &lt;archivo&gt;</span> — lo abre en VSCode. Si no tienes VSCode, usa <code>notepad mi-cluster/docker-compose.yml</code></div>
+</div>
+
+<h3>Cambio 1 · el quórum</h3>
+
+<p>Busca esta línea, cerca de la línea 30:</p>
+
+<div class="salida">KAFKA_CONTROLLER_QUORUM_VOTERS: '{{TODO_VOTERS_3_NODES}}'</div>
+
+<p>Reemplaza el marcador por esto, <b>tal cual, sin espacios de más</b>:</p>
+
+<div class="salida">1@kafka-broker-1:39092,2@kafka-broker-2:39093,3@kafka-broker-3:39094</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · quórum de controladores</span>
+  La lista de <b>quiénes tienen derecho a votar</b> cuando hay que elegir jefe de turno. Se escribe como <code>id@servidor:puerto</code>, separados por comas. <b>Tiene que ser idéntica en los tres servidores</b>, porque si uno tiene una lista distinta, cree que la elección es otra.
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">Por qué el puerto 39092 y no el 9092</span>
+  <p style="margin-bottom:0">Los servidores hablan entre ellos por una puerta distinta de la que usan los clientes. El <b>39092</b> es la puerta de la coordinación, la que usan para votar y ponerse de acuerdo. El <b>9092</b> es la puerta de la calle. <b>Mezclarlas es el error del laboratorio 04</b>, y ahí lo vas a ver fallar en vivo.</p>
+</div>
+
+<h3>Cambio 2 · la identidad</h3>
+
+<p>Busca la línea del <code>CLUSTER_ID</code> y pega el tuyo, el del paso 1. Las comillas se quedan:</p>
+
+<div class="salida">CLUSTER_ID: 'YlCN8AhrTfWKst5eUgWhrg'</div>
+
+<h3>Cambio 3 · los servidores 2 y 3</h3>
+
+<p>Debajo del bloque de <code>kafka-broker-1</code> hay un comentario que dice <b>TU TURNO</b>. Ahí van los otros dos.</p>
+
+<p><b>Copia el bloque entero de <code>kafka-broker-1</code>, pégalo dos veces, y cambia siete cosas en cada copia.</b> Esta es la tabla, y conviene tenerla al lado mientras escribes.</p>
+
+<table>
+<tr><th>Qué cambiar</th><th>En el 2</th><th>En el 3</th></tr>
+<tr><td>El nombre del servicio, el <code>hostname</code> y el <code>container_name</code></td><td><code>kafka-broker-2</code></td><td><code>kafka-broker-3</code></td></tr>
+<tr><td><code>ports</code></td><td><code>"9093:9093"</code></td><td><code>"9094:9094"</code></td></tr>
+<tr><td><code>KAFKA_NODE_ID</code></td><td><code>2</code></td><td><code>3</code></td></tr>
+<tr><td>El puerto PLAINTEXT interno</td><td><code>29093</code></td><td><code>29094</code></td></tr>
+<tr><td>El puerto CONTROLLER interno</td><td><code>39093</code></td><td><code>39094</code></td></tr>
+<tr><td>El puerto EXTERNAL</td><td><code>9093</code></td><td><code>9094</code></td></tr>
+<tr><td>El volumen</td><td><code>kafka-broker-2-data</code></td><td><code>kafka-broker-3-data</code></td></tr>
+</table>
+
+<div class="caja ojo">
+  <span class="rot">Y dos que NO se cambian</span>
+  <p style="margin-bottom:0">El <code>CLUSTER_ID</code> y el <code>KAFKA_CONTROLLER_QUORUM_VOTERS</code> van <b>exactamente iguales en los tres</b>. Es el error más común de este laboratorio, y produce un clúster que arranca a medias.</p>
+</div>
+
+<p>Así queda el bloque de listeners del servidor 2, para que compares:</p>
+
+<div class="salida">KAFKA_LISTENERS: 'PLAINTEXT://kafka-broker-2:29093,CONTROLLER://kafka-broker-2:39093,EXTERNAL://0.0.0.0:9093'
+KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka-broker-2:29093,EXTERNAL://localhost:9093'</div>
+
+<h3>Cambio 4 · los volúmenes</h3>
+
+<p>Al final del archivo hay tres líneas, dos comentadas. <b>Descoméntalas</b>:</p>
+
+<div class="salida">volumes:
+  kafka-broker-1-data:
+  kafka-broker-2-data:
+  kafka-broker-3-data:</div>
+
+<p>Guarda con <b>Ctrl+S</b>.</p>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>Tu archivo tiene <b>tres bloques de servicio</b> y <b>tres volúmenes</b>. Compruébalo sin abrir el editor:</p>
+  <pre>grep -cE "^  kafka-broker-[123]:" mi-cluster/docker-compose.yml
+grep -c "CLUSTER_ID" mi-cluster/docker-compose.yml</pre>
+  <p style="margin-bottom:0">El primero tiene que decir <b>3</b> y el segundo también <b>3</b>.</p>
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">Si te atascas, hay una solución de referencia</span>
+  <p style="margin-bottom:0">Está en <code>soluciones/docker-compose-3-brokers.SOLUCION.yml</code>. <b>Míralo después de intentarlo</b>, no antes. Y si lo usas, cámbiale el <code>CLUSTER_ID</code> por el tuyo.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 3 de 7</span>Encender los tres</h2>
+
+<h3>El comando</h3>
+
+<pre>cd mi-cluster
+docker compose -p novatech-lab02 up -d
+cd ..</pre>
+
+<div class="desglose">
+<div><span class="flag">cd mi-cluster</span> — entra a la carpeta donde está tu plano</div>
+<div><span class="flag">docker compose up -d</span> — crea y levanta todo lo que el plano declara. La <code>-d</code> es <i>detached</i>, o sea que corre en segundo plano y te devuelve la terminal</div>
+<div><span class="flag">-p novatech-lab02</span> — <b>el nombre del proyecto.</b> Delimita qué puede borrar un <code>down -v</code> más adelante, para que no se lleve por delante los volúmenes de otro laboratorio</div>
+<div><span class="flag">cd ..</span> — vuelve a la raíz del laboratorio, desde donde se ejecuta todo lo demás</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">✔ Network mi-cluster_mi-cluster-network  Created
+✔ Volume novatech-lab02_kafka-broker-1-data  Created
+✔ Volume novatech-lab02_kafka-broker-2-data  Created
+✔ Volume novatech-lab02_kafka-broker-3-data  Created
+✔ Container kafka-broker-1  Started
+✔ Container kafka-broker-2  Started
+✔ Container kafka-broker-3  Started</div>
+
+<h3>Comprueba que están vivos</h3>
+
+<p><b>Espera unos 30 segundos</b>, porque los tres tienen que encontrarse y elegir jefe de turno.</p>
+
+<pre>docker ps --filter name=kafka-broker</pre>
+
+<div class="salida-rot">Lo que vas a ver · recortado a lo ancho</div>
+<div class="salida">NAMES            STATUS         PORTS
+kafka-broker-2   Up 7 seconds   0.0.0.0:9093->9093/tcp
+kafka-broker-3   Up 7 seconds   0.0.0.0:9094->9094/tcp
+kafka-broker-1   Up 7 seconds   0.0.0.0:9092->9092/tcp</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>Salen <b>tres líneas</b>, con <code>Up</code> en <code>STATUS</code>, y en <code>PORTS</code> los tres puertos distintos <b>9092, 9093 y 9094</b>.</p>
+  <p style="margin-bottom:0">Si sale menos de tres, no sigas. El paso 4 no va a decir nada útil.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si uno dice <code>Restarting</code> o desaparece de la lista</span>
+  <p>Se está muriendo en bucle. Mira por qué:</p>
+  <pre>docker logs kafka-broker-2 2>&amp;1 | tail -20</pre>
+  <p><b>Las tres causas, por frecuencia:</b></p>
+  <p><b>Dice <code>InconsistentClusterIdException</code>.</b> Un servidor tiene un <code>CLUSTER_ID</code> distinto de los otros. Revisa que los tres sean idénticos, carácter por carácter.</p>
+  <p><b>Dice algo sobre <code>voters</code> o <code>quorum</code>.</b> El <code>KAFKA_CONTROLLER_QUORUM_VOTERS</code> no es igual en los tres, o tiene un puerto mal. Tiene que ser <code>1@kafka-broker-1:39092,2@kafka-broker-2:39093,3@kafka-broker-3:39094</code> en los tres.</p>
+  <p style="margin-bottom:0"><b>Dice <code>Address already in use</code>.</b> Dos servidores tienen el mismo puerto en el <code>KAFKA_LISTENERS</code>. Cada uno lleva los suyos.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si sale <code>port is already allocated</code> al levantar</span>
+  <p style="margin-bottom:0">Otro laboratorio del curso está arriba y ocupa el 9092. Bájalo con <code>docker compose -p novatech-labNN down -v</code>, poniendo el número que aparezca en <code>docker ps</code>.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el <code>up</code> falla con un error de YAML</span>
+  <p style="margin-bottom:0">El YAML es sensible a la indentación. <b>Los bloques de los tres servidores tienen que estar al mismo nivel</b>, con dos espacios desde el margen. Si copiaste y pegaste, revisa que no se te haya colado un espacio de más al principio de alguna línea.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 4 de 7</span>Leer el quórum</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Los tres están arriba. Ahora hay que preguntarle al clúster <b>quién es el jefe de turno y desde cuándo</b>, que es la consulta que vas a hacer en producción cada vez que algo vaya raro.</p>
+
+<h3>El comando</h3>
+
+<pre>bin/check-quorum.sh</pre>
+
+<div class="desglose">
+<div><span class="flag">bin/check-quorum.sh</span> — un script del curso. Por dentro ejecuta <b>dos</b> consultas, <code>describe --status</code> y <code>describe --replication</code>, y les agrega una ficha que explica cada campo</div>
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">Los comandos reales, los que vas a escribir en SUNAT</span>
+  <pre style="margin-bottom:0">kafka-metadata-quorum --bootstrap-server kafka-broker-1:29092 \
+    describe --status
+
+kafka-metadata-quorum --bootstrap-server kafka-broker-1:29092 \
+    describe --replication</pre>
+</div>
+
+<div class="desglose">
+<div><span class="flag">kafka-metadata-quorum</span> — la herramienta que responde por el quórum. <b>Es la que reemplazó a todo lo que antes se le preguntaba a ZooKeeper</b></div>
+<div><span class="flag">describe --status</span> — el resumen. Quién manda y desde cuándo. <b>Solo consulta</b></div>
+<div><span class="flag">describe --replication</span> — el detalle por nodo. Cuánto le falta a cada uno</div>
+</div>
+
+<div class="salida-rot">La primera mitad · el estado</div>
+<div class="salida">ClusterId:              YlCN8AhrTfWKst5eUgWhrg
+LeaderId:               1
+LeaderEpoch:            1
+HighWatermark:          27
+MaxFollowerLag:         0
+MaxFollowerLagTimeMs:   0
+CurrentVoters:          [{"id": 1, "endpoints": ["CONTROLLER://kafka-broker-1:39092"]},
+                         {"id": 2, "endpoints": ["CONTROLLER://kafka-broker-2:39093"]},
+                         {"id": 3, "endpoints": ["CONTROLLER://kafka-broker-3:39094"]}]
+CurrentObservers:       []</div>
+
+<table>
+<tr><th>Campo</th><th>Qué dice</th></tr>
+<tr><td><code>ClusterId</code></td><td>El identificador que generaste en el paso 1. <b>Compruébalo, tiene que ser el tuyo</b></td></tr>
+<tr><td><code>LeaderId</code></td><td>Quién es el jefe de turno ahora mismo. <b>A ti te puede salir el 2 o el 3</b>, porque la elección es entre iguales</td></tr>
+<tr><td><code>LeaderEpoch</code></td><td><b>El número de turno.</b> Sube en uno cada vez que hay una elección nueva. Es el campo del paso 6</td></tr>
+<tr><td><code>HighWatermark</code></td><td>Hasta dónde llegó el registro de metadatos que los tres comparten. Avanza solo, con el tiempo</td></tr>
+<tr><td><code>CurrentVoters</code></td><td><b>Los tres que tienen derecho a votar.</b> Es la lista que escribiste en el paso 2</td></tr>
+<tr><td><code>CurrentObservers</code></td><td>Nodos que aportan capacidad pero <b>no votan</b>. Aquí está vacío. En el laboratorio 08 vas a agregar uno</td></tr>
+</table>
+
+<div class="salida-rot">La segunda mitad · la replicación</div>
+<div class="salida">NodeId  DirectoryId             LogEndOffset  Lag  LastFetchTimestamp  Status
+1       AAAAAAAAAAAAAAAAAAAAAA  30            0    1787850336962       Leader
+2       AAAAAAAAAAAAAAAAAAAAAA  30            0    1787850336885       Follower
+3       AAAAAAAAAAAAAAAAAAAAAA  30            0    1787850336885       Follower</div>
+
+<table>
+<tr><th>Columna</th><th>Qué dice</th></tr>
+<tr><td><code>Status</code></td><td><b>Un <code>Leader</code> y dos <code>Follower</code>.</b> Es el reparto sano</td></tr>
+<tr><td><code>LogEndOffset</code></td><td>Hasta dónde tiene copiado cada uno el registro de metadatos</td></tr>
+<tr><td><code>Lag</code></td><td>Cuánto le falta a cada seguidor para alcanzar al líder. <b>En 0 significa al día</b></td></tr>
+<tr><td><code>LastFetchTimestamp</code></td><td>Cuándo fue la última vez que ese nodo pidió novedades. <b>Un valor antiguo aquí es la señal de un nodo que se quedó atrás</b></td></tr>
+</table>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>En <code>CurrentVoters</code> hay <b>tres</b> identificadores, y en la tabla de replicación hay <b>un <code>Leader</code> y dos <code>Follower</code></b>, los tres con <code>Lag</code> en 0.</p>
+  <p style="margin-bottom:0"><b>Anota el <code>LeaderId</code> y el <code>LeaderEpoch</code>.</b> Los vas a comparar en el paso 6.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si <code>CurrentVoters</code> trae menos de tres</span>
+  <p style="margin-bottom:0">Uno de los servidores no se unió al quórum. Casi siempre su <code>KAFKA_CONTROLLER_QUORUM_VOTERS</code> es distinto del de los otros. Bájalo todo con <code>cd mi-cluster && docker compose -p novatech-lab02 down -v && cd ..</code>, corrige el archivo y vuelve a levantar.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 5 de 7</span>Un tópico con tres copias</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Con un solo servidor, en el laboratorio 01, no pudiste crear un tópico con tres copias. Kafka te dijo que no. <b>Ahora sí se puede</b>, y conviene ver qué cambia.</p>
+
+<div class="concepto">
+  <span class="rot">Concepto · réplica e ISR</span>
+  Una <b>réplica</b> es cada una de las copias de una partición, viviendo en un servidor distinto. Son las libretas de respaldo.<br><br>
+  El <b>ISR</b> (<i>In-Sync Replicas</i>) es <b>cuáles de esas copias están al día en este momento</b>. Son los que marcaron tarjeta. <b>Esta es la columna que vas a mirar en el paso 6</b>, cuando falte uno.
+</div>
+
+<h3>El comando</h3>
+
+<pre>docker exec kafka-broker-1 kafka-topics \
+    --bootstrap-server kafka-broker-1:29092 \
+    --create --topic novatech.test \
+    --partitions 6 --replication-factor 3</pre>
+
+<div class="desglose">
+<div><span class="flag">docker exec kafka-broker-1</span> — ejecuta el comando <b>dentro</b> del primer servidor. <b>En un servidor de verdad esta parte no existe</b></div>
+<div><span class="flag">--bootstrap-server kafka-broker-1:29092</span> — el puerto <b>interno</b>, porque estamos hablando desde dentro de la red de Docker</div>
+<div><span class="flag">--partitions 6</span> — en cuántos pedazos se corta. <b>Seis, para que haya de sobra que repartir entre tres servidores</b></div>
+<div><span class="flag">--replication-factor 3</span> — tres copias de cada pedazo, en tres servidores distintos. <b>Esto es lo que en el laboratorio 01 fallaba</b></div>
+</div>
+
+<h3>Ahora descríbelo</h3>
+
+<pre>docker exec kafka-broker-1 kafka-topics \
+    --bootstrap-server kafka-broker-1:29092 \
+    --describe --topic novatech.test</pre>
+
+<div class="salida-rot">Las primeras líneas · recortado a lo ancho</div>
+<div class="salida">Topic: novatech.test  PartitionCount: 6  ReplicationFactor: 3
+  Configs: min.insync.replicas=2
+  Partition: 0  Leader: 2  Replicas: 2,3,1  Isr: 2,3,1
+  Partition: 1  Leader: 3  Replicas: 3,1,2  Isr: 3,1,2
+  Partition: 2  Leader: 1  Replicas: 1,2,3  Isr: 1,2,3</div>
+
+<p><b>Fíjate en dos cosas.</b> Cada partición tiene un líder distinto, así que el trabajo está repartido entre los tres. Y en las tres, <code>Isr</code> trae <b>los mismos tres números</b> que <code>Replicas</code>, o sea que las tres copias están al día.</p>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p><code>ReplicationFactor: 3</code>, seis líneas de partición, y en todas <b><code>Isr</code> tiene tres números</b>.</p>
+  <p style="margin-bottom:0"><b>Copia esas seis líneas a un papel.</b> En el paso 6 vas a comparar contra ellas.</p>
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">Ese <code>min.insync.replicas=2</code> que aparece sin que lo pidieras</span>
+  <p style="margin-bottom:0">Viene del plano, del <code>KAFKA_MIN_INSYNC_REPLICAS: 2</code>. Significa que <b>para aceptar una escritura hacen falta al menos dos copias al día</b>. Con tres servidores puedes perder uno y seguir escribiendo. <b>Si perdieras dos, el tópico dejaría de aceptar escrituras</b>, y eso es a propósito. Prefiere no aceptar el dato antes que aceptarlo sin respaldo.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 6 de 7</span>Matar al jefe de turno</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Aquí está el laboratorio. Vas a apagar <b>el servidor que manda</b>, no uno cualquiera, y a mirar qué hacen los otros dos.</p>
+
+<h3>Primero, mira quién es</h3>
+
+<pre>docker exec kafka-broker-1 kafka-metadata-quorum \
+    --bootstrap-server kafka-broker-1:29092 describe --status | head -3</pre>
+
+<div class="salida-rot">Lo que salió en la corrida medida</div>
+<div class="salida">ClusterId:              YlCN8AhrTfWKst5eUgWhrg
+LeaderId:               2
+LeaderEpoch:            3</div>
+
+<p><b>Anota los dos números.</b> En este ejemplo el jefe de turno es el <b>2</b> y el turno va por el <b>3</b>. A ti te van a salir otros.</p>
+
+<h3>Ahora apágalo</h3>
+
+<pre>docker stop kafka-broker-2</pre>
+
+<div class="desglose">
+<div><span class="flag">docker stop</span> — apaga el contenedor <b>sin borrarlo</b>. Su disco queda intacto, y por eso lo vas a poder encender de nuevo en el paso 7</div>
+<div><span class="flag">kafka-broker-2</span> — <b>pon el número que te salió a ti</b>, no el 2 del ejemplo</div>
+</div>
+
+<div class="caja ojo">
+  <span class="rot">Espera 20 segundos antes de preguntar</span>
+  <p style="margin-bottom:0">Los otros dos tienen que <b>notar que falta</b>, convocar la elección y ponerse de acuerdo. Si preguntas de inmediato vas a ver un clúster a medio camino.</p>
+</div>
+
+<h3>Pregúntale a uno de los que quedan</h3>
+
+<div class="caja ojo">
+  <span class="rot">Ojo con el puerto interno · cada servidor tiene el suyo</span>
+  <table style="margin-bottom:0">
+  <tr><th>Servidor</th><th>Puerto interno</th></tr>
+  <tr><td><code>kafka-broker-1</code></td><td><code>29092</code></td></tr>
+  <tr><td><code>kafka-broker-2</code></td><td><code>29093</code></td></tr>
+  <tr><td><code>kafka-broker-3</code></td><td><code>29094</code></td></tr>
+  </table>
+</div>
+
+<pre>docker exec kafka-broker-1 kafka-metadata-quorum \
+    --bootstrap-server kafka-broker-1:29092 describe --status</pre>
+
+<div class="salida-rot">Lo que salió · el clúster sin el 2</div>
+<div class="salida">ClusterId:              YlCN8AhrTfWKst5eUgWhrg
+LeaderId:               3
+LeaderEpoch:            4
+HighWatermark:          558
+MaxFollowerLag:         559
+MaxFollowerLagTimeMs:   -1
+CurrentVoters:          [{"id": 1, ...}, {"id": 2, ...}, {"id": 3, ...}]
+CurrentObservers:       []</div>
+
+<h3>Cómo se lee, y son tres cosas</h3>
+
+<p><b>Uno. Cambió el jefe de turno.</b> Era el 2 y ahora es el 3. <b>Nadie ejecutó un comando de elección.</b> Los dos que quedaban lo hicieron solos.</p>
+
+<p><b>Dos. Subió el número de turno.</b> El <code>LeaderEpoch</code> pasó de 3 a 4. Ese número es la manera que tiene Kafka de saber qué órdenes son del turno actual y cuáles son de un turno viejo. <b>Si un servidor que estuvo desconectado vuelve dando órdenes del turno 3, se las ignoran.</b></p>
+
+<p><b>Tres. <code>CurrentVoters</code> sigue trayendo los tres.</b> Y eso confunde a mucha gente. <b>La lista de votantes es la definición del quórum, no la lista de quiénes están vivos.</b> Para saber quién está vivo se mira el <code>MaxFollowerLag</code>, que aquí saltó a 559, y el <code>MaxFollowerLagTimeMs</code> en <code>-1</code>. Ese <code>-1</code> significa «hay uno del que no sé nada».</p>
+
+<h3>Y comprueba que el clúster sigue atendiendo</h3>
+
+<pre>docker exec kafka-broker-1 kafka-topics \
+    --bootstrap-server kafka-broker-1:29092 \
+    --describe --topic novatech.test | head -4</pre>
+
+<div class="salida-rot">Lo que salió</div>
+<div class="salida">Topic: novatech.test  PartitionCount: 6  ReplicationFactor: 3
+  Partition: 0  Leader: 3  Replicas: 2,3,1  Isr: 1,3
+  Partition: 1  Leader: 3  Replicas: 3,1,2  Isr: 1,3
+  Partition: 2  Leader: 1  Replicas: 1,2,3  Isr: 1,3</div>
+
+<div class="caja tecnico">
+  <span class="rot">Esta salida dice tres cosas a la vez</span>
+  <p><b>El tópico responde.</b> El comando devolvió datos, así que el clúster está atendiendo con dos de tres servidores.</p>
+  <p><b>El <code>Isr</code> se encogió</b>, de tres números a dos. El 2 salió de la lista de los que están al día, porque está apagado.</p>
+  <p style="margin-bottom:0"><b>Y el liderazgo se movió.</b> Mira la partición 0. Sus réplicas son <code>2,3,1</code> y el líder era el 2. Ahora el líder es el 3. <b>El trabajo del que se cayó lo tomó otro, partición por partición.</b></p>
+</div>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p><b>El <code>LeaderId</code> cambió y el <code>LeaderEpoch</code> subió en uno.</b> Y el <code>describe</code> del tópico sigue respondiendo, con el <code>Isr</code> encogido a dos.</p>
+  <p style="margin-bottom:0">Eso es la primera mitad de la afirmación. <b>El clúster aguantó perder uno.</b></p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el comando se queda colgado repitiendo <code>Connection to node -1 could not be established</code></span>
+  <p>Le estás preguntando <b>al servidor que apagaste</b>, o al puerto interno equivocado.</p>
+  <p style="margin-bottom:0">Corta con <code>Ctrl+C</code> y repite contra uno que siga vivo, <b>con su puerto</b>, según la tabla de arriba. Preguntarle al 2 por el 29092 falla aunque el 2 esté vivo, porque el 29092 es del 1.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el <code>LeaderEpoch</code> no cambió</span>
+  <p style="margin-bottom:0">Apagaste un seguidor, no al líder. <b>No es un error</b>, y de hecho demuestra algo útil: el clúster ni se inmuta cuando cae uno que no manda. Enciéndelo de nuevo con <code>docker start</code>, vuelve a mirar quién es el <code>LeaderId</code>, y apaga a ese.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 7 de 7</span>Devolverlo, y ver que no recupera el puesto</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>El servidor vuelve. La pregunta que casi todo el mundo contesta mal es <b>si recupera el liderazgo que tenía</b>.</p>
+
+<div class="caja">
+  <p style="margin-bottom:0"><b>Piénsalo antes de ejecutar.</b> Era el jefe de turno, tiene todos los datos, su disco está intacto. ¿Vuelve a mandar?</p>
+</div>
+
+<h3>El comando</h3>
+
+<pre>docker start kafka-broker-2</pre>
+
+<p><b>Espera unos 40 segundos</b> y pregunta otra vez:</p>
+
+<pre>bin/check-quorum.sh</pre>
+
+<div class="salida-rot">Lo que salió</div>
+<div class="salida">ClusterId:              YlCN8AhrTfWKst5eUgWhrg
+LeaderId:               3
+LeaderEpoch:            4
+HighWatermark:          680
+MaxFollowerLag:         0
+MaxFollowerLagTimeMs:   492
+
+NodeId  DirectoryId             LogEndOffset  Lag  Status
+3       AAAAAAAAAAAAAAAAAAAAAA  683           0    Leader
+1       AAAAAAAAAAAAAAAAAAAAAA  683           0    Follower
+2       AAAAAAAAAAAAAAAAAAAAAA  683           0    Follower</div>
+
+<div class="caja tecnico">
+  <span class="rot">La respuesta es no, y mira los tres números</span>
+  <p><b>El <code>LeaderId</code> sigue siendo 3.</b> El 2 volvió y no reclamó nada.</p>
+  <p><b>El <code>LeaderEpoch</code> sigue en 4.</b> No hubo elección nueva, porque no hacía falta. Ya había jefe de turno.</p>
+  <p style="margin-bottom:0"><b>El 2 volvió como <code>Follower</code>, con <code>Lag</code> en 0.</b> Se puso al día en segundos y se sentó a copiar.</p>
+</div>
+
+<h3>Por qué esto es deseable</h3>
+
+<div class="caja sunat">
+  <span class="rot">Qué significa esto para SUNAT</span>
+  <p>Un liderazgo que vuelve solo al servidor original suena ordenado y es <b>una mala idea</b>. Significaría una segunda elección, y una segunda pausa, cada vez que un servidor se reinicia.</p>
+  <p>Un servidor que se reinicia dos veces en una hora provocaría <b>cuatro</b> elecciones en vez de dos. <b>Kafka prefiere la estabilidad al orden.</b></p>
+  <p style="margin-bottom:0">Y de ahí sale la pregunta que hay que hacer en producción. Cuando alguien diga «reiniciamos el broker 2 y todo volvió a la normalidad», la pregunta correcta es <b>«¿volvió a ser líder, o volvió como seguidor?»</b>. Las dos son normales. Solo una de las dos costó una pausa.</p>
+</div>
+
+<h3>Y comprueba que el tópico se recuperó</h3>
+
+<pre>docker exec kafka-broker-1 kafka-topics \
+    --bootstrap-server kafka-broker-1:29092 \
+    --describe --topic novatech.test | head -4</pre>
+
+<div class="salida-rot">Lo que salió</div>
+<div class="salida">Topic: novatech.test  PartitionCount: 6  ReplicationFactor: 3
+  Partition: 0  Leader: 3  Replicas: 2,3,1  Isr: 1,2,3
+  Partition: 1  Leader: 3  Replicas: 3,1,2  Isr: 1,2,3
+  Partition: 2  Leader: 1  Replicas: 1,2,3  Isr: 1,2,3</div>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p><b>El <code>Isr</code> volvió a tener tres números</b>, o sea que el 2 se puso al día. Y sin embargo, <b>la partición 0 sigue liderada por el 3</b> aunque su primera réplica sea el 2.</p>
+  <p style="margin-bottom:0">Eso cierra el laboratorio. <b>Los datos se recuperan solos. El liderazgo no vuelve solo.</b></p>
+</div>
+
+<div class="np"></div>
+<h2>Lo que aprendiste</h2>
+
+<div class="regla"><span class="num">1</span>
+<b>Tres servidores aguantan perder uno. Dos, no.</b><br>
+La elección necesita mayoría, y de tres la mayoría es dos. Por eso los quórums se dimensionan en números impares, con tres o cinco. Un quórum de dos no tolera ninguna caída, porque uno solo nunca es mayoría de dos.
+</div>
+
+<div class="regla"><span class="num">2</span>
+<b><code>CurrentVoters</code> no dice quién está vivo.</b><br>
+Dice quién tiene derecho a votar, que es la lista que tú escribiste. Para saber quién está vivo se mira el <code>Status</code> de cada nodo, su <code>Lag</code> y su <code>LastFetchTimestamp</code>. Confundir las dos cosas es el error de lectura más común de esta salida.
+</div>
+
+<div class="regla"><span class="num">3</span>
+<b>El <code>LeaderEpoch</code> es el contador de elecciones.</b><br>
+Sube en uno cada vez que hay una. Es lo que le permite al clúster ignorar las órdenes de un servidor que estuvo desconectado y vuelve creyendo que todavía manda.
+</div>
+
+<div class="regla"><span class="num">4</span>
+<b>El que vuelve entra como seguidor.</b><br>
+Los datos se recuperan solos y el liderazgo no. Es una decisión de diseño a favor de la estabilidad, porque devolver el liderazgo costaría una segunda elección y una segunda pausa cada vez que alguien reinicia un servidor.
+</div>
+
+<div class="np"></div>
+<h2>Para profundizar</h2>
+
+<p>Lo que sigue no está en el recorrido de clase. <b>El clúster que tienes arriba sirve para todo esto.</b></p>
+
+<h3>A · Leerle el disco a cada servidor</h3>
+
+<pre>bin/verify-storage.sh kafka-broker-1
+bin/verify-storage.sh kafka-broker-2
+bin/verify-storage.sh kafka-broker-3</pre>
+
+<div class="salida-rot">Lo que sale para el primero</div>
+<div class="salida">Found log directory:
+  /var/lib/kafka/data
+Found metadata: {cluster.id=YlCN8AhrTfWKst5eUgWhrg,
+  directory.id=56uijmDgA69Xqc7-LoodWg, node.id=1, version=1}</div>
+
+<p><b>Lo que hay que mirar.</b> Corre los tres y compara. El <code>cluster.id</code> es <b>el mismo en los tres</b>, porque es la identidad compartida. El <code>node.id</code> y el <code>directory.id</code> son <b>distintos en cada uno</b>. Es la comprobación que harías en un servidor real cuando sospechas que alguien copió un directorio de datos de una máquina a otra.</p>
+
+<h3>B · Apagar dos, y ver qué deja de funcionar y qué no</h3>
+
+<p>Es la contraparte del paso 6, y demuestra la regla 1. <b>Lo interesante es que no se cae todo de golpe.</b></p>
+
+<pre>docker stop kafka-broker-2 kafka-broker-3</pre>
+
+<p>Espera 20 segundos y prueba <b>tres cosas distintas</b>, en este orden.</p>
+
+<p><b>Uno. Leer lo que ya existe.</b></p>
+
+<pre>docker exec kafka-broker-1 kafka-topics \
+    --bootstrap-server kafka-broker-1:29092 --list</pre>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">novatech.test</div>
+
+<p><b>Funciona.</b> Y sorprende a todo el mundo. El servidor que queda tiene su propia copia de los metadatos, así que puede contestar de memoria qué tópicos existen.</p>
+
+<p><b>Dos. Crear algo nuevo.</b></p>
+
+<pre>docker exec kafka-broker-1 kafka-topics \
+    --bootstrap-server kafka-broker-1:29092 \
+    --create --topic novatech.imposible \
+    --partitions 1 --replication-factor 1</pre>
+
+<div class="salida-rot">Lo que sale, tras un rato reintentando</div>
+<div class="salida">WARN [AdminClient clientId=adminclient-1] Error connecting to node
+  kafka-broker-3:29094 (id: 3 rack: null isFenced: false)
+java.net.UnknownHostException: kafka-broker-3: Name or service not known</div>
+
+<p><b>Falla.</b> Crear un tópico es <b>escribir</b> en el registro de metadatos, y para eso hace falta que la mayoría esté de acuerdo. Con uno de tres no hay mayoría.</p>
+
+<p><b>Tres. Preguntar por el quórum.</b></p>
+
+<pre>docker exec kafka-broker-1 kafka-metadata-quorum \
+    --bootstrap-server kafka-broker-1:29092 describe --status</pre>
+
+<p><b>Se cuelga.</b> Esa consulta se la hace al jefe de turno, y no hay. Córtala con <code>Ctrl+C</code>.</p>
+
+<div class="caja tecnico">
+  <span class="rot">La regla que sale de estas tres pruebas</span>
+  <p style="margin-bottom:0"><b>Sin quórum, el clúster puede seguir contestando lo que ya sabe, y no puede aprender nada nuevo.</b> Por eso un clúster sin mayoría puede parecer sano desde un tablero que solo hace consultas de lectura. <b>La prueba honesta es intentar escribir.</b></p>
+</div>
+
+<div class="caja ojo">
+  <span class="rot">Y ese comportamiento es correcto</span>
+  <p style="margin-bottom:0">Un servidor solo <b>no puede saber</b> si los otros dos están muertos o si es él quien perdió la red. Si siguiera atendiendo por su cuenta y los otros dos siguieran vivos al otro lado, tendrías <b>dos clústeres escribiendo el mismo dato</b>. <b>Kafka prefiere no atender antes que arriesgarse a eso.</b></p>
+</div>
+
+<p>Para volver:</p>
+
+<pre>docker start kafka-broker-2 kafka-broker-3</pre>
+
+<h3>C · Mirar quién manda en cada partición</h3>
+
+<pre>docker exec kafka-broker-1 kafka-topics \
+    --bootstrap-server kafka-broker-1:29092 \
+    --describe --topic novatech.test</pre>
+
+<p>Y para contarlo sin hacerlo a ojo:</p>
+
+<pre>docker exec kafka-broker-1 kafka-topics \
+    --bootstrap-server kafka-broker-1:29092 \
+    --describe --topic novatech.test | grep -oE "Leader: [0-9]+" | sort | uniq -c</pre>
+
+<div class="salida-rot">Lo que salió en la corrida medida</div>
+<div class="salida">   2 Leader: 1
+   2 Leader: 2
+   2 Leader: 3</div>
+
+<p><b>Lo que hay que mirar.</b> <b>Dos particiones por servidor, repartidas parejo.</b> Kafka distribuye el liderazgo al crear el tópico, y ese reparto es lo que hace que el trabajo no caiga todo en la misma máquina. <b>Si acabas de hacer el paso 6, el reparto va a estar desbalanceado</b>, porque el que se cayó perdió sus liderazgos y no los recuperó.</p>
+
+<h3>D · Los archivos de configuración de un contenedor vivo</h3>
+
+<p>Es un adelanto del laboratorio 03, y se ve en dos comandos.</p>
+
+<pre>docker exec kafka-broker-1 sh -c "ls /etc/kafka/*.properties | wc -l"
+docker exec kafka-broker-1 sh -c "ps -o args= -C java | tr ' ' '\n' | grep properties"</pre>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">13
+/etc/kafka/kafka.properties</div>
+
+<p><b>Lo que hay que mirar.</b> Hay <b>trece</b> archivos <code>.properties</code>, y uno de ellos se llama <code>server.properties</code>. <b>Pero el proceso no arrancó con ese.</b> Arrancó con <code>kafka.properties</code>, que <b>no lo escribió nadie</b>. Lo genera la imagen al arrancar, traduciendo las variables <code>KAFKA_*</code> que tú escribiste en el plano.</p>
+
+<p>La misma imagen, apagada, tiene <b>doce</b>. El decimotercero solo existe cuando el contenedor corre. <b>Ese es el tema entero del laboratorio 03.</b></p>
+
+<h3>E · El reporte del laboratorio</h3>
+
+<p><code>plantillas/reporte-entregable.md</code>, con las respuestas de referencia en <code>soluciones/reporte-resuelto.md</code>. <b>Míralas después de intentarlo.</b></p>
+
+<h2>Antes de cerrar</h2>
+
+<div class="caja ojo">
+  <span class="rot">Deja el terreno limpio</span>
+  <p>Si vas a hacer otro laboratorio, baja este primero o los puertos van a estar ocupados:</p>
+  <pre>cd mi-cluster
+docker compose -p novatech-lab02 down -v
+cd ..</pre>
+  <p><b>Esa <code>-v</code> borra también los volúmenes</b>, o sea los tres discos. Si quieres conservarlos para seguir mañana donde lo dejaste, usa <code>bin/stop-mi-cluster.sh</code>, que apaga sin borrar.</p>
+  <p style="margin-bottom:0">Y comprueba con <code>docker ps --filter name=kafka-broker</code> que no quede nada.</p>
+</div>
+
+<div class="caja sunat">
+  <span class="rot">Lo que te llevas</span>
+  <p style="margin-bottom:0">Ya sabes leer las dos salidas con las que se diagnostica un clúster KRaft. Y sabes las dos preguntas que hay que hacer cuando alguien reporta que un servidor se cayó y volvió. <b>¿Cambió el <code>LeaderEpoch</code>?</b> Y <b>¿el <code>Isr</code> recuperó sus tres números?</b></p>
+</div>
+
+</body></html>
