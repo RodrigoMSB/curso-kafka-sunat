@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><link rel="stylesheet" href="estilo-alumno.css"></head>
+<body>
+
+<div class="portada">
+  <div class="kicker">C U R S O &nbsp; D E &nbsp; A D M I N I S T R A C I Ó N &nbsp; D E &nbsp; K A F K A</div>
+  <div class="labnum">LABORATORIO 07</div>
+  <h1>¿Y comparado<br>con qué?</h1>
+  <div class="sub">Pruebas de rendimiento.<br>Guía para hacerlo por tu cuenta, paso a paso</div>
+  <div class="meta">
+    Confluent Platform 8.2.0 · Kafka 4.2 en modo KRaft · 3 brokers<br>
+    Duración estimada · 45 minutos, casi todos de leer lo que salió<br>
+    NovaTech Logistics · caso de estudio
+  </div>
+</div>
+
+<h2>Antes de empezar</h2>
+
+<h3>Qué vas a lograr</h3>
+
+<p>Al final de esta guía vas a haber medido el clúster, vas a haberlo medido otra vez <b>sin tocar nada</b>, y los dos números van a ser distintos. Todo lo demás del laboratorio sale de ahí.</p>
+
+<p>Este es el laboratorio que enseña a <b>no creerle a un número</b>. No hay nada que configurar y nada que romper. El trabajo es leer.</p>
+
+<div class="afirmacion">
+  <span class="rot">Lo que este laboratorio demuestra</span>
+  <div class="txt">Una sola medición no dice nada. El rendimiento es siempre una comparación.</div>
+</div>
+
+<div class="afirmacion">
+  <span class="rot">Y la comparación tampoco se lee sola</span>
+  <div class="txt">Una diferencia solo cuenta si es más grande que el ruido de tu máquina. Por eso lo primero que se mide no es la mejora, es el ruido.</div>
+</div>
+
+<div class="caja ojo">
+  <span class="rot">Un aviso, porque este lab termina distinto a como esperas</span>
+  <p>Al final del recorrido la respuesta medida va a ser <b>«en esta máquina no se distingue»</b>.</p>
+  <p style="margin-bottom:0">No es que el laboratorio salga mal. <b>Es el resultado</b>, y aprender a decirlo en voz alta es la mitad de la clase.</p>
+</div>
+
+<h3>Qué necesitas tener listo</h3>
+
+<table>
+<tr><th>Requisito</th><th>Cómo lo compruebas</th></tr>
+<tr><td>Docker Desktop corriendo, con 6 GB de RAM</td><td>Ajustes de Docker Desktop, pestaña <i>Resources</i></td></tr>
+<tr><td>Git Bash abierto en la carpeta del lab</td><td><code>cd Capitulo_3/lab-07-pruebas-rendimiento</code></td></tr>
+<tr><td>La máquina lo más descargada posible</td><td><b>Cierra el navegador con veinte pestañas y lo que esté sincronizando.</b> Hoy estás midiendo tu propia máquina, y todo lo que corra ahí entra en la medición</td></tr>
+<tr><td>Papel y lápiz, o un bloc de notas</td><td>Vas a anotar unos veinte números. <b>No confíes en el desplazamiento de la terminal</b></td></tr>
+<tr><td>Los puertos 9092, 9093, 9094 y 8090 libres</td><td>El paso 1 te avisa si no lo están</td></tr>
+</table>
+
+<h3>El caso</h3>
+
+<div class="caja">
+  <p>Viene la temporada alta y alguien pregunta cuánto aguanta el clúster de <b>NovaTech Logistics</b>. Se corre una prueba de carga y salen <b>114 000 mensajes por segundo</b>. Ese número entra en una lámina.</p>
+  <p>El equipo aplica un cambio de tuning que la documentación recomienda, vuelve a correr la prueba, y salen <b>111 000</b>. Conclusión de la reunión, <i>el cambio empeoró el clúster, vuélvanlo atrás</i>.</p>
+  <p>Las dos mediciones son reales. Y la conclusión <b>no se sostiene</b>. Pero cuidado, porque la contraria tampoco. Si los números hubieran salido al revés y la reunión hubiera decidido <i>el cambio funciona, déjenlo</i>, habrían estado <b>igual de equivocados</b>.</p>
+  <p style="margin-bottom:0">El problema no es el tuning. El problema es que <b>114 000 no significa nada por sí solo</b>, y nadie en esa reunión sabía cuánto se mueve ese número cuando no se cambia nada.</p>
+</div>
+
+<div class="caja abuelita">
+  <span class="rot">La metáfora · hoy entra el ayudante</span>
+  <p>Kafka sigue siendo <b>el restaurante</b>. El <b>mozo</b> es el broker, el <b>tipo de comanda</b> es el tópico, los <b>sectores del salón</b> son las particiones, el <b>cocinero</b> es el consumidor y la <b>brigada</b> es su grupo.</p>
+  <p>Hoy entra una pieza nueva, del otro lado del salón. <b>El ayudante</b>, que recoge las comandas de las mesas y se las lleva al mozo. Es el <b>productor</b>.</p>
+  <p style="margin-bottom:0"><b>Todo lo que vas a tunear hoy son decisiones suyas</b>, no del mozo.</p>
+</div>
+
+<h3>Las tres decisiones del ayudante</h3>
+
+<table>
+<tr><th>Decisión</th><th>El parámetro</th><th>Qué controla</th></tr>
+<tr><td>Cuánto se queda esperando a que caigan más comandas antes de arrancar</td><td><code>linger.ms</code></td><td><b>Es el del recorrido de hoy</b></td></tr>
+<tr><td>Cuántas comandas le caben en la bandeja</td><td><code>batch.size</code></td><td>Cuántos bytes junta antes de salir</td></tr>
+<tr><td>A quién le espera el visto bueno</td><td><code>acks</code></td><td>A nadie, al mozo, o al mozo y a las libretas de respaldo</td></tr>
+</table>
+
+<p>Un ayudante con <code>linger.ms=0</code> sale disparado apenas tiene algo en la mano. Si espera diez milisegundos más, sale con la bandeja más llena y hace menos viajes. Mueve más comandas por hora, y cada comanda individual llega un poco más tarde.</p>
+
+<div class="caja tecnico">
+  <span class="rot">Y aquí está el laboratorio de hoy</span>
+  <p style="margin-bottom:0">Si cronometras <b>un</b> viaje del ayudante, no sabes nada. Ese viaje pudo tocar el ascensor libre o la cocina llena. Para decir algo hay que cronometrar varios, y hay que cronometrar los dos escenarios <b>el mismo día, uno detrás del otro</b>.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 1 de 7</span>Levantar el clúster</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>El mismo clúster de tres brokers de los laboratorios anteriores. Este lab trae además un tópico de banco de pruebas ya creado, con 6 particiones.</p>
+
+<h3>Los comandos</h3>
+
+<pre>cd Capitulo_3/lab-07-pruebas-rendimiento
+chmod +x bin/*.sh kafka-cli/*.sh
+bin/start-lab.sh</pre>
+
+<div class="desglose">
+<div><span class="flag">cd Capitulo_3/lab-07-pruebas-rendimiento</span> — la carpeta de este laboratorio. Todos los comandos salen de aquí</div>
+<div><span class="flag">chmod +x</span> — permiso de ejecución para los scripts, que en Git Bash a veces se pierde al clonar</div>
+<div><span class="flag">bin/start-lab.sh</span> — levanta los tres brokers, la interfaz web, y crea el tópico <code>novatech.tuning.bench</code></div>
+</div>
+
+<h3>Comprueba que el banco de pruebas existe</h3>
+
+<pre>kafka-cli/describe-topic.sh novatech.tuning.bench | head -1</pre>
+
+<div class="salida-rot">Lo que vas a ver · recortado a lo ancho</div>
+<div class="salida">Topic: novatech.tuning.bench  PartitionCount: 6  ReplicationFactor: 3
+  Configs: min.insync.replicas=2</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>Salió <code>✓ 3/3 brokers operativos</code> y el tópico <code>novatech.tuning.bench</code> dice <b><code>PartitionCount: 6</code></b>.</p>
+  <p style="margin-bottom:0">Seis particiones importan hoy, porque son las que permiten que la carga se reparta entre los tres brokers en vez de caer toda en uno.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el tópico no existe</span>
+  <p>El mensaje es <code>Topic 'novatech.tuning.bench' does not exist</code>. El <code>start-lab.sh</code> no llegó a crearlo.</p>
+  <p style="margin-bottom:0">Créalo tú mismo y sigue:</p>
+  <pre style="margin-bottom:0">docker exec kafka-broker-1 kafka-topics \
+    --bootstrap-server kafka-broker-1:29092 \
+    --create --topic novatech.tuning.bench \
+    --partitions 6 --replication-factor 3</pre>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si algo falla al levantar</span>
+  <p style="margin-bottom:0">Es lo mismo de los laboratorios anteriores. <b>Docker apagado</b>, abre Docker Desktop. <b><code>port is already allocated</code></b>, algo usa el 9092, el 9093, el 9094 o el 8090. <b><code>Timeout: solo 2/3 brokers</code></b>, sube Docker a 6 GB y repite.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 2 de 7</span>Medir el ruido, que es lo primero</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Antes de tunear nada hay que saber <b>cuánto se mueve el número cuando no se cambia nada</b>. Ese movimiento es el ruido de tu máquina, y cualquier mejora más chica que ese ruido es indistinguible de la suerte.</p>
+
+<p>Se mide dos veces seguidas, con el clúster en el mismo estado y sin tocar un solo parámetro.</p>
+
+<div class="concepto">
+  <span class="rot">Concepto · throughput</span>
+  Cuánto trabajo pasa por unidad de tiempo. Aquí sale como <code>records/sec</code> y como <code>MB/sec</code>. <b>Es el número que la gente cita.</b>
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · latencia</span>
+  Cuánto tarda <b>un</b> mensaje en confirmarse. Aquí viene cinco veces, como promedio, como máximo, y en tres percentiles.
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · percentil</span>
+  El <code>99th</code> es el valor que <b>el 99 % de los mensajes no superó</b>. Dicho al revés, uno de cada cien tardó <b>más</b> que eso.
+</div>
+
+<h3>El comando, dos veces seguidas</h3>
+
+<pre>kafka-cli/perf-test.sh novatech.tuning.bench 50000</pre>
+
+<div class="desglose">
+<div><span class="flag">kafka-cli/perf-test.sh</span> — envoltorio del curso. Por dentro llama a <code>kafka-producer-perf-test</code> dentro del contenedor</div>
+<div><span class="flag">novatech.tuning.bench</span> — a qué tópico se le manda la carga</div>
+<div><span class="flag">50000</span> — cuántos mensajes generar. A 200 bytes cada uno son unos 10 MB</div>
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">El comando real, el que vas a escribir en SUNAT</span>
+  <pre style="margin-bottom:0">kafka-producer-perf-test \
+    --topic novatech.tuning.bench \
+    --num-records 50000 --record-size 200 --throughput -1 \
+    --producer-props bootstrap.servers=kafka-broker-1:29092 \
+      acks=all batch.size=16384 linger.ms=0 compression.type=none</pre>
+</div>
+
+<div class="desglose">
+<div><span class="flag">--num-records 50000</span> — cuántos mensajes manda en total</div>
+<div><span class="flag">--record-size 200</span> — cuántos bytes pesa cada uno</div>
+<div><span class="flag">--throughput -1</span> — tope de mensajes por segundo. <b>Con <code>-1</code> empuja todo lo que pueda</b>, que es lo que queremos para medir el techo</div>
+<div><span class="flag">--producer-props</span> — las propiedades del productor. <b>Aquí vive el tuning</b></div>
+<div><span class="flag">acks=all</span> — cuántas copias confirman antes de dar el mensaje por escrito</div>
+<div><span class="flag">batch.size=16384</span> — 16 KB. Cuántos bytes junta antes de mandar un lote</div>
+<div><span class="flag">linger.ms=0</span> — no espera nada, cierra el lote apenas puede. <b>Es el valor de fábrica, y el que vamos a mover en el paso 3</b></div>
+<div><span class="flag">compression.type=none</span> — sin comprimir</div>
+</div>
+
+<div class="salida-rot">Lo que salió en una corrida real · dos líneas, una por corrida</div>
+<div class="salida">50000 records sent, 98231.827112 records/sec (18.74 MB/sec), 92.73 ms avg latency,
+190.00 ms max latency, 86 ms 50th, 166 ms 95th, 174 ms 99th, 177 ms 99.9th.
+
+50000 records sent, 105708.245243 records/sec (20.16 MB/sec), 79.18 ms avg latency,
+196.00 ms max latency, 80 ms 50th, 120 ms 95th, 132 ms 99th, 138 ms 99.9th.</div>
+
+<h3>Cómo se lee</h3>
+
+<table>
+<tr><th>Medición</th><th>Corrida 1</th><th>Corrida 2</th><th>Diferencia</th></tr>
+<tr><td>records/sec</td><td>98 232</td><td>105 708</td><td><b>+7,6 %</b></td></tr>
+<tr><td>MB/sec</td><td>18,74</td><td>20,16</td><td>+7,6 %</td></tr>
+<tr><td>Latencia media</td><td>92,73 ms</td><td>79,18 ms</td><td>−14,6 %</td></tr>
+<tr><td>Latencia p99</td><td>174 ms</td><td>132 ms</td><td>−24,1 %</td></tr>
+</table>
+
+<div class="caja ojo">
+  <span class="rot">No se cambió nada entre las dos corridas</span>
+  <p>Mismo comando, mismo tópico, mismo clúster, unos segundos de diferencia. Y el throughput se movió un <b>7,6 %</b>, la latencia media un 14,6 % y el p99 un 24,1 %.</p>
+  <p style="margin-bottom:0"><b>Ese es el ruido de tu máquina, y acabas de medirlo.</b> Cualquier mejora que anuncies por debajo de ese margen no es una mejora. Es la corrida siguiente.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p><b>Las dos corridas no coinciden.</b> Eso es todo lo que tiene que pasar en este paso.</p>
+  <p style="margin-bottom:0"><b>Anota tu porcentaje.</b> Es la vara con la que se mide todo lo que viene después, y en el paso 6 la vas a volver a mirar. <b>A ti te va a salir otro número</b>, y probablemente otra diferencia.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si sale <code>Option --producer-props has been deprecated</code></span>
+  <p style="margin-bottom:0">Es Kafka 8.x avisando de un cambio de nombre del parámetro. <b>El parámetro funciona.</b> Ignóralo, va a salir en todas las corridas del laboratorio.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si tus números son mucho más bajos que estos</span>
+  <p>Por ejemplo 15 000 en vez de 100 000 <code>records/sec</code>. <b>Es normal y no rompe nada.</b> Estos números salieron de una máquina concreta, y el tuyo es otro.</p>
+  <p style="margin-bottom:0">Docker Desktop sobre Windows mete una capa de virtualización que se nota mucho aquí. <b>Da igual</b>, porque este laboratorio no compara tu máquina contra la mía. Compara tus corridas contra tus corridas.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si las dos corridas te salen casi idénticas, con un 1 o 2 % de diferencia</span>
+  <p>Es una máquina muy descargada, y <b>hay que tener cuidado con eso</b>. Con un ruido tan chico, ganancias del 3 % sí lo superarían.</p>
+  <p style="margin-bottom:0"><b>Corre la base tres o cuatro veces más.</b> El ruido casi siempre es mayor de lo que muestran dos corridas, y el paso 6 de esta guía trata exactamente de eso.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 3 de 7</span>Cambiar un parámetro. Uno solo</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Ahora sí se tunea. Subimos <code>linger.ms</code> de 0 a 10. El ayudante, en vez de salir disparado con lo que tenga en la mano, se queda hasta diez milisegundos juntando comandas antes de arrancar. Menos viajes, cada uno más lleno.</p>
+
+<div class="caja ojo">
+  <span class="rot">Solo ese</span>
+  <p><code>batch.size</code> se queda en 16 KB, <code>acks</code> en <code>all</code>, la compresión en <code>none</code>.</p>
+  <p style="margin-bottom:0">Si mueves tres cosas y el número mejora, tienes una mejora que <b>no sabes atribuir</b>. Y el día que una de las tres te muerda en producción, no vas a saber cuál sacar.</p>
+</div>
+
+<h3>Antes de correr, apuesta</h3>
+
+<div class="caja">
+  <p style="margin-bottom:0">Escríbelo en tu papel antes de teclear. Al subir <code>linger.ms</code> de 0 a 10, <b>¿el throughput sube o baja? ¿Y la latencia media?</b> Comparar tu apuesta con el resultado es la mitad del ejercicio.</p>
+</div>
+
+<h3>El comando, otra vez dos veces</h3>
+
+<pre>kafka-cli/perf-test.sh novatech.tuning.bench 50000 --linger-ms 10</pre>
+
+<div class="desglose">
+<div><span class="flag">--linger-ms 10</span> — cuántos milisegundos espera el productor juntando mensajes antes de mandar el lote, aunque no esté lleno. <b>Es el único cambio respecto del paso 2</b></div>
+</div>
+
+<div class="salida-rot">Lo que salió en la corrida real</div>
+<div class="salida">50000 records sent, 89605.734767 records/sec (17.09 MB/sec), 95.03 ms avg latency,
+235.00 ms max latency, 102 ms 50th, 150 ms 95th, 160 ms 99th, 164 ms 99.9th.
+
+50000 records sent, 116279.069767 records/sec (22.18 MB/sec), 58.52 ms avg latency,
+199.00 ms max latency, 61 ms 50th, 89 ms 95th, 92 ms 99th, 96 ms 99.9th.</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>Tienes cuatro corridas anotadas. <b>Todavía no las interpretes.</b></p>
+  <p style="margin-bottom:0">Fíjate solo en una cosa. <b>Las dos corridas con <code>linger.ms=10</code> tampoco coinciden entre sí</b>, y se separan más que las dos del paso 2. El ruido no desaparece porque cambies un parámetro.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 4 de 7</span>Un par más, y las dos lecturas de la tabla</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Con cuatro corridas todavía no se puede concluir nada, y este paso empieza mostrando por qué. Después agregamos un par más, medido uno detrás del otro.</p>
+
+<h3>Primero, mira lo que ya tienes</h3>
+
+<pre>kafka-cli/perf-test.sh novatech.tuning.bench 50000
+kafka-cli/perf-test.sh novatech.tuning.bench 50000 --linger-ms 10</pre>
+
+<div class="desglose">
+<div><span class="flag">los dos, uno detrás del otro</span> — <b>eso es un par.</b> Se miden con la máquina en el mismo estado, con segundos de diferencia, para que lo único que cambie entre los dos sea el parámetro</div>
+</div>
+
+<div class="salida-rot">El tercer par, medido</div>
+<div class="salida">50000 records sent, 114942.528736 records/sec (21.92 MB/sec), 65.29 ms avg latency,
+195.00 ms max latency, 71 ms 50th, 95 ms 95th, 99 ms 99th, 102 ms 99.9th.
+
+50000 records sent, 124378.109453 records/sec (23.72 MB/sec), 54.47 ms avg latency,
+194.00 ms max latency, 58 ms 50th, 79 ms 95th, 82 ms 99th, 84 ms 99.9th.</div>
+
+<h3>Las seis corridas, juntas</h3>
+
+<table>
+<tr><th></th><th>records/sec</th><th>Latencia media</th><th>Latencia p99</th><th>Latencia máx</th></tr>
+<tr><td><b>Base 1</b></td><td>98 232</td><td>92,73 ms</td><td>174 ms</td><td>190 ms</td></tr>
+<tr><td><b><code>linger</code> 1</b></td><td>89 606</td><td>95,03 ms</td><td>160 ms</td><td>235 ms</td></tr>
+<tr><td><b>Base 2</b></td><td>105 708</td><td>79,18 ms</td><td>132 ms</td><td>196 ms</td></tr>
+<tr><td><b><code>linger</code> 2</b></td><td>116 279</td><td>58,52 ms</td><td>92 ms</td><td>199 ms</td></tr>
+<tr><td><b>Base 3</b></td><td>114 943</td><td>65,29 ms</td><td>99 ms</td><td>195 ms</td></tr>
+<tr><td><b><code>linger</code> 3</b></td><td>124 378</td><td>54,47 ms</td><td>82 ms</td><td>194 ms</td></tr>
+</table>
+
+<h3>Lectura uno · los rangos sueltos no separan, y engañan en las dos direcciones</h3>
+
+<div class="salida">base              98 232 ───────────── 114 943
+linger    89 606 ──────────────────────────── 124 378     se pisan</div>
+
+<p>La <b>mejor</b> corrida base (114 943) le gana a la <b>peor</b> corrida tuneada (89 606). Un alumno que corriera esas dos se iría con «el tuning empeoró el clúster», que es exactamente la reunión del caso. Otro que corriera la base 1 contra la tuneada 3 se iría con «mejoró un <b>27 %</b>».</p>
+
+<p><b>Las dos conclusiones saldrían de datos reales y las dos estarían mal.</b></p>
+
+<h3>Lectura dos · pareado se ve mucho mejor</h3>
+
+<table>
+<tr><th>Par</th><th>Base</th><th><code>linger.ms=10</code></th><th>Diferencia</th><th>¿Quién ganó?</th></tr>
+<tr><td>1</td><td>98 232</td><td>89 606</td><td><b>−8,8 %</b></td><td>base</td></tr>
+<tr><td>2</td><td>105 708</td><td>116 279</td><td><b>+10,0 %</b></td><td><code>linger</code></td></tr>
+<tr><td>3</td><td>114 943</td><td>124 378</td><td><b>+8,2 %</b></td><td><code>linger</code></td></tr>
+</table>
+
+<p><b>Dos de tres</b> para el tuneado, y las dos ganancias superan el 7,6 % de ruido que mediste en el paso 2. Es el momento exacto en que se escribe la lámina que dice «<code>linger.ms=10</code> mejora el throughput un 10 %».</p>
+
+<div class="caja ojo">
+  <span class="rot">No cierres aquí. Con tres pares no alcanza</span>
+  <p>Hay un par donde el tuneado <b>pierde</b>, y pierde por un 8,8 %, que es del mismo tamaño que las victorias.</p>
+  <p style="margin-bottom:0">Si un efecto es real, no se da vuelta de un par a otro. Lo que tienes por ahora es <b>una moneda que salió cara dos de tres veces</b>, y eso le pasa a cualquier moneda.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>Tienes los tres pares anotados con su porcentaje, y <b>comparaste cada uno contra el ruido del paso 2</b>.</p>
+  <p style="margin-bottom:0"><b>A ti el marcador te puede salir 3–0, 0–3 o 1–2.</b> Da igual cuál. Lo que se hace a continuación es lo mismo en todos los casos.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 5 de 7</span>La tanda de control · diez pares</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Tres pares no contestan la pregunta. Vamos a correr diez, y con un detalle de diseño que importa.</p>
+
+<div class="caja tecnico">
+  <span class="rot">Por qué se alterna el orden dentro de cada par</span>
+  <p>Si una configuración corre <b>siempre</b> en la misma posición, cualquier cosa que dependa de la posición se le suma o se le resta siempre a la misma. Cachés que se calientan, otra tarea del sistema que arranca.</p>
+  <p style="margin-bottom:0"><b>Alternar reparte ese efecto entre las dos.</b></p>
+</div>
+
+<h3>Los comandos</h3>
+
+<pre># los pares impares · la base primero
+kafka-cli/perf-test.sh novatech.tuning.bench 50000
+kafka-cli/perf-test.sh novatech.tuning.bench 50000 --linger-ms 10
+
+# los pares pares · el tuneado primero
+kafka-cli/perf-test.sh novatech.tuning.bench 50000 --linger-ms 10
+kafka-cli/perf-test.sh novatech.tuning.bench 50000</pre>
+
+<p>Son veinte corridas de unos cinco segundos cada una. <b>Toma unos dos minutos y no requiere que hagas nada más que esperar.</b></p>
+
+<h3>Los diez pares medidos</h3>
+
+<table>
+<tr><th>Par</th><th>Orden</th><th>Base</th><th><code>linger.ms=10</code></th><th>Diferencia</th></tr>
+<tr><td>1</td><td>base 1º</td><td>118 483</td><td>124 069</td><td>+4,7 %</td></tr>
+<tr><td>2</td><td><code>linger</code> 1º</td><td>123 153</td><td>124 069</td><td>+0,7 %</td></tr>
+<tr><td>3</td><td>base 1º</td><td>119 904</td><td>128 205</td><td>+6,9 %</td></tr>
+<tr><td>4</td><td><code>linger</code> 1º</td><td>130 890</td><td>129 199</td><td>−1,3 %</td></tr>
+<tr><td>5</td><td>base 1º</td><td>125 000</td><td>129 870</td><td>+3,9 %</td></tr>
+<tr><td>6</td><td><code>linger</code> 1º</td><td>99 602</td><td>126 263</td><td><b>+26,8 %</b></td></tr>
+<tr><td>7</td><td>base 1º</td><td>125 628</td><td>135 870</td><td>+8,2 %</td></tr>
+<tr><td>8</td><td><code>linger</code> 1º</td><td>132 979</td><td>127 877</td><td>−3,8 %</td></tr>
+<tr><td>9</td><td>base 1º</td><td>125 628</td><td>128 205</td><td>+2,1 %</td></tr>
+<tr><td>10</td><td><code>linger</code> 1º</td><td>121 951</td><td>120 482</td><td>−1,2 %</td></tr>
+</table>
+
+<table>
+<tr><th>Resumen de los diez pares</th><th>Valor</th></tr>
+<tr><td>Marcador</td><td><b><code>linger</code> 7 · base 3</b></td></tr>
+<tr><td>Media de la base</td><td>122 322 rec/s</td></tr>
+<tr><td>Media del tuneado</td><td>127 411 rec/s</td></tr>
+<tr><td>Diferencia de medias</td><td><b>+4,2 %</b></td></tr>
+<tr><td>Rango de las diferencias por par</td><td>−3,8 % a +26,8 %</td></tr>
+</table>
+
+<div class="caja ojo">
+  <span class="rot">Siete de diez. Este es el momento peligroso del laboratorio</span>
+  <p>Ganar siete de diez <b>se siente como evidencia</b>. Es cuando se escribe la lámina y se manda el correo.</p>
+  <p style="margin-bottom:0"><b>No la escribas todavía.</b> Falta volver a mirar la vara, y la vara que tienes está mal medida. Eso es el paso 6.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>Tienes el marcador y las dos medias. <b>A ti te puede salir 5–5, 3–7 o 9–1.</b></p>
+  <p style="margin-bottom:0"><b>La conclusión de este laboratorio no depende de quién gane</b>, y el paso siguiente explica por qué.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 6 de 7</span>El ruido que dos corridas no te mostraron</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Este paso no necesita ningún comando nuevo. <b>Los datos ya los tienes.</b> Lo único que hay que hacer es mirarlos de otra manera.</p>
+
+<p>En el paso 2 mediste el ruido con <b>dos</b> corridas base y te dio 7,6 %. En el paso 5 corriste <b>diez</b> corridas base más, sin tocar nada entre ellas. Ponlas en fila.</p>
+
+<div class="salida-rot">Las diez corridas base de la tanda de control, en records/sec</div>
+<div class="salida">118483   123153   119904   130890   125000
+ 99602   125628   132979   125628   121951
+
+mínimo   99 602
+máximo  132 979
+dispersión  33,5 %</div>
+
+<div class="caja ojo">
+  <span class="rot">Aquí se cae todo lo anterior</span>
+  <p>El ruido real de esta máquina, medido sobre diez corridas sin tocar nada, es del <b>33,5 %</b>.</p>
+  <p style="margin-bottom:0">El 7,6 % del paso 2 no era el ruido. Era <b>lo que dos corridas alcanzaron a mostrar del ruido</b>, y se quedó cuatro veces corto.</p>
+</div>
+
+<h3>Y ahora la comparación que cierra el laboratorio</h3>
+
+<div class="salida">ruido real, sin cambiar nada     ├──────────────────── 33,5 % ────────────────────┤
+diferencia de medias del tuning  ├─ 4,2 % ─┤
+la mejor ganancia de un par      ├──────────────── 26,8 % ─────────────┤</div>
+
+<p><b>La diferencia de medias cabe ocho veces dentro del ruido.</b> Y hasta el par que más ganó, ese +26,8 % que parecía espectacular, cabe entero dentro de lo que la máquina se mueve sola.</p>
+
+<p>Mira además de dónde salió ese +26,8 %. La base de ese par fue <b>99 602</b>, la corrida más lenta de las diez. <b>No es que el tuneado corriera rápido. Es que la base corrió mal.</b></p>
+
+<div class="afirmacion">
+  <span class="rot">La conclusión honesta, y la única defendible</span>
+  <div class="txt">En esta máquina, con esta carga, <code style="color:#fff;background:none">linger.ms=10</code> no se distingue de la línea base.</div>
+</div>
+
+<div class="caja sunat">
+  <span class="rot">Por qué esto vale más que la lámina del 10 %</span>
+  <p>No es que <code>linger.ms=10</code> sea peor. Es que <b>el efecto, si existe, es más chico que lo que esta máquina se mueve sola</b>, y con estas herramientas no lo podemos medir.</p>
+  <p><b>«No se distingue» es un resultado, no un fracaso.</b> Es lo que un ingeniero le lleva a su jefe cuando el jefe le pidió un número. <i>Medí, y la diferencia es más chica que mi error de medición. Si quieres que la persiga, necesito otro banco de pruebas.</i></p>
+  <p style="margin-bottom:0">Esa frase vale más que la lámina del 10 %, porque la lámina del 10 % <b>se cae sola la primera vez que alguien la repite</b>.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p>Puedes decir en una frase, sin mirar la guía, <b>por qué siete victorias de diez no alcanzan para afirmar que el tuning sirve</b>.</p>
+  <p style="margin-bottom:0">Y fíjate en lo que hizo falta para llegar ahí. <b>No una métrica distinta ni un comando más listo. Repetir hasta que el ruido dejara de mandar.</b></p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si tu ganancia media SÍ supera tu ruido de diez corridas, y por mucho</span>
+  <p>Puede ser un efecto real en tu máquina, o tu máquina hizo algo raro. <b>Corre cinco pares más.</b></p>
+  <p style="margin-bottom:0">Un efecto real se repite. Una corrida rara, no. Y si tras quince pares la ganancia sigue por encima del ruido, <b>tienes un resultado que puedes defender</b>, que es exactamente lo que este laboratorio te enseñó a construir.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 7 de 7</span>El promedio esconde los casos malos</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Ahora no compares corridas. <b>Quédate dentro de una sola línea</b>, la primera del paso 2.</p>
+
+<div class="salida">50000 records sent, 98231.827112 records/sec (18.74 MB/sec), 92.73 ms avg latency,
+190.00 ms max latency, 86 ms 50th, 166 ms 95th, 174 ms 99th, 177 ms 99.9th.</div>
+
+<table>
+<tr><th>Métrica de la misma corrida</th><th>Valor</th></tr>
+<tr><td>Latencia media</td><td>92,73 ms</td></tr>
+<tr><td>Latencia p50</td><td>86 ms</td></tr>
+<tr><td>Latencia p95</td><td>166 ms</td></tr>
+<tr><td>Latencia p99</td><td>174 ms</td></tr>
+<tr><td>Latencia máxima</td><td><b>190 ms</b></td></tr>
+</table>
+
+<p>El promedio dice 93 ms. Pero uno de cada cien mensajes tardó más de 174, y hubo al menos uno que tardó <b>190 ms, el doble del promedio</b>.</p>
+
+<p>Si tu tablero muestra el promedio, ese mensaje <b>no aparece en ninguna parte</b>. Y es exactamente el que el usuario nota, porque es el que se quedó esperando.</p>
+
+<div class="caja sunat">
+  <span class="rot">Por eso el rendimiento se mira en percentiles</span>
+  <p style="margin-bottom:0">El promedio te dice cómo le fue al sistema. <b>El p99 te dice cómo le fue al peor de cada cien usuarios.</b> Los acuerdos de nivel de servicio se escriben con percentiles, nunca con promedios.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p style="margin-bottom:0">Puedes señalar, en una sola línea de salida, <b>cuál es el número que se reporta y cuál es el que se vigila</b>. No son el mismo.</p>
+</div>
+
+<div class="np"></div>
+<h2>Lo que aprendiste</h2>
+
+<div class="regla"><span class="num">1</span>
+<b>Mide dos veces antes de tunear una. Y después mide diez.</b><br>
+La primera medición no es la línea base, es una muestra. Y dos tampoco alcanzan. Lo viste en el paso 6, donde el ruido pasó de 7,6 % a 33,5 % con solo mirar más corridas. Todo lo que caiga dentro de ese rango es ruido.
+</div>
+
+<div class="regla"><span class="num">2</span>
+<b>Un parámetro a la vez.</b><br>
+Si cambias <code>linger.ms</code>, <code>batch.size</code> y la compresión juntos y mejora, tienes una mejora que no sabes atribuir. Sirve para la lámina y no sirve para operar.
+</div>
+
+<div class="regla"><span class="num">3</span>
+<b>Compara pares, no rangos, y mide los dos el mismo día.</b><br>
+Cada configuración contra la otra, una detrás de la otra, varias veces y alternando el orden. Comparar la corrida de hoy contra un número anotado el mes pasado es comparar ruido. Y una mejora solo cuenta si es más grande que tu ruido, aunque gane siete pares de diez.
+</div>
+
+<div class="regla"><span class="num">4</span>
+<b>El promedio se reporta, el percentil se vigila.</b><br>
+El promedio esconde la cola. Si un tablero solo muestra promedios, los casos que el usuario nota son invisibles en él.
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">La lectura que se usa para todo</span>
+  <p><b>Un número de rendimiento sin su comparación, su repetición y su percentil no es un dato. Es una anécdota.</b></p>
+  <p style="margin-bottom:0">Y su corolario, que es lo que separa a quien mide de quien presenta. <b>La respuesta «no se distingue» es una medición. La respuesta «mejoró un 10 %», dicha sin saber cuánto se mueve la máquina sola, no lo es.</b></p>
+</div>
+
+<div class="np"></div>
+<h2>Para profundizar</h2>
+
+<p>Lo que sigue quedó fuera del recorrido por tiempo. <b>Todos estos comandos se ejecutaron contra este mismo clúster y las salidas son las que dieron.</b></p>
+
+<div class="caja ojo">
+  <span class="rot">Y todos se leen con la regla del recorrido</span>
+  <p style="margin-bottom:0">Pares intercalados, varias veces, y cada diferencia se compara <b>contra el ruido</b>, no contra cero. <b>Los números de abajo son los de esta máquina.</b> Los tuyos van a ser otros, y puede que te lleven a otra conclusión. Lo que no cambia es el método.</p>
+</div>
+
+<h3>A · Los tres niveles de <code>acks</code></h3>
+
+<p>Es la decisión de a quién le espera el visto bueno el ayudante.</p>
+
+<table>
+<tr><th><code>acks</code></th><th>Espera a</th><th>Qué pasa si el líder muere justo después de confirmar</th></tr>
+<tr><td><code>0</code></td><td>Nadie</td><td>El mensaje se pierde y el productor nunca se entera</td></tr>
+<tr><td><code>1</code></td><td>El líder</td><td>Se pierde si murió antes de que las réplicas copiaran</td></tr>
+<tr><td><code>all</code></td><td>El líder y las réplicas en ISR</td><td>No se pierde</td></tr>
+</table>
+
+<pre>kafka-cli/perf-test.sh novatech.tuning.bench 50000 --acks 0
+kafka-cli/perf-test.sh novatech.tuning.bench 50000 --acks 1
+kafka-cli/perf-test.sh novatech.tuning.bench 50000 --acks all</pre>
+
+<div class="salida-rot">Tres corridas de cada uno, en records/sec</div>
+<div class="salida">acks=0      142450   143266   147059      rango 142 450 a 147 059
+acks=1      132626   136240   134771      rango 132 626 a 136 240
+acks=all    126582   132275   130890      rango 126 582 a 132 275</div>
+
+<p><b>Lo que hay que mirar.</b> Aquí los tres rangos <b>no se pisan</b>, y el orden es el que dice el manual. Menos confirmaciones, más rápido. Es un efecto que se ve a simple vista, sin pares y sin estadística.</p>
+
+<div class="caja ojo">
+  <span class="rot">Y aun así, cuidado con lo que concluyes</span>
+  <p>La diferencia entre <code>acks=0</code> y <code>acks=all</code> es de un 11 %, y tu ruido de diez corridas fue del 33,5 %. <b>Estos tres rangos no se pisan porque las nueve corridas cayeron juntas en el tiempo</b>, no porque el efecto sea mayor que el ruido del día.</p>
+  <p style="margin-bottom:0">En un clúster real, con los brokers en servidores distintos y switches en el medio, la diferencia es mucho mayor. <b>Aquí los tres brokers viven en la misma máquina</b>, así que esperar la confirmación de las réplicas no cruza una red de verdad.</p>
+</div>
+
+<div class="caja sunat">
+  <span class="rot">La regla que vale más que el número</span>
+  <p><b>Un banco de pruebas que no se parece a producción mide el banco de pruebas.</b></p>
+  <p style="margin-bottom:0">Y lo que <code>acks</code> decide de verdad no es la velocidad. <b>Es qué se pierde cuando un broker se cae.</b> Eso se elige por riesgo, no por benchmark.</p>
+</div>
+
+<h3>B · <code>batch.size</code>, el otro parámetro del lote</h3>
+
+<p><code>batch.size</code> es cuántos <b>bytes</b> junta el productor antes de mandar el lote. <code>linger.ms</code> es cuánto <b>tiempo</b> espera. Se confunden todo el tiempo.</p>
+
+<pre>kafka-cli/perf-test.sh novatech.tuning.bench 50000 --batch-size 65536</pre>
+
+<div class="salida-rot">Tres corridas de cada uno</div>
+<div class="salida">                 records/sec              latencia media
+base (16 KB)    128 866 a 135 501        37,33 a  46,42 ms
+64 KB           149 254 a 159 744         6,02 a  10,24 ms</div>
+
+<div class="caja tecnico">
+  <span class="rot">Este es el contraste que cierra el laboratorio</span>
+  <p><code>linger.ms</code> necesitó trece pares para responder «no sé». <b><code>batch.size</code> no necesita ninguno.</b> Los dos rangos de throughput no se tocan, y los de latencia tampoco se acercan.</p>
+  <p style="margin-bottom:0"><b>Así se ve un efecto de verdad.</b> Cuando hay que pelear con el ruido para encontrar una mejora, casi siempre la mejora no está.</p>
+</div>
+
+<p>Y el extremo opuesto, que es el más instructivo de todos:</p>
+
+<pre>kafka-cli/perf-test.sh novatech.tuning.bench 50000 --batch-size 1024</pre>
+
+<div class="salida-rot">Con un lote de 1 KB</div>
+<div class="salida">                 records/sec              latencia media
+1 KB             29 240 a  31 807       646,28 a 717,24 ms</div>
+
+<p>El throughput se desploma a <b>una cuarta parte</b> y la latencia media sube <b>más de quince veces</b>. <b>El batching no es un ajuste fino. Es lo que sostiene el rendimiento.</b></p>
+
+<h3>C · Compresión</h3>
+
+<pre>kafka-cli/perf-test.sh novatech.tuning.bench 50000 --compression lz4
+kafka-cli/perf-test.sh novatech.tuning.bench 50000 --compression zstd</pre>
+
+<div class="salida-rot">Latencia media, tres corridas de cada uno</div>
+<div class="salida">lz4     41,16   35,98   35,06 ms      rango 35,06 a 41,16
+zstd     7,87   13,81    6,17 ms      rango  6,17 a 13,81</div>
+
+<p><b>Lo que hay que mirar.</b> <code>lz4</code> es notablemente <b>estable</b>, con tres corridas muy juntas. <code>zstd</code> es bastante más rápido y también mucho más disperso, con una corrida que dobla a las otras dos.</p>
+
+<div class="caja ojo">
+  <span class="rot">La trampa de medir compresión</span>
+  <p style="margin-bottom:0">Con datos de relleno como los de esta prueba la compresión rinde muchísimo, porque son muy repetitivos. Con datos reales, que comprimen bastante peor, rinde mucho menos. <b>Nunca midas compresión con datos sintéticos y lleves ese número a una decisión.</b></p>
+</div>
+
+<h3>D · Combinar parámetros, y por qué se hace al final</h3>
+
+<pre>kafka-cli/perf-test.sh novatech.tuning.bench 50000 --batch-size 65536 --linger-ms 10</pre>
+
+<div class="salida-rot">Lo que salió</div>
+<div class="salida">50000 records sent, 165562.913907 records/sec (31.58 MB/sec), 8.87 ms avg latency,
+196.00 ms max latency, 7 ms 50th, 26 ms 95th, 29 ms 99th, 31 ms 99.9th.</div>
+
+<p>Es el mejor número de todo el laboratorio. <b>Y no te dice cuál de los dos parámetros lo consiguió.</b></p>
+
+<p><b>Lo que hay que mirar.</b> Combinar solo tiene sentido <b>después</b> de haber medido cada parámetro por separado. Ya sabes que uno mueve el throughput con claridad y del otro no puedes afirmar nada. Si hubieras ido directo a la combinación, te llevarías el 165 000 sin saber que <code>linger.ms</code> no aportó nada demostrable.</p>
+
+<h3>E · El lado del consumidor, y una trampa fea</h3>
+
+<pre>kafka-cli/consumer-perf-test.sh novatech.tuning.bench 100000
+kafka-cli/consumer-perf-test.sh novatech.tuning.bench 100000 --fetch-size 5242880</pre>
+
+<div class="salida-rot">Salida real, con las columnas que importan</div>
+<div class="salida">data.consumed.in.MB, MB.sec, data.consumed.in.nMsg, nMsg.sec, rebalance.time.ms,
+fetch.time.ms, fetch.MB.sec, fetch.nMsg.sec
+19.1238, 5.1477, 100264, 26988.9637, 3574, 141, 135.6301, 711092.1986</div>
+
+<div class="caja ojo">
+  <span class="rot">Mira las dos columnas del medio antes de creerle al nMsg.sec</span>
+  <p><code>nMsg.sec</code> dice <b>26 989</b> mensajes por segundo. Pero de los ~3 715 ms que duró la prueba, <b>3 574 fueron el rebalanceo</b> y solo <b>141 fueron leer</b>.</p>
+  <p style="margin-bottom:0">El <code>nMsg.sec</code> está midiendo casi puro arranque. La columna honesta es la de al lado, <code>fetch.nMsg.sec</code>, que dio <b>711 092</b>. Veintiséis veces más.</p>
+</div>
+
+<p>Y por eso subir <code>--fetch-size</code> a 5 MB casi no mueve el <code>nMsg.sec</code>, que pasó a 29 386. <b>No era el fetch el que mandaba.</b></p>
+
+<p><b>Antes de tunear algo, confirma que ese algo es el cuello de botella.</b></p>
+
+<h3>F · Particionado · todo el tráfico en una partición</h3>
+
+<p>Producir con <b>una sola clave</b> manda todo a <b>una</b> partición, y una partición es un solo broker líder. Sin paralelismo.</p>
+
+<p>Primero anota dónde está cada partición:</p>
+
+<pre>docker exec kafka-broker-1 kafka-get-offsets \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.tuning.bench --time -1</pre>
+
+<p>Ahora escribe 50 000 mensajes con clave:</p>
+
+<pre>seq 1 50000 | awk '{ print "K:msg_"$1 }' | \
+    docker exec -i kafka-broker-1 kafka-console-producer \
+        --bootstrap-server kafka-broker-1:29092 \
+        --topic novatech.tuning.bench \
+        --property "parse.key=true" --property "key.separator=:" \
+        --producer-property "batch.size=65536" --producer-property "linger.ms=10"</pre>
+
+<div class="desglose">
+<div><span class="flag">seq 1 50000</span> — genera los números del 1 al 50 000, uno por línea</div>
+<div><span class="flag">awk '{ print "K:msg_"$1 }'</span> — convierte cada número en una línea <code>K:msg_N</code></div>
+<div><span class="flag">key.separator=:</span> — corta en el <b>primer</b> dos puntos. <b>Ojo con lo que es la clave aquí, porque no es lo que parece.</b> De la línea <code>K:msg_1</code> la clave es <code>K</code> y el valor es <code>msg_1</code>. Las 50 000 líneas llevan la <b>misma</b> clave, y ese es todo el truco del ejercicio</div>
+</div>
+
+<div class="salida-rot">Los offsets, antes y después</div>
+<div class="salida">antes                              después
+novatech.tuning.bench:0:425294     novatech.tuning.bench:0:425294
+novatech.tuning.bench:1:430598     novatech.tuning.bench:1:430598
+novatech.tuning.bench:2:422439     novatech.tuning.bench:2:422439
+novatech.tuning.bench:3:428054     novatech.tuning.bench:3:428054
+novatech.tuning.bench:4:417758     novatech.tuning.bench:4:467758   ← +50 000
+novatech.tuning.bench:5:425857     novatech.tuning.bench:5:425857</div>
+
+<p><b>Cinco particiones no se movieron ni un offset.</b> Las 50 000 cayeron enteras en la 4, porque el <i>hash</i> de <code>K</code> da esa y siempre va a dar esa. Seis particiones de capacidad, una trabajando.</p>
+
+<div class="caja tecnico">
+  <span class="rot">Lo que este ejercicio no mide</span>
+  <p style="margin-bottom:0"><code>kafka-console-producer</code> no imprime <code>records/sec</code>, así que <b>no hay número que comparar</b> con el del recorrido. Lo que demuestra es <b>dónde caen los mensajes</b>, y eso se mide con los offsets.</p>
+</div>
+
+<p><b>La pregunta que vale.</b> Si seis vehículos VIP generan el 80 % del tráfico y particionas por clave, ¿qué le pasa a la partición que les tocó? Es el <i>hot partitioning</i>, y es el precio de garantizar orden por clave.</p>
+
+<h3>G · El reporte del laboratorio</h3>
+
+<p><code>plantillas/reporte-entregable.md</code> recorre estas actividades con sus preguntas. Las respuestas de referencia están en <code>soluciones/reporte-resuelto.md</code>.</p>
+
+<div class="caja ojo">
+  <span class="rot">Ojo con el disco si haces toda esta sección</span>
+  <p>Cada corrida escribe 50 000 mensajes de 200 bytes, o sea unos 10 MB, y el tópico tiene factor de replicación 3. <b>La cuenta es 30 MB por corrida.</b></p>
+  <p style="margin-bottom:0">El recorrido son 26 corridas y esta sección agrega unas veinte más, así que <b>puedes acercarte al gigabyte y medio</b>. No es un problema en una máquina normal, pero si Docker Desktop te avisa de espacio, el que libera es <code>bin/reset-lab.sh</code>. <b><code>bin/stop-lab.sh</code> no sirve para esto</b>, porque apaga los contenedores y conserva los volúmenes a propósito.</p>
+</div>
+
+<h2>Antes de cerrar</h2>
+
+<div class="caja ojo">
+  <span class="rot">Deja el terreno limpio</span>
+  <p>Si vas a seguir con el laboratorio 08, <b>deja el clúster arriba</b>. Si terminas por hoy:</p>
+  <pre>bin/stop-lab.sh</pre>
+  <p style="margin-bottom:0">Y comprueba con <code>docker ps --filter name=kafka-broker</code> que no quede nada.</p>
+</div>
+
+<div class="caja sunat">
+  <span class="rot">Lo que te llevas</span>
+  <p>La próxima vez que alguien te muestre un número de rendimiento, la primera pregunta ya no es «¿es bueno?». Es <b>«¿comparado con qué, cuántas veces lo mediste, y cuánto se mueve solo?»</b>.</p>
+  <p style="margin-bottom:0">Y la segunda cosa, que cuesta más. <b>Este laboratorio terminó sin encontrar la mejora que fue a buscar, y eso está bien.</b> Medir en serio incluye poder decir «no se distingue». El que nunca reporta ese resultado no es que tenga mejores parámetros. Es que no está midiendo el ruido.</p>
+</div>
+
+</body></html>

@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><link rel="stylesheet" href="estilo-alumno.css"></head>
+<body>
+
+<div class="portada">
+  <div class="kicker">C U R S O &nbsp; D E &nbsp; A D M I N I S T R A C I Ó N &nbsp; D E &nbsp; K A F K A</div>
+  <div class="labnum">LABORATORIO 08</div>
+  <h1>¿Y quién<br>mueve los<br>datos?</h1>
+  <div class="sub">Sumar un broker en caliente.<br>Guía para hacerlo por tu cuenta, paso a paso</div>
+  <div class="meta">
+    Confluent Platform 8.2.0 · Kafka 4.2 en modo KRaft · 3 brokers y uno más<br>
+    Duración estimada · 50 minutos · necesitas dos terminales<br>
+    NovaTech Logistics · caso de estudio
+  </div>
+</div>
+
+<h2>Antes de empezar</h2>
+
+<h3>Qué vas a lograr</h3>
+
+<p>Al final de esta guía vas a haber metido <b>un cuarto servidor a un clúster que está atendiendo</b>, y le vas a haber movido carga sin detener nada.</p>
+
+<p>Y antes de eso vas a ver algo que a mucha gente le cuesta caro. <b>El servidor nuevo se va a quedar ahí, encendido, sano, costando dinero, y vacío</b>, hasta que alguien se lo ordene.</p>
+
+<div class="afirmacion">
+  <span class="rot">Lo que este laboratorio demuestra</span>
+  <div class="txt">Se le puede agregar un servidor a un clúster que está atendiendo y moverle carga sin detener nada.</div>
+</div>
+
+<div class="afirmacion">
+  <span class="rot">Y la letra chica, que es la mitad del valor</span>
+  <div class="txt">«Sin detener nada» no significa «sin que nadie lo note». No se pierde un mensaje, y la cola de latencia se entera.</div>
+</div>
+
+<div class="caja ojo">
+  <span class="rot">Un aviso sobre el comando de hoy</span>
+  <p><code>kafka-reassign-partitions</code> es <b>el comando más peligroso del curso</b>. Copia gigabytes entre servidores mientras el clúster atiende, y compite por la misma red y los mismos discos que tus clientes.</p>
+  <p style="margin-bottom:0">Por eso te deja <b>un plan de vuelta</b> y <b>un freno</b>. Este laboratorio trata sobre esos dos, no sobre el comando.</p>
+</div>
+
+<h3>Qué necesitas tener listo</h3>
+
+<table>
+<tr><th>Requisito</th><th>Cómo lo compruebas</th></tr>
+<tr><td>Docker Desktop corriendo, con <b>8 GB</b> de RAM</td><td>Hoy son cuatro brokers, no tres. Ajustes de Docker Desktop, pestaña <i>Resources</i></td></tr>
+<tr><td><b>Dos terminales de Git Bash</b></td><td>Una para el tráfico de fondo y otra para trabajar</td></tr>
+<tr><td>Las dos en la carpeta del laboratorio</td><td><code>cd Capitulo_3/lab-08-brokers-en-caliente</code></td></tr>
+<tr><td>Los puertos 9092, 9093, 9094, 9095 y 8090 libres</td><td>El cuarto broker usa el 9095</td></tr>
+</table>
+
+<div class="caja ojo">
+  <span class="rot">Cómo vamos a llamar a las terminales</span>
+  <table style="margin-bottom:0">
+  <tr><th>Terminal</th><th>Para qué</th></tr>
+  <tr><td><b>P</b>, la del productor</td><td>Aquí corre el tráfico de fondo durante todo el laboratorio. <b>No la vas a poder usar para otra cosa</b></td></tr>
+  <tr><td><b>T</b>, la de trabajo</td><td>Desde aquí se agrega el broker, se reasigna y se consulta todo</td></tr>
+  </table>
+</div>
+
+<h3>El caso</h3>
+
+<div class="caja">
+  <p>Viene el Cyber. El equipo de <b>NovaTech Logistics</b> decide sumar un cuarto broker al clúster para aguantar el pico. Levantan el servidor, lo unen al clúster, confirman que aparece en la lista.</p>
+  <p><b>Y no pasa nada.</b></p>
+  <p>El tráfico sigue repartido entre los tres de siempre. El servidor nuevo está encendido, sano, costando dinero, y vacío. Alguien pregunta cuándo empieza a recibir carga, y la respuesta honesta es <b>nunca, si nadie se lo ordena</b>.</p>
+  <p style="margin-bottom:0">El problema no es Kafka. El problema es una confusión que se paga cara. <b>Agregar capacidad y usar capacidad son dos operaciones distintas</b>, y la segunda mueve datos por la red mientras tus clientes están conectados.</p>
+</div>
+
+<div class="caja abuelita">
+  <span class="rot">La metáfora · entra un mozo nuevo a mitad de servicio</span>
+  <p>Kafka sigue siendo <b>el restaurante</b>. El mozo es el broker, el tipo de comanda es el tópico, los sectores del salón son las particiones, las libretas de respaldo son las réplicas.</p>
+  <p style="margin-bottom:0">Hoy <b>entra un mozo nuevo a mitad de servicio</b>. Ponerle el uniforme y presentarlo al equipo es una cosa. Que le toque atender mesas es otra, porque alguien tiene que <b>reasignarle sectores del salón</b>, y eso significa que un mozo que ya venía atendiendo la mesa 7 se la pasa al nuevo, con los clientes sentados y a mitad del plato.</p>
+</div>
+
+<table>
+<tr><th>En el restaurante</th><th>En Kafka</th></tr>
+<tr><td>Entra el mozo nuevo y se presenta</td><td>El broker 4 arranca y se une al clúster</td></tr>
+<tr><td>Sigue parado en la puerta</td><td>El broker 4 no tiene ninguna partición</td></tr>
+<tr><td>Se le reparten sectores del salón</td><td><code>kafka-reassign-partitions</code></td></tr>
+<tr><td>El traspaso de cada mesa, con el cliente ahí</td><td>La copia de cada réplica, con el productor escribiendo</td></tr>
+<tr><td><b>El papelito con quién atendía qué antes</b></td><td><b>El plan de vuelta</b></td></tr>
+<tr><td><b>«Vayan despacio, que hay clientes»</b></td><td><b>El throttle</b></td></tr>
+</table>
+
+<p><b>Las dos últimas filas son las que nadie anota</b>, y son la segunda mitad de este laboratorio.</p>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 1 de 7</span>Levantar el clúster y tomar la foto de «antes»</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Un clúster de tres brokers con un tópico de 6 particiones y factor de replicación 3. Cada partición vive en tres brokers, así que hay <b>18 réplicas</b> repartidas entre tres servidores.</p>
+
+<p>Antes de tocar nada hay que fotografiar dónde está cada una. <b>Contra esa foto vas a comparar todo lo demás.</b></p>
+
+<h3>Los comandos, en la terminal T</h3>
+
+<pre>cd Capitulo_3/lab-08-brokers-en-caliente
+chmod +x bin/*.sh kafka-cli/*.sh
+bin/start-lab.sh
+kafka-cli/describe-topic.sh novatech.lab08.pedidos</pre>
+
+<div class="desglose">
+<div><span class="flag">bin/start-lab.sh</span> — levanta los tres brokers y la interfaz web. <b>El cuarto no lo levanta</b>, ese es tu trabajo en el paso 3</div>
+<div><span class="flag">kafka-cli/describe-topic.sh</span> — envoltorio del curso. Por dentro llama a <code>kafka-topics --describe</code></div>
+<div><span class="flag">novatech.lab08.pedidos</span> — el tópico del laboratorio, que el <code>start-lab.sh</code> deja creado</div>
+</div>
+
+<div class="salida-rot">La foto de «antes» · esto salió en una corrida real</div>
+<div class="salida">Topic: novatech.lab08.pedidos  PartitionCount: 6  ReplicationFactor: 3
+  Configs: min.insync.replicas=2
+  Partition: 0  Leader: 3  Replicas: 3,1,2  Isr: 3,1,2
+  Partition: 1  Leader: 1  Replicas: 1,2,3  Isr: 1,2,3
+  Partition: 2  Leader: 2  Replicas: 2,3,1  Isr: 2,3,1
+  Partition: 3  Leader: 2  Replicas: 2,3,1  Isr: 2,3,1
+  Partition: 4  Leader: 3  Replicas: 3,1,2  Isr: 3,1,2
+  Partition: 5  Leader: 1  Replicas: 1,2,3  Isr: 1,2,3</div>
+
+<h3>Cómo se lee</h3>
+
+<table>
+<tr><th>Columna</th><th>Qué dice</th></tr>
+<tr><td><code>Replicas: 3,1,2</code></td><td>En qué brokers vive esta partición. <b>El primero de la lista es el líder preferido</b></td></tr>
+<tr><td><code>Leader: 3</code></td><td>Quién atiende <b>ahora</b> las lecturas y escrituras. Los otros dos solo copian</td></tr>
+<tr><td><code>Isr: 3,1,2</code></td><td>Las copias que están <b>al día</b>. Si una se atrasa, sale de aquí</td></tr>
+</table>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>Salen <b>seis líneas de partición</b>, y en toda la columna <code>Replicas</code> <b>solo aparecen el 1, el 2 y el 3</b>.</p>
+  <p style="margin-bottom:0"><b>A ti los números te van a salir repartidos de otra manera</b>, porque Kafka decide el reparto al crear el tópico. Lo que no cambia es que no hay ningún 4.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si sale <code>Timeout: solo 2/3 brokers están operativos</code></span>
+  <p style="margin-bottom:0">Es memoria. <b>Este laboratorio va a levantar cuatro brokers</b>, así que necesita más que los anteriores. Sube Docker Desktop a 8 GB en <i>Resources</i> y ejecuta <code>bin/start-lab.sh</code> otra vez.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el tópico no existe</span>
+  <p style="margin-bottom:0">El <code>start-lab.sh</code> no llegó a crearlo. Créalo tú y sigue:</p>
+  <pre style="margin-bottom:0">docker exec kafka-broker-1 kafka-topics \
+    --bootstrap-server kafka-broker-1:29092 \
+    --create --topic novatech.lab08.pedidos \
+    --partitions 6 --replication-factor 3</pre>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 2 de 7</span>Poner tráfico, y que dure lo suficiente</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Para poder afirmar «sin detener nada» hace falta que <b>haya algo que detener</b>. Antes de tocar el clúster, ponemos un productor a escribir y lo dejamos corriendo todo el laboratorio.</p>
+
+<div class="caja ojo">
+  <span class="rot">Y aquí hay una trampa que arruina el laboratorio en silencio</span>
+  <p>El envoltorio <code>kafka-cli/produce-sample.sh</code> escribe <b>a toda velocidad</b>, sin tope. En una máquina rápida, sus 300 000 mensajes se acaban <b>en dos segundos</b>.</p>
+  <p style="margin-bottom:0">Si eso pasa, cuando llegues a reasignar <b>ya no hay tráfico</b>, y la demostración no demuestra nada. No falla ni avisa. Simplemente no hay nada que mirar.</p>
+</div>
+
+<p>La salida es ponerle un tope al caudal, para que la duración sea la misma en cualquier máquina. Por eso aquí va el comando crudo.</p>
+
+<h3>El comando, en la terminal P</h3>
+
+<pre>docker exec kafka-broker-1 kafka-producer-perf-test \
+    --topic novatech.lab08.pedidos \
+    --num-records 300000 --record-size 256 \
+    --throughput 5000 \
+    --producer-props bootstrap.servers=kafka-broker-1:29092</pre>
+
+<div class="desglose">
+<div><span class="flag">kafka-producer-perf-test</span> — la herramienta oficial de carga, la misma del laboratorio 07. Aquí no la usamos para medir, la usamos para <b>generar tráfico realista</b></div>
+<div><span class="flag">--num-records 300000</span> — cuántos mensajes en total</div>
+<div><span class="flag">--record-size 256</span> — cuántos bytes pesa cada uno</div>
+<div><span class="flag">--throughput 5000</span> — <b>el tope, y es la clave de este paso.</b> 5 000 mensajes por segundo. 300 000 dividido por 5 000 son <b>60 segundos de tráfico</b>, en cualquier máquina</div>
+<div><span class="flag">--producer-props bootstrap.servers=…</span> — a qué clúster escribe</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver mientras corre</div>
+<div class="salida">24998 records sent, 4999.6 records/sec (1.22 MB/sec), 8.4 ms avg latency, 235.0 ms max latency.
+25002 records sent, 5000.4 records/sec (1.22 MB/sec), 6.9 ms avg latency, 42.0 ms max latency.
+...</div>
+
+<p>Una línea cada cinco segundos. <b>Déjalo corriendo y vuelve a la terminal T.</b> Tienes 60 segundos, que alcanzan de sobra para los pasos 3 y 4.</p>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>La terminal P <b>sigue imprimiendo líneas</b> y el <code>records/sec</code> ronda los 5 000.</p>
+  <p style="margin-bottom:0"><b>Comprueba que sigue viva antes de cada paso.</b> Si terminó, vuelve a lanzarla. Sin tráfico, los pasos 4 y 7 no muestran nada.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el productor termina antes de que llegues al paso 4</span>
+  <p>Te pasó porque los pasos anteriores te tomaron más de un minuto, que es lo normal la primera vez.</p>
+  <p style="margin-bottom:0"><b>Relánzalo con más mensajes</b> y tendrás cinco minutos:</p>
+  <pre style="margin-bottom:0">docker exec kafka-broker-1 kafka-producer-perf-test \
+    --topic novatech.lab08.pedidos \
+    --num-records 1500000 --record-size 256 \
+    --throughput 5000 \
+    --producer-props bootstrap.servers=kafka-broker-1:29092</pre>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 3 de 7</span>Agregar el broker 4, y ver que no pasa nada</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Se levanta un cuarto broker y se une al clúster. <b>Fíjate en lo que no cambia</b>, que es todo el punto del paso.</p>
+
+<h3>Los comandos, en la terminal T</h3>
+
+<pre>kafka-cli/add-broker.sh
+kafka-cli/list-brokers.sh</pre>
+
+<div class="desglose">
+<div><span class="flag">kafka-cli/add-broker.sh</span> — levanta el contenedor <code>kafka-broker-4</code>, que el compose trae declarado bajo un perfil aparte. <b>Tarda unos 11 segundos</b></div>
+<div><span class="flag">kafka-cli/list-brokers.sh</span> — le pregunta al clúster quién está y en qué papel</div>
+</div>
+
+<div class="salida-rot">El final de <code>list-brokers.sh</code> · recortado a lo ancho</div>
+<div class="salida">LeaderId:           2
+LeaderEpoch:        1
+CurrentVoters:      [{"id": 1, "endpoints": ["CONTROLLER://kafka-broker-1:39092"]},
+                     {"id": 2, "endpoints": ["CONTROLLER://kafka-broker-2:39093"]},
+                     {"id": 3, "endpoints": ["CONTROLLER://kafka-broker-3:39094"]}]
+CurrentObservers:   [{"id": 4, "directoryId": "X9GHyPeS16rwsSyDOYZYyQ"}]</div>
+
+<h3>Cómo se lee, y son dos cosas</h3>
+
+<div class="concepto">
+  <span class="rot">Concepto · quórum de controladores</span>
+  El grupo de nodos que decide quién es líder de qué. <b>Se dimensiona una vez, con tres o cinco, y se deja quieto.</b> Escalar brokers y escalar el quórum son decisiones distintas, y mezclarlas es una fuente clásica de problemas.
+</div>
+
+<p><b>Uno. El quórum no se tocó.</b> Los <i>voters</i> siguen siendo 1, 2 y 3. El broker 4 entra como <b>observer</b>, o sea que aporta capacidad de almacenamiento y de cómputo pero <b>no vota</b> en las decisiones del clúster.</p>
+
+<p><b>Dos. El broker 4 está vacío.</b> Vuelve a mirar la foto:</p>
+
+<pre>kafka-cli/describe-topic.sh novatech.lab08.pedidos</pre>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">  Partition: 0  Leader: 3  Replicas: 3,1,2  Isr: 3,1,2
+  Partition: 1  Leader: 1  Replicas: 1,2,3  Isr: 1,2,3
+  Partition: 2  Leader: 2  Replicas: 2,3,1  Isr: 2,3,1
+  Partition: 3  Leader: 2  Replicas: 2,3,1  Isr: 2,3,1
+  Partition: 4  Leader: 3  Replicas: 3,1,2  Isr: 3,1,2
+  Partition: 5  Leader: 1  Replicas: 1,2,3  Isr: 1,2,3</div>
+
+<div class="caja ojo">
+  <span class="rot">Este es el punto del laboratorio</span>
+  <p><b>Ni un 4 en toda la columna <code>Replicas</code>.</b> Las 18 réplicas siguen exactamente donde estaban. Es la misma foto del paso 1, sin una sola diferencia.</p>
+  <p style="margin-bottom:0">El servidor está encendido, sano, unido al clúster, contando en tu factura. Y no está haciendo nada. <b>Agregar capacidad no mueve datos.</b> Alguien tiene que ordenarlo.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>En <code>CurrentVoters</code> hay <b>tres</b> identificadores y en <code>CurrentObservers</code> está el <b>4</b>.</p>
+  <p style="margin-bottom:0">Y la foto del tópico <b>no cambió respecto del paso 1</b>. Compáralas línea por línea.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si <code>add-broker.sh</code> falla por memoria</span>
+  <p style="margin-bottom:0">El cuarto broker es el que empuja el consumo por encima de lo que Docker tiene asignado. Sube a 8 GB en <i>Resources</i>. <b>No hace falta rehacer el laboratorio</b>, Docker reinicia y los volúmenes siguen ahí. Vuelve a lanzar <code>bin/start-lab.sh</code> y repite desde el paso 2.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el broker 4 aparece en <code>CurrentVoters</code></span>
+  <p style="margin-bottom:0">No debería, y si pasa es que el clúster se levantó con una configuración distinta a la del laboratorio. Baja todo con <code>bin/stop-lab.sh</code>, vuelve a <code>bin/start-lab.sh</code> y repite. <b>El quórum de este lab es siempre de tres.</b></p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 4 de 7</span>Reasignar las réplicas</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<div class="concepto">
+  <span class="rot">Concepto · reasignar</span>
+  Cambiar <b>en qué brokers vive</b> cada réplica. <b>No cambia el número de particiones, no cambia el orden y no toca un solo mensaje.</b> Lo único que hace es copiar datos de un servidor a otro.
+</div>
+
+<p>El comando trabaja en <b>tres fases separadas a propósito</b>.</p>
+
+<table>
+<tr><th>Fase</th><th>Qué hace</th><th>¿Mueve datos?</th></tr>
+<tr><td><code>--generate</code></td><td>Propone un plan y lo imprime</td><td>No</td></tr>
+<tr><td><code>--execute</code></td><td>Aplica el plan. Empieza la copia</td><td><b>Sí</b></td></tr>
+<tr><td><code>--verify</code></td><td>Pregunta cómo va, y al terminar <b>limpia</b></td><td>No</td></tr>
+</table>
+
+<p>Están separadas porque <b>el plan que Kafka propone no tiene por qué gustarte</b>. Entre <code>--generate</code> y <code>--execute</code> hay un hueco deliberado para que un humano lea lo que va a pasar.</p>
+
+<h3>Antes de ejecutar, comprueba el tráfico</h3>
+
+<p><b>Mira la terminal P.</b> Si dejó de imprimir líneas, relanza el productor del paso 2 antes de seguir. Lo que viene solo tiene gracia con tráfico encima.</p>
+
+<h3>El comando, en la terminal T</h3>
+
+<pre>kafka-cli/reassign-partitions.sh novatech.lab08.pedidos 1,2,3,4 8000000</pre>
+
+<div class="desglose">
+<div><span class="flag">novatech.lab08.pedidos</span> — qué tópico se reparte</div>
+<div><span class="flag">1,2,3,4</span> — entre qué brokers. <b>Los que no estén aquí quedan fuera</b>, y esa es la manera de vaciar un broker</div>
+<div><span class="flag">8000000</span> — el throttle. <b>8 MB por segundo de techo para la copia</b>, para que no se coma el ancho de banda de tus clientes</div>
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">Los tres comandos reales, los que vas a escribir en SUNAT</span>
+  <p>El envoltorio hace las tres fases seguidas. En un servidor las escribes tú, una por una:</p>
+  <pre style="margin-bottom:0">kafka-reassign-partitions --bootstrap-server kafka-broker-1:29092 \
+    --topics-to-move-json-file topics.json --broker-list 1,2,3,4 --generate
+
+kafka-reassign-partitions --bootstrap-server kafka-broker-1:29092 \
+    --reassignment-json-file plan.json --execute --throttle 8000000
+
+kafka-reassign-partitions --bootstrap-server kafka-broker-1:29092 \
+    --reassignment-json-file plan.json --verify</pre>
+</div>
+
+<div class="salida-rot">Lo que vas a ver · recortado, el JSON completo es muy largo</div>
+<div class="salida">[Reasignación] novatech.lab08.pedidos → brokers 1,2,3,4 (throttle 8000000 B/s)
+[1/3] Generando plan...
+Plan propuesto:
+{"version":1,"partitions":[{"topic":"novatech.lab08.pedidos","partition":0,
+"replicas":[2,3,4],...}]}
+
+Plan de VUELTA guardado en /tmp/lab08-rollback-novatech.lab08.pedidos.json
+
+[2/3] Ejecutando...
+Current partition replica assignment
+{"version":1,"partitions":[{"topic":"novatech.lab08.pedidos","partition":0,
+"replicas":[1,2,3],...}]}
+
+Save this to use as the --reassignment-json-file option during rollback
+Warning: You must run --verify periodically, until the reassignment completes,
+to ensure the throttle is removed.
+The inter-broker throttle limit was set to 8000000 B/s
+Successfully started partition reassignments for novatech.lab08.pedidos-0,...
+
+[3/3] Verificando hasta que termine...
+  copiando... 4 de 6 partición(es) pendiente(s) (intento 1/60)
+Status of partition reassignment:
+Reassignment of partition novatech.lab08.pedidos-0 is completed.
+...
+Clearing broker-level throttles on brokers 1,2,3,4
+Clearing topic-level throttles on topic novatech.lab08.pedidos
+✓ Reasignación completa</div>
+
+<p>La operación completa tardó <b>12 segundos</b> en la corrida medida.</p>
+
+<h3>Ahora mira dónde quedaron las réplicas</h3>
+
+<pre>kafka-cli/describe-topic.sh novatech.lab08.pedidos</pre>
+
+<div class="salida-rot">La foto de «después»</div>
+<div class="salida">  Partition: 0  Leader: 3  Replicas: 2,3,4  Isr: 2,3,4
+  Partition: 1  Leader: 1  Replicas: 3,4,1  Isr: 1,3,4
+  Partition: 2  Leader: 2  Replicas: 4,1,2  Isr: 1,2,4
+  Partition: 3  Leader: 3  Replicas: 1,2,3  Isr: 1,2,3
+  Partition: 4  Leader: 1  Replicas: 4,3,1  Isr: 1,3,4
+  Partition: 5  Leader: 1  Replicas: 3,1,2  Isr: 1,2,3</div>
+
+<p><b>El 4 aparece ahora en cuatro de las seis particiones</b>, y en dos de ellas es el <b>primero</b> de la lista, o sea el líder preferido.</p>
+
+<div class="caja tecnico">
+  <span class="rot">Ser líder preferido no es ser líder todavía</span>
+  <p style="margin-bottom:0">En la partición 2 las réplicas son <code>4,1,2</code> pero el <code>Leader</code> sigue siendo el 2. <b>Kafka no le quita el liderazgo a nadie solo porque cambió el orden de la lista.</b> El traspaso ocurre en la siguiente elección de líder preferido, que corre sola cada cierto tiempo. En la corrida medida, dos particiones ya tenían al 4 de líder y en otra corrida ninguna.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p><b>El 4 aparece en la columna <code>Replicas</code> de varias particiones</b>, y en <code>Isr</code> también, que significa que ya está al día.</p>
+  <p style="margin-bottom:0"><b>A ti te puede tocar en tres, en cuatro o en cinco particiones.</b> Lo que no puede pasar es que no aparezca en ninguna.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si la reasignación termina instantáneamente</span>
+  <p style="margin-bottom:0">El tópico tiene muy pocos datos, así que no hay nada que copiar. Es lo esperado si te saltaste el paso 2. <b>Produce volumen primero</b> o no vas a ver nada.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si dice <code>still in progress</code> y se queda ahí</span>
+  <p style="margin-bottom:0"><b>Es correcto.</b> La copia no ha terminado. El envoltorio reintenta hasta 60 veces. Si agotara los 60 intentos, mira los logs con <code>docker logs kafka-broker-4</code>, pero con el volumen de este lab no debería pasar.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 5 de 7</span>El plan de vuelta, que se va con el scroll</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Vuelve a mirar la salida del paso anterior. Hay dos líneas que casi nadie lee, y son las que este laboratorio existe para enseñar. Esta es la primera.</p>
+
+<div class="salida">Current partition replica assignment
+{"version":1,"partitions":[... "partition":0,"replicas":[1,2,3] ...]}
+
+Save this to use as the --reassignment-json-file option during rollback</div>
+
+<div class="caja ojo">
+  <span class="rot">Eso es la foto de cómo estaba todo antes</span>
+  <p>Y viene <b>en el formato exacto que el propio comando acepta</b>. Kafka te está diciendo, con todas las letras, que lo guardes.</p>
+  <p style="margin-bottom:0"><b>Es lo único que te permite deshacer esta operación.</b> Si el plan te deja el clúster peor, y pasa, porque un plan automático no sabe de tus racks ni de tus discos ni de cuál es la partición caliente, la vuelta atrás es aplicar ese JSON. Si no lo guardaste, tienes que reconstruirlo a mano, partición por partición, desde una foto que ya no existe.</p>
+</div>
+
+<h3>En este laboratorio el script te lo guarda solo</h3>
+
+<pre>ls -l /tmp/lab08-rollback-novatech.lab08.pedidos.json</pre>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">-rw-r--r--  1 rodrigo  wheel  911  Aug 27 00:06
+  /tmp/lab08-rollback-novatech.lab08.pedidos.json</div>
+
+<p><b>En tu servidor no hay quien te lo guarde.</b> Se copia y se pega en un archivo <b>antes</b> de que la consola lo tape, y en una operación de verdad se manda por correo al equipo antes de tocar nada.</p>
+
+<h3>Y ahora deshazlo de verdad</h3>
+
+<p>Es el ejercicio que convierte esto en un músculo. El plan guardado es aplicable tal cual:</p>
+
+<pre>docker cp /tmp/lab08-rollback-novatech.lab08.pedidos.json \
+    kafka-broker-1:/tmp/rollback.json
+
+docker exec kafka-broker-1 kafka-reassign-partitions \
+    --bootstrap-server kafka-broker-1:29092 \
+    --reassignment-json-file /tmp/rollback.json --execute
+
+docker exec kafka-broker-1 kafka-reassign-partitions \
+    --bootstrap-server kafka-broker-1:29092 \
+    --reassignment-json-file /tmp/rollback.json --verify</pre>
+
+<div class="desglose">
+<div><span class="flag">docker cp &lt;origen&gt; &lt;contenedor&gt;:&lt;destino&gt;</span> — copia un archivo de tu máquina al interior del contenedor. <b>El comando de Kafka se ejecuta dentro, así que el archivo también tiene que estar dentro</b></div>
+<div><span class="flag">--reassignment-json-file /tmp/rollback.json</span> — el plan que se va a aplicar, que aquí es el de vuelta</div>
+<div><span class="flag">sin <code>--throttle</code></span> — a propósito, para que el paso 6 tenga con qué comparar</div>
+</div>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p>Tras el <code>--verify</code>, la foto del tópico vuelve a ser <b>exactamente la del paso 1</b>, réplica por réplica y en el mismo orden. Compruébalo:</p>
+  <pre style="margin-bottom:0">kafka-cli/describe-topic.sh novatech.lab08.pedidos</pre>
+</div>
+
+<div class="caja ojo">
+  <span class="rot">Y una advertencia que vale el paso entero</span>
+  <p style="margin-bottom:0"><b>Deshacer no es gratis.</b> Es otra reasignación completa, con su propia copia de datos, su propio impacto y su propio plan de vuelta. <b>«Puedo revertirlo» no significa «puedo revertirlo sin consecuencias».</b></p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 6 de 7</span>Los frenos que quedan puestos</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Esta es la otra línea que casi nadie lee.</p>
+
+<div class="salida">Warning: You must run --verify periodically, until the reassignment completes,
+to ensure the throttle is removed.
+The inter-broker throttle limit was set to 8000000 B/s</div>
+
+<p>El <code>--throttle</code> le pone un techo a la copia para que no se coma el ancho de banda de tus clientes, y eso es lo correcto. <b>Pero ese techo no es un parámetro del comando.</b> Son configuraciones dinámicas que Kafka escribe en el clúster, y que se quedan ahí.</p>
+
+<h3>Vuelve a reasignar, con throttle, y míralas</h3>
+
+<pre>kafka-cli/reassign-partitions.sh novatech.lab08.pedidos 1,2,3,4 8000000
+kafka-cli/describe-broker-config.sh 1 | grep throttled</pre>
+
+<div class="desglose">
+<div><span class="flag">kafka-cli/describe-broker-config.sh 1</span> — la configuración efectiva del broker 1, la misma herramienta del laboratorio 03</div>
+<div><span class="flag">| grep throttled</span> — filtra las líneas de los frenos. <b>Si no devuelve nada, quedó limpio</b></div>
+</div>
+
+<div class="salida-rot">Lo que sale mientras la copia corre</div>
+<div class="salida">  follower.replication.throttled.rate=8000000 sensitive=false
+    synonyms={DYNAMIC_BROKER_CONFIG:follower.replication.throttled.rate=8000000}
+  leader.replication.throttled.rate=8000000 sensitive=false
+    synonyms={DYNAMIC_BROKER_CONFIG:leader.replication.throttled.rate=8000000}</div>
+
+<p>Ese <code>DYNAMIC_BROKER_CONFIG</code> es el mismo origen que estudiaste en el laboratorio 03. <b>Alguien lo escribió en caliente</b>, y ese alguien fue el <code>--execute</code>.</p>
+
+<h3>Y aquí está la trampa, medida</h3>
+
+<p>Quien quita los frenos es el <code>--verify</code>, <b>y solo cuando todas las particiones terminaron</b>. Compruébalo tú mismo. Corre un <code>--verify</code> <b>enseguida</b>, mientras todavía queda copia pendiente:</p>
+
+<pre>docker exec kafka-broker-1 kafka-reassign-partitions \
+    --bootstrap-server kafka-broker-1:29092 \
+    --reassignment-json-file /tmp/plan.json --verify
+
+echo "codigo de salida: $?"
+kafka-cli/describe-broker-config.sh 1 | grep throttled</pre>
+
+<div class="salida-rot">Lo que salió en la corrida medida</div>
+<div class="salida">Reassignment of partition novatech.lab08.pedidos-0 is still in progress.
+... (5 de 6 particiones en curso)
+
+codigo de salida: 0
+
+  follower.replication.throttled.rate=8000000 ...
+  leader.replication.throttled.rate=8000000 ...</div>
+
+<div class="caja ojo">
+  <span class="rot">Léelo despacio, porque es el hallazgo del laboratorio</span>
+  <p>Quedaban <b>cinco particiones copiando</b>. El comando dijo <code>still in progress</code>, <b>no limpió nada</b>, y devolvió <b>código de salida 0</b>.</p>
+  <p style="margin-bottom:0">Un script que corre <code>--verify</code> una sola vez y mira el código de salida <b>se da por satisfecho y deja el clúster con los frenos puestos</b>, indefinidamente. Meses después alguien investiga por qué la replicación va lenta y encuentra un <code>throttled.rate</code> que nadie recuerda haber puesto.</p>
+</div>
+
+<h3>Ahora hazlo bien</h3>
+
+<pre>docker exec kafka-broker-1 kafka-reassign-partitions \
+    --bootstrap-server kafka-broker-1:29092 \
+    --reassignment-json-file /tmp/plan.json --verify</pre>
+
+<p>Repítelo hasta que <b>ninguna partición diga <code>in progress</code></b>.</p>
+
+<div class="salida-rot">Cuando por fin terminan todas</div>
+<div class="salida">Reassignment of partition novatech.lab08.pedidos-0 is completed.
+Reassignment of partition novatech.lab08.pedidos-1 is completed.
+Reassignment of partition novatech.lab08.pedidos-2 is completed.
+Reassignment of partition novatech.lab08.pedidos-3 is completed.
+Reassignment of partition novatech.lab08.pedidos-4 is completed.
+Reassignment of partition novatech.lab08.pedidos-5 is completed.
+
+Clearing broker-level throttles on brokers 1,2,3,4
+Clearing topic-level throttles on topic novatech.lab08.pedidos</div>
+
+<pre>kafka-cli/describe-broker-config.sh 1 | grep throttled</pre>
+
+<div class="salida-rot">Y ahora sí</div>
+<div class="salida">(no devuelve nada)</div>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p>Viste los frenos puestos, viste que un <code>--verify</code> prematuro <b>no los quita y aun así devuelve 0</b>, y viste el <code>Clearing</code> del <code>--verify</code> final.</p>
+  <p style="margin-bottom:0">Y el <code>grep throttled</code> final <b>no devuelve nada</b>.</p>
+</div>
+
+<div class="caja ojo">
+  <span class="rot">Un detalle que engaña, y hay que conocerlo</span>
+  <p style="margin-bottom:0">Si corres el <code>--execute</code> <b>sin</b> <code>--throttle</code>, Kafka no pone ningún freno. Pero el <code>--verify</code> imprime <code>Clearing … throttles</code> <b>de todos modos</b>. Ese mensaje <b>no es prueba de que hubiera throttles</b>. De ahí sale la creencia de que Kafka los pone solo. No los pone. <b>Los pones tú.</b></p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 7 de 7</span>«Sin detener nada» no es «sin que nadie lo note»</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Vuelve a la terminal P y espera a que el productor termine. Su línea final es la que cierra el laboratorio.</p>
+
+<div class="salida-rot">Lo que salió en la corrida medida, con la reasignación encima</div>
+<div class="salida">300000 records sent, 4998.916901 records/sec (1.22 MB/sec), 9.11 ms avg latency,
+2016.00 ms max latency, 6 ms 50th, 10 ms 95th, 12 ms 99th, 1611 ms 99.9th.</div>
+
+<h3>Cómo se lee, y son dos lecturas opuestas</h3>
+
+<table>
+<tr><th>Métrica</th><th>Valor</th><th>Qué dice</th></tr>
+<tr><td>Mensajes enviados</td><td><b>300 000 de 300 000</b></td><td><b>Cero pérdidas</b></td></tr>
+<tr><td>Errores fatales</td><td><b>0</b></td><td>La operación fue transparente para la aplicación</td></tr>
+<tr><td>Latencia media</td><td>9,11 ms</td><td>Un tablero de promedios diría que no pasó nada</td></tr>
+<tr><td>Latencia p50</td><td>6 ms</td><td>La mitad de los mensajes ni se enteró</td></tr>
+<tr><td>Latencia p95</td><td>10 ms</td><td>El 95 % tampoco</td></tr>
+<tr><td>Latencia p99</td><td>12 ms</td><td>El 99 % tampoco</td></tr>
+<tr><td><b>Latencia p99.9</b></td><td><b>1 611 ms</b></td><td><b>Uno de cada mil tardó más de un segundo y medio</b></td></tr>
+<tr><td><b>Latencia máxima</b></td><td><b>2 016 ms</b></td><td>El peor tardó <b>dos segundos</b></td></tr>
+</table>
+
+<div class="caja ojo">
+  <span class="rot">Mira el salto entre el p99 y el p99.9</span>
+  <p><b>De 12 ms a 1 611 ms.</b> Ciento treinta y cuatro veces, en una décima de punto porcentual de los mensajes.</p>
+  <p style="margin-bottom:0">Es exactamente la lección del laboratorio 07, aplicada a una operación en vez de a un benchmark. <b>El promedio dice que no pasó nada y el percentil dice que sí.</b> Si tu tablero solo muestra promedios, esta operación se ve perfecta.</p>
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">Sobre los WARN del productor</span>
+  <p>La documentación del curso menciona que durante una reasignación el productor puede registrar avisos de <code>NOT_LEADER_OR_FOLLOWER</code>. Ocurre cuando el liderazgo de una partición se mueve y el cliente le sigue escribiendo al broker viejo durante unos milisegundos.</p>
+  <p style="margin-bottom:0"><b>En las dos corridas con las que se midió esta guía no apareció ninguno</b>, y aun así la cola de latencia se disparó. <b>Si a ti tampoco te sale, no significa que la operación fuera gratis.</b> El rastro fiable es el p99.9, no el log.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p>Puedes decir las dos cosas en la misma frase sin contradecirte. <b>No se perdió ni un mensaje, y la operación se notó.</b></p>
+  <p style="margin-bottom:0">Si tu p99.9 salió parecido al p99, es que tu reasignación terminó antes de que el productor arrancara de verdad. Repite el paso 2 con más mensajes y el paso 4 encima.</p>
+</div>
+
+<div class="caja sunat">
+  <span class="rot">Qué significa esto para SUNAT</span>
+  <p>Una reasignación es transparente para la <b>aplicación</b>, si los clientes tienen reintentos configurados. <b>No es transparente para un acuerdo de nivel de servicio escrito en percentiles.</b></p>
+  <p style="margin-bottom:0">Por eso se hace fuera de hora punta y con <code>--throttle</code>. Y por eso al equipo se le avisa antes, no después.</p>
+</div>
+
+<div class="np"></div>
+<h2>Lo que aprendiste</h2>
+
+<div class="regla"><span class="num">1</span>
+<b>Agregar capacidad y usar capacidad son dos operaciones.</b><br>
+Un broker nuevo entra vacío y se queda vacío. Si nadie reasigna, pagaste un servidor para nada. Y al revés, si alguien reasigna sin avisar, se está moviendo tráfico de producción por la red.
+</div>
+
+<div class="regla"><span class="num">2</span>
+<b>El plan de vuelta se guarda antes de ejecutar.</b><br>
+Lo imprime el <code>--execute</code> y se lo lleva el scroll. Es lo único que permite deshacer. En una operación de verdad se guarda en un archivo con nombre y fecha, y se manda al equipo <b>antes</b> de tocar nada.
+</div>
+
+<div class="regla"><span class="num">3</span>
+<b><code>--verify</code> se corre en bucle, hasta que ninguna partición diga <code>in progress</code>.</b><br>
+Es la fase que limpia. Correrla una sola vez deja el clúster con límites de replicación puestos que nadie va a recordar, <b>y encima devuelve código de salida 0</b>, así que ni un script se entera. Comprueba después que se fueron.
+</div>
+
+<div class="regla"><span class="num">4</span>
+<b>«Sin downtime» se afirma con percentiles, no con promedios.</b><br>
+No se perdió un mensaje, y el p99.9 pasó de milisegundos a más de un segundo y medio. Las dos cosas son verdad, y la segunda es la que el usuario nota.
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">La lectura que se usa para todo</span>
+  <p style="margin-bottom:0"><b>Toda operación en caliente deja dos rastros. Una forma de deshacerla, y algo encendido que hay que apagar.</b> Si no sabes cuáles son, no terminaste la operación.</p>
+</div>
+
+<div class="np"></div>
+<h2>Para profundizar</h2>
+
+<p>Lo que sigue quedó fuera del recorrido por tiempo. <b>Todos estos comandos se ejecutaron contra este mismo clúster.</b></p>
+
+<h3>A · Drenar el broker y sacarlo</h3>
+
+<p>Pasó el pico y hay que devolver el servidor. <b>Apagarlo en seco pierde las réplicas que tiene</b>, así que primero se mueven a los que se quedan.</p>
+
+<pre>kafka-cli/drain-broker.sh novatech.lab08.pedidos 1,2,3
+kafka-cli/describe-topic.sh novatech.lab08.pedidos</pre>
+
+<div class="desglose">
+<div><span class="flag">1,2,3</span> — <b>la lista de los que se quedan.</b> El 4 no está, así que sus réplicas se van a los otros tres. Es el mismo comando del paso 4, con otra lista</div>
+</div>
+
+<p><b>Lo que hay que mirar.</b> Tras el drenaje, <b>ni un 4 en toda la columna <code>Replicas</code></b>. Ahora sí se puede apagar sin perder nada:</p>
+
+<pre>docker compose -f infra/docker-compose.yml --profile scale stop kafka-broker-4
+kafka-cli/list-brokers.sh</pre>
+
+<p>El clúster sigue operativo con 3 brokers y <b>el quórum no se enteró</b>, porque el 4 nunca fue <i>voter</i>. Es la contraparte exacta del paso 3.</p>
+
+<h3>B · Configuración dinámica del broker</h3>
+
+<pre>kafka-cli/describe-broker-config.sh 1
+kafka-cli/alter-broker-config.sh 1 num.replica.fetchers=2
+kafka-cli/describe-broker-config.sh 1 | grep num.replica.fetchers</pre>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">  num.replica.fetchers=2 sensitive=false
+    synonyms={DYNAMIC_BROKER_CONFIG:num.replica.fetchers=2,
+              DEFAULT_CONFIG:num.replica.fetchers=1}</div>
+
+<p><b>Lo que hay que mirar.</b> Aparecen <b>los dos orígenes</b>. El <code>DEFAULT_CONFIG</code> de fábrica sigue ahí abajo y el <code>DYNAMIC_BROKER_CONFIG</code> le gana encima. <b>Es exactamente lo que viste en el laboratorio 03</b>, aplicado a un parámetro que sí sirve durante una reasignación, porque controla cuántos hilos copian réplicas.</p>
+
+<h3>C · Limpiar los frenos a mano</h3>
+
+<p>Si te quedaste con throttles puestos, esta es la salida:</p>
+
+<pre>docker exec kafka-broker-1 kafka-configs \
+    --bootstrap-server kafka-broker-1:29092 \
+    --alter --entity-type brokers --entity-name 1 \
+    --delete-config leader.replication.throttled.rate,follower.replication.throttled.rate</pre>
+
+<div class="desglose">
+<div><span class="flag">--entity-type brokers --entity-name 1</span> — sobre qué broker. <b>Hay que repetirlo por cada broker</b> del clúster</div>
+<div><span class="flag">--delete-config</span> — borra esas configuraciones dinámicas y las devuelve a su valor de fábrica</div>
+</div>
+
+<p>Y comprueba con <code>kafka-cli/describe-broker-config.sh 1 | grep throttled</code> que ya no queda nada.</p>
+
+<h3>D · El ciclo completo, con tráfico</h3>
+
+<p>Es la prueba de fuego, y el entregable del laboratorio. Con un productor corriendo en segundo plano, en este orden:</p>
+
+<table>
+<tr><th>#</th><th>Paso</th></tr>
+<tr><td>1</td><td>Agrega el broker 4</td></tr>
+<tr><td>2</td><td>Reasigna a los 4 brokers, <b>con <code>--throttle</code></b></td></tr>
+<tr><td>3</td><td>Guarda el plan de vuelta en un archivo con nombre y fecha</td></tr>
+<tr><td>4</td><td>Cambia <code>num.replica.fetchers=2</code> en caliente en el broker 4</td></tr>
+<tr><td>5</td><td>Drena el broker 4 y apágalo</td></tr>
+<tr><td>6</td><td><b>Comprueba que no quedó ningún <code>throttled</code> en ningún broker</b></td></tr>
+</table>
+
+<p><b>Documenta cuatro cosas.</b> ¿Hubo pérdida de mensajes? ¿Cuál fue el paso más lento? ¿Cuánto se movió el p99.9 del productor? ¿El clúster quedó limpio?</p>
+
+<h3>E · El reporte del laboratorio</h3>
+
+<p>Está en <code>plantillas/reporte-entregable.md</code>.</p>
+
+<h2>Antes de cerrar</h2>
+
+<div class="caja ojo">
+  <span class="rot">Deja el terreno limpio</span>
+  <p>Corta el productor de la terminal P con <b><code>Ctrl+C</code></b> si sigue corriendo. Después, desde la terminal T:</p>
+  <pre>bin/stop-lab.sh</pre>
+  <p><b>Ese comando apaga los contenedores y conserva los volúmenes</b>, incluido el del broker 4. Si quieres empezar de cero la próxima vez, el que borra los datos es <code>bin/reset-lab.sh</code>.</p>
+  <p style="margin-bottom:0">Comprueba con <code>docker ps --filter name=kafka-broker</code> que no quede nada corriendo.</p>
+</div>
+
+<div class="caja sunat">
+  <span class="rot">Lo que te llevas</span>
+  <p style="margin-bottom:0">La próxima vez que alguien diga «agregamos un servidor al clúster», la primera pregunta ya no es «¿está arriba?». Es <b>«¿le movieron carga, guardaron el plan de vuelta, y comprobaron que no quedó nada encendido?»</b>.</p>
+</div>
+
+</body></html>
