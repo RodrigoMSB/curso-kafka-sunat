@@ -146,6 +146,7 @@ botar_contenedores_del_curso() {  # <etiqueta> <proyecto_propio>
     # Los volumenes NO se tocan: se botan contenedores y nada mas.
     local quien="$1" propio="$2"
     local id duenio nombre n=0 lista
+    local red redes r=0
 
     if [ -z "$propio" ]; then
         echo -e "${RED}[${quien}] no recibi el proyecto propio.${NC}" >&2
@@ -179,5 +180,32 @@ EOF
         echo -e "${YELLOW}[${quien}] ${n} contenedor(es) de otros labs del curso eliminados.${NC}"
         echo -e "${YELLOW}          Sus volumenes NO se tocaron.${NC}"
     fi
+
+    # Y las redes que quedaron sin nadie conectado. Botar solo contenedores
+    # las deja acumularse: diez labs encadenados agotan los pools de
+    # direcciones de Docker y el siguiente ya no puede crear la suya, con un
+    # "all predefined address pools have been fully subnetted" que no dice
+    # nada del lab. Solo se tocan las VACIAS, asi que nunca se desconecta
+    # nada de nadie, y los volumenes siguen sin tocarse.
+    #
+    # Ojo: 'docker network ls --filter name=' compara por SUBCADENA, no por
+    # prefijo -- medido: con name=novatech-lab devuelve tambien una red
+    # llamada spec80-novatech-lab99-red, que no es del curso. Por eso el
+    # prefijo se ancla aqui abajo, en el case, igual que con los contenedores.
+    redes=$(docker network ls --format "{{.Name}}" 2>/dev/null)
+    while read -r red; do
+        [ -z "$red" ] && continue
+        case "$red" in novatech-lab*) ;; *) continue ;; esac
+        case "$red" in ${propio}*) continue ;; esac
+        [ "$(docker network inspect "$red" --format '{{len .Containers}}' 2>/dev/null)" = "0" ] || continue
+        if docker network rm "$red" >/dev/null 2>&1; then
+            echo -e "${YELLOW}[${quien}] red huerfana ${red} eliminada${NC}"
+            r=$((r+1))
+        fi
+    done <<EOF
+$redes
+EOF
+
+    [ "$r" -gt 0 ] && echo -e "${YELLOW}[${quien}] ${r} red(es) vacia(s) de otros labs eliminadas.${NC}"
     return 0
 }

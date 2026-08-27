@@ -53,7 +53,7 @@ fi
 ficha_op "INICIAR EL LAB 12" \
     'Deja el lab en su estado inicial y levanta el clúster desde cero' \
     'la guía, tu reporte de plantillas/ y todo archivo del lab en disco' \
-    "contenedores y volúmenes de novatech-lab12, y contenedores de otros labs novatech-lab*" \
+    "contenedores y volúmenes de novatech-lab12, y contenedores y redes vacías de otros labs novatech-lab*" \
     'al empezar el lab, o para volver a un arranque limpio'
 
 echo -e "${YELLOW}[1/7] Levantando contenedores del clúster NovaTech Lab 12...${NC}"

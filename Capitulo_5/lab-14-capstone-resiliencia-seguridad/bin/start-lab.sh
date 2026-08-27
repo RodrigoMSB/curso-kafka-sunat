@@ -53,7 +53,7 @@ fi
 ficha_op "INICIAR EL LAB 14" \
     'Genera los certificados TLS, levanta el clúster seguro y carga tópicos y ACLs' \
     'los certificados que ya existan: solo genera los que falten' \
-    "contenedores de OTROS labs del curso que esten levantados o parados; sus volumenes no" \
+    "contenedores y redes vacías de OTROS labs del curso; sus volumenes no se tocan" \
     'al empezar el lab, y para reanudarlo después de un stop'
 
 echo -e "${YELLOW}[1/6] Generando certificados TLS (si no existen)...${NC}"
