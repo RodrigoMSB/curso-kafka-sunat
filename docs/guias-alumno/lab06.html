@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><link rel="stylesheet" href="estilo-alumno.css"></head>
+<body>
+
+<div class="portada">
+  <div class="kicker">C U R S O &nbsp; D E &nbsp; A D M I N I S T R A C I Ó N &nbsp; D E &nbsp; K A F K A</div>
+  <div class="labnum">LABORATORIO 06</div>
+  <h1>¿Y quién<br>repartió el<br>trabajo?</h1>
+  <div class="sub">Producción, consumo y grupos.<br>Guía para hacerlo por tu cuenta, paso a paso</div>
+  <div class="meta">
+    Confluent Platform 8.2.0 · Kafka 4.2 en modo KRaft · 3 brokers<br>
+    Duración estimada · 50 minutos · necesitas cinco terminales<br>
+    NovaTech Logistics · caso de estudio
+  </div>
+</div>
+
+<h2>Antes de empezar</h2>
+
+<h3>Qué vas a lograr</h3>
+
+<p>Al final de esta guía vas a haber visto, con tus ojos y en terminales distintas, <b>dos procesos que leen lo mismo y se reparten el trabajo</b>, y <b>dos procesos que leen lo mismo y lo duplican</b>. La única diferencia entre los dos casos va a ser <b>una palabra del comando</b>.</p>
+
+<p>Este es el concepto que más cuesta de Kafka. No se parece a nada de lo que viste hasta ahora, y por fuera los dos casos se ven idénticos.</p>
+
+<div class="afirmacion">
+  <span class="rot">Lo que este laboratorio demuestra</span>
+  <div class="txt">Dos consumidores del mismo grupo se reparten el trabajo. Dos grupos distintos leen todo cada uno.</div>
+</div>
+
+<p>Y hay una consecuencia que cuesta plata, y que también vas a ver en pantalla.</p>
+
+<div class="afirmacion">
+  <span class="rot">La consecuencia</span>
+  <div class="txt">Más consumidores que particiones no acelera nada. El sobrante mira.</div>
+</div>
+
+<h3>Qué necesitas tener listo</h3>
+
+<table>
+<tr><th>Requisito</th><th>Cómo lo compruebas</th></tr>
+<tr><td>Docker Desktop corriendo, con 6 GB de RAM</td><td>Ajustes de Docker Desktop, pestaña <i>Resources</i></td></tr>
+<tr><td><b>Cinco terminales de Git Bash</b></td><td>Cuatro para los consumidores y una para trabajar. <b>Las vas a necesitar todas</b></td></tr>
+<tr><td>Las cinco en la carpeta del laboratorio</td><td>En cada una, <code>cd Capitulo_3/lab-06-produccion-consumo-cli</code></td></tr>
+<tr><td>El repositorio del curso actualizado</td><td><code>git pull</code> antes de empezar</td></tr>
+<tr><td>Los puertos 9092, 9093, 9094 y 8090 libres</td><td>El paso 1 te avisa si no lo están</td></tr>
+</table>
+
+<div class="caja ojo">
+  <span class="rot">Cómo vamos a llamar a las terminales</span>
+  <p>Para que no te pierdas, cada terminal tiene nombre en toda la guía. <b>Ponles ese nombre en la pestaña si tu terminal lo permite.</b></p>
+  <table style="margin-bottom:0">
+  <tr><th>Terminal</th><th>Para qué</th></tr>
+  <tr><td><b>A</b>, <b>B</b>, <b>C</b>, <b>D</b></td><td>Los consumidores. Se quedan corriendo y no las vas a poder usar para otra cosa</td></tr>
+  <tr><td><b>T</b>, la de trabajo</td><td>Desde aquí se crea el tópico, se escriben mensajes y se consulta el estado de los grupos</td></tr>
+  </table>
+</div>
+
+<h3>El caso</h3>
+
+<div class="caja">
+  <p>El proceso que valida comprobantes recibidos en <b>NovaTech Logistics</b> empieza a quedarse corto. Llegan más rápido de lo que se validan, la cola crece, y a las seis de la tarde hay cuatro horas de atraso.</p>
+  <p>La solución que propone cualquiera es obvia. <b>Levantemos un segundo proceso.</b></p>
+  <p>Y ahí aparece la pregunta que nadie sabe contestar en la reunión. <b>Si levanto un segundo validador, ¿se reparten los comprobantes, o los dos validan los mismos?</b></p>
+  <p>Las dos respuestas son plausibles y las consecuencias son opuestas. Si se reparten, el atraso se corta a la mitad y el problema está resuelto. Si los dos leen todo, cada comprobante se valida dos veces. En un proceso tributario eso no es un poco más lento. Es un comprobante contabilizado dos veces, y el atraso además sigue igual.</p>
+  <p style="margin-bottom:0">Lo peor es que <b>por fuera se ven idénticos</b>. Dos procesos, la misma fuente de datos, el mismo comando. Nada en la pantalla te dice cuál de los dos mundos estás habitando, hasta que alguien revisa las cifras a fin de mes.</p>
+</div>
+
+<div class="caja abuelita">
+  <span class="rot">La metáfora · hoy cruzamos a la cocina</span>
+  <p>Kafka sigue siendo <b>el restaurante</b>. El <b>mozo</b> es el <b>broker</b>, el <b>tipo de comanda</b> es el <b>tópico</b>, los <b>sectores del salón</b> son las <b>particiones</b>, el <b>espiche</b> donde se clavan las comandas es el <b>segmento</b>.</p>
+  <p>Hasta ahora miramos siempre el lado del mozo. Quién anota, dónde se guarda, cuánto dura. <b>Hoy cruzamos a la cocina</b>, y entran dos piezas nuevas.</p>
+  <p>El <b>cocinero</b> que va sacando comandas del espiche para prepararlas es el <b>consumidor</b>. Y <b>la brigada</b>, o sea los cocineros que trabajan la misma carta y se reparten las comandas entre ellos, es el <b>grupo de consumo</b>.</p>
+  <p style="margin-bottom:0">Con eso, el problema del caso se dice en una frase de restaurante. Si entra un segundo cocinero, <b>¿se reparte las comandas con el primero, o prepara todos los platos otra vez?</b></p>
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">La respuesta del restaurante es la de Kafka</span>
+  <p>Depende de si los pusiste en la misma brigada. <b>Dos cocineros de la misma brigada se reparten el espiche.</b></p>
+  <p style="margin-bottom:0">Dos brigadas distintas, como la cocina y el equipo de auditoría que revisa cada comanda, <b>preparan cada una todas las comandas</b>, porque están haciendo cosas distintas con ellas. 🍽 <b>La palabra que lo decide es <code>--group</code>.</b></p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 1 de 7</span>Levantar el clúster y preparar las terminales</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Este laboratorio usa el mismo clúster de tres brokers del laboratorio 05. Si lo dejaste arriba, no hace falta que lo bajes. Si vienes de cero, hay que levantarlo.</p>
+
+<h3>Los comandos, en la terminal T</h3>
+
+<pre>cd Capitulo_3/lab-06-produccion-consumo-cli
+chmod +x bin/*.sh kafka-cli/*.sh
+bin/start-lab.sh</pre>
+
+<div class="desglose">
+<div><span class="flag">cd Capitulo_3/lab-06-produccion-consumo-cli</span> — la carpeta de este laboratorio. <b>Es distinta de la del 05</b>, aunque el clúster que levanta sea equivalente</div>
+<div><span class="flag">chmod +x bin/*.sh kafka-cli/*.sh</span> — permiso de ejecución para los scripts. En Git Bash a veces se pierde al clonar</div>
+<div><span class="flag">bin/start-lab.sh</span> — levanta los tres brokers y la interfaz web. <b>Si había otro laboratorio del curso arriba, lo baja primero</b></div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver · recortado, el original trae un banner grande</div>
+<div class="salida">[1/4] Levantando contenedores del clúster NovaTech...
+ ✔ Container kafka-broker-1                 Healthy
+ ✔ Container kafka-broker-2                 Healthy
+ ✔ Container kafka-broker-3                 Healthy
+ ✔ Container kafbat-ui                      Started
+
+[2/4] Esperando a que los brokers estén operativos...
+  ✓ 3/3 brokers operativos
+
+════════════════════════════════════════════════════════════
+  CLÚSTER NOVATECH OPERATIVO
+════════════════════════════════════════════════════════════</div>
+
+<h3>Ahora abre las otras cuatro terminales</h3>
+
+<p>Abre cuatro ventanas más de Git Bash, y en cada una entra a la carpeta del laboratorio:</p>
+
+<pre>cd Capitulo_3/lab-06-produccion-consumo-cli</pre>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>Tienes <b>cinco terminales abiertas</b>, todas en la carpeta del laboratorio, y en la terminal T salió <code>✓ 3/3 brokers operativos</code>.</p>
+  <p style="margin-bottom:0">Compruébalo con <code>docker ps --filter name=kafka-broker</code>. Tres líneas, las tres con <code>Up</code> y <code>(healthy)</code>.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si algo falla en este paso</span>
+  <p><b>Dice <code>[ERROR] Docker no está corriendo</code>.</b> Abre Docker Desktop, espera a que la ballena se calme y repite.</p>
+  <p><b>Dice <code>port is already allocated</code>.</b> Algo usa el 9092, el 9093, el 9094 o el 8090. Mira qué con <code>docker ps</code> y bájalo.</p>
+  <p style="margin-bottom:0"><b>Dice <code>Timeout: solo 2/3 brokers están operativos</code>.</b> Casi siempre es memoria. Sube Docker a 6 GB y repite <code>bin/start-lab.sh</code>.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 2 de 7</span>El tópico de tres sectores</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<div class="concepto">
+  <span class="rot">Concepto · partición</span>
+  Cada uno de los <b>pedazos en que se corta un tópico</b>. Son los <b>sectores del salón</b>, y existen exactamente para esto, para que el trabajo se pueda repartir entre varios.
+</div>
+
+<p>Necesitamos un tópico con <b>3 particiones</b>. Tres es el número más chico que permite ver un reparto desigual entre dos miembros, o sea 2 y 1. Y también es el más chico que deja ver, con una cuarta terminal, a un miembro sin nada que hacer.</p>
+
+<div class="caja ojo">
+  <span class="rot">Hoy los comandos van crudos, sin envoltorio</span>
+  <p>En el laboratorio 05 usamos los envoltorios de <code>kafka-cli/</code>. Hoy no.</p>
+  <p>El motivo es concreto. El envoltorio <code>consume-as-group.sh</code> trae el tópico fijo por dentro, uno de 6 particiones, y no acepta <code>--topic</code>. Hoy necesitamos uno de 3 particiones para que el techo se vea con cuatro terminales en vez de siete.</p>
+  <p style="margin-bottom:0">No es una pérdida. <b>Es exactamente lo que vas a escribir en el servidor de SUNAT</b>, donde no hay envoltorios ni Docker.</p>
+</div>
+
+<h3>El comando, en la terminal T</h3>
+
+<pre>docker exec kafka-broker-1 kafka-topics \
+    --bootstrap-server kafka-broker-1:29092 \
+    --create --topic novatech.validacion \
+    --partitions 3 --replication-factor 3</pre>
+
+<div class="desglose">
+<div><span class="flag">docker exec</span> — ejecuta el comando <b>dentro</b> de un contenedor que ya corre. <b>En el servidor de SUNAT esta parte no existe</b></div>
+<div><span class="flag">kafka-broker-1</span> — en cuál de los tres contenedores. Cualquiera sirve</div>
+<div><span class="flag">kafka-topics</span> — la herramienta que administra tópicos</div>
+<div><span class="flag">--bootstrap-server kafka-broker-1:29092</span> — el puerto <b>interno</b>, porque le hablamos desde dentro de la red de Docker. Desde tu máquina sería <code>localhost:9092</code></div>
+<div><span class="flag">--create --topic novatech.validacion</span> — crear, y con qué nombre</div>
+<div><span class="flag">--partitions 3</span> — <b>el número del laboratorio.</b> Es el techo de paralelismo que vamos a chocar en el paso 6</div>
+<div><span class="flag">--replication-factor 3</span> — tres copias de cada partición, como el resto del clúster</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">WARNING: Due to limitations in metric names, topics with a period ('.') or
+underscore ('_') could collide. To avoid issues it is best to use either,
+but not both.
+Created topic novatech.validacion.</div>
+
+<div class="caja tecnico">
+  <span class="rot">Ese WARNING no es un error</span>
+  Sale siempre que el nombre del tópico lleva puntos, y todos los del curso los llevan. Kafka avisa que un nombre que mezcla puntos y guiones bajos podría chocar en sus métricas internas. <b>El tópico se creó igual</b>, y la línea <code>Created topic</code> lo confirma.
+</div>
+
+<h3>Verifícalo</h3>
+
+<pre>docker exec kafka-broker-1 kafka-topics \
+    --bootstrap-server kafka-broker-1:29092 \
+    --describe --topic novatech.validacion</pre>
+
+<div class="desglose">
+<div><span class="flag">--describe</span> — solo consulta. No modifica nada</div>
+</div>
+
+<div class="salida-rot">La primera línea de la salida</div>
+<div class="salida">Topic: novatech.validacion  TopicId: S4mA2u1ISYKQCwSHGBo4uQ
+  PartitionCount: 3  ReplicationFactor: 3  Configs: min.insync.replicas=2</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p><code>PartitionCount</code> dice <b>3</b>. <b>Ese número es el protagonista de todo lo que sigue.</b> Anótalo.</p>
+  <p style="margin-bottom:0">Debajo salen tres líneas más, una por partición, numeradas 0, 1 y 2.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si dice que el tópico ya existe</span>
+  <p>Te pasa si repites el laboratorio. Bórralo y créalo de nuevo, porque necesitas los contadores en cero:</p>
+  <pre style="margin-bottom:0">docker exec kafka-broker-1 kafka-topics \
+    --bootstrap-server kafka-broker-1:29092 \
+    --delete --topic novatech.validacion</pre>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 3 de 7</span>Un cocinero solo</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<div class="concepto">
+  <span class="rot">Concepto · consumidor</span>
+  Un proceso que <b>lee</b> de un tópico. Puede estar en un grupo o no. Es el cocinero.
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · grupo de consumo</span>
+  El conjunto de consumidores que Kafka trata como <b>un solo trabajo repartido entre varios</b>. Se declara con <code>--group &lt;nombre&gt;</code>. Kafka le asigna a cada miembro un puñado de particiones, y <b>cada mensaje lo lee exactamente un miembro del grupo</b>. Es la brigada.
+</div>
+
+<p>Lanzamos <b>un</b> consumidor dentro del grupo <code>validacion</code> y miramos qué le tocó. Con un solo miembro la respuesta no tiene misterio, pero fija la línea base contra la que vas a comparar todo lo demás.</p>
+
+<div class="caja ojo">
+  <span class="rot">Una diferencia importante con el laboratorio 05</span>
+  <p><b>Los consumidores de hoy no terminan solos.</b> Se quedan corriendo, esperando mensajes, hasta que tú los cortes con <b><code>Ctrl+C</code></b>.</p>
+  <p style="margin-bottom:0">Eso no es un error ni rompe nada. <b>Es lo que hace un consumidor de verdad.</b> Cortarlo con <code>Ctrl+C</code> es la forma correcta de sacarlo, y en el paso 7 lo vamos a usar a propósito.</p>
+</div>
+
+<h3>El comando, en la terminal A</h3>
+
+<pre>docker exec -it kafka-broker-1 kafka-console-consumer \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.validacion \
+    --group validacion \
+    --consumer-property client.id=cons-A \
+    --property print.partition=true \
+    --property print.key=true --property key.separator='|'</pre>
+
+<div class="desglose">
+<div><span class="flag">docker exec -it</span> — la <code>-i</code> mantiene la entrada abierta y la <code>-t</code> le da una terminal. <b>Juntas son las que hacen que <code>Ctrl+C</code> funcione</b> y que las líneas aparezcan a medida que llegan</div>
+<div><span class="flag">kafka-console-consumer</span> — el consumidor de línea de comandos que trae Kafka</div>
+<div><span class="flag">--topic novatech.validacion</span> — de qué tópico se lee</div>
+<div><span class="flag">--group validacion</span> — <b>la palabra del laboratorio.</b> Te unes a ese grupo, y Kafka te asigna particiones en vez de darte todo</div>
+<div><span class="flag">--consumer-property client.id=cons-A</span> — le pone nombre a este consumidor. <b>Sin esto Kafka le inventa uno como <code>console-consumer-40f2d1ba…</code></b> y los listados se vuelven ilegibles</div>
+<div><span class="flag">--property print.partition=true</span> — imprime <b>de qué partición</b> vino cada mensaje. <b>Sin esto no se ve el reparto</b>, que es todo el laboratorio</div>
+<div><span class="flag">--property print.key=true</span> — imprime también la clave del mensaje</div>
+<div><span class="flag">--property key.separator='|'</span> — con qué carácter se separan clave y valor en pantalla</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">Nada. El cursor se queda esperando.</div>
+
+<div class="caja tecnico">
+  <span class="rot">Eso es correcto · déjalo corriendo</span>
+  <p>Todavía no hay mensajes en el tópico. El consumidor está conectado y esperando, que es lo que hace un consumidor.</p>
+  <p style="margin-bottom:0">Antes de quedarse quieto imprime dos avisos. <b>No son errores y el comando funciona igual.</b></p>
+</div>
+
+<div class="salida">Option --consumer-property is deprecated and will be removed in a future
+version. Use --command-property instead.
+Option --property is deprecated and will be removed in a future version.
+Use --formatter-property instead.</div>
+
+<h3>Ahora pregunta cómo quedó el grupo, desde la terminal T</h3>
+
+<pre>docker exec kafka-broker-1 kafka-consumer-groups \
+    --bootstrap-server kafka-broker-1:29092 \
+    --describe --group validacion</pre>
+
+<div class="desglose">
+<div><span class="flag">kafka-consumer-groups</span> — la herramienta que responde por los grupos. <b>Quién está, qué le tocó, y cuánto le falta por leer</b></div>
+<div><span class="flag">--describe --group validacion</span> — el detalle de ese grupo. Solo consulta, no modifica nada</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver · recortado a lo ancho</div>
+<div class="salida">GROUP       TOPIC                PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG  CLIENT-ID
+validacion  novatech.validacion  0          0               0               0    cons-A
+validacion  novatech.validacion  1          0               0               0    cons-A
+validacion  novatech.validacion  2          0               0               0    cons-A</div>
+
+<p>Una línea por partición, y en las tres el mismo <code>CLIENT-ID</code>. <b><code>cons-A</code> se quedó con las tres.</b> Es el único cocinero, así que atiende el salón entero.</p>
+
+<div class="concepto">
+  <span class="rot">Concepto · lag</span>
+  Cuántos mensajes escritos <b>todavía no leyó</b> un grupo. Es la resta <code>LOG-END-OFFSET</code> menos <code>CURRENT-OFFSET</code>, la misma cuenta de los extremos del laboratorio 05. <b>Un <code>LAG</code> que crece es la señal de que el consumo va más lento que la producción</b>, o sea el atraso de las cuatro horas del caso, medido.
+</div>
+
+<table>
+<tr><th>Columna</th><th>Qué dice</th></tr>
+<tr><td><code>PARTITION</code></td><td>Cada partición lleva su cuenta por separado</td></tr>
+<tr><td><code>CURRENT-OFFSET</code></td><td>Hasta dónde leyó <b>el grupo</b> en esa partición</td></tr>
+<tr><td><code>LOG-END-OFFSET</code></td><td>Hasta dónde escribió el productor</td></tr>
+<tr><td><code>LAG</code></td><td>Lo que falta por leer, la resta de los dos anteriores. <b>Es el número que se vigila en producción</b></td></tr>
+<tr><td><code>CONSUMER-ID</code></td><td>Qué miembro atiende esa partición. Es un identificador largo que Kafka genera</td></tr>
+<tr><td><code>CLIENT-ID</code></td><td>El nombre que le pusimos con <code>client.id</code>. Por eso se lee <code>cons-A</code></td></tr>
+</table>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>Salen <b>tres líneas</b>, una por partición, y en las tres el <code>CLIENT-ID</code> dice <b><code>cons-A</code></b>.</p>
+  <p style="margin-bottom:0">Los <code>LAG</code> están en 0 porque todavía no hay nada escrito.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si dice <code>Consumer group 'validacion' does not exist</code></span>
+  <p>El consumidor de la terminal A no llegó a unirse al grupo. Mira esa terminal.</p>
+  <p style="margin-bottom:0">Si ahí hay un error, casi siempre es el nombre del tópico mal escrito. Compruébalo con <code>docker exec kafka-broker-1 kafka-topics --bootstrap-server kafka-broker-1:29092 --list</code>.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el <code>CLIENT-ID</code> sale como <code>console-consumer-40f2d1ba…</code></span>
+  <p style="margin-bottom:0">Se te perdió el <code>--consumer-property client.id=cons-A</code>. No rompe el laboratorio, pero vas a tener que ir comparando identificadores largos. <b>Corta con <code>Ctrl+C</code> y relánzalo completo</b>, se agradece después.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 4 de 7</span>Entra el segundo cocinero</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Este es el paso que contesta la pregunta de la reunión. Sumamos un segundo consumidor <b>al mismo grupo</b>, escribimos seis comprobantes, y contamos cuántos recibió cada uno.</p>
+
+<h3>El comando, en la terminal B</h3>
+
+<p>Es el mismo de antes, cambiando solo el <code>client.id</code>:</p>
+
+<pre>docker exec -it kafka-broker-1 kafka-console-consumer \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.validacion \
+    --group validacion \
+    --consumer-property client.id=cons-B \
+    --property print.partition=true \
+    --property print.key=true --property key.separator='|'</pre>
+
+<div class="desglose">
+<div><span class="flag">--group validacion</span> — <b>idéntico al de la terminal A. Ahí está todo el experimento</b></div>
+<div><span class="flag">client.id=cons-B</span> — lo único que cambia, para poder distinguirlos en los listados</div>
+</div>
+
+<div class="caja ojo">
+  <span class="rot">Espera unos 20 segundos antes de seguir</span>
+  <p style="margin-bottom:0">Kafka tiene que <b>rehacer el reparto</b> ahora que hay dos miembros. Si preguntas de inmediato vas a ver el reparto viejo, o un grupo en estado <code>PreparingRebalance</code>. Dale tiempo.</p>
+</div>
+
+<h3>Vuelve a preguntar, desde la terminal T</h3>
+
+<pre>docker exec kafka-broker-1 kafka-consumer-groups \
+    --bootstrap-server kafka-broker-1:29092 \
+    --describe --group validacion</pre>
+
+<div class="salida-rot">Lo que vas a ver · recortado a lo ancho</div>
+<div class="salida">GROUP       TOPIC                PARTITION  ...  CLIENT-ID
+validacion  novatech.validacion  0          ...  cons-A
+validacion  novatech.validacion  1          ...  cons-A
+validacion  novatech.validacion  2          ...  cons-B</div>
+
+<p>Las tres particiones siguen repartidas, pero ahora entre dos nombres. <b><code>cons-A</code> se quedó con la 0 y la 1, y <code>cons-B</code> con la 2.</b> Nadie las comparte.</p>
+
+<div class="caja tecnico">
+  <span class="rot">A ti te puede tocar al revés</span>
+  Que <code>cons-B</code> se lleve dos y <code>cons-A</code> una da exactamente igual. <b>Lo que no puede pasar es que una partición aparezca dos veces.</b>
+</div>
+
+<h3>Ahora los seis comprobantes, desde la terminal T</h3>
+
+<pre>for i in 1 2 3 4 5 6; do
+  echo "RUC-2010006660${i}:comprobante_${i}" | \
+  docker exec -i kafka-broker-1 kafka-console-producer \
+      --bootstrap-server kafka-broker-1:29092 \
+      --topic novatech.validacion \
+      --property parse.key=true --property key.separator=:
+done</pre>
+
+<div class="desglose">
+<div><span class="flag">for i in 1 2 3 4 5 6; do … done</span> — un bucle. Seis comprobantes, uno por vuelta. <b>Cada vuelta abre un productor nuevo</b>, por eso tarda unos segundos</div>
+<div><span class="flag">echo "RUC-2010006660${i}:comprobante_${i}"</span> — la línea que se le manda al productor. Clave y valor separados por <code>:</code></div>
+<div><span class="flag">|</span> — la tubería. Toma lo que imprimió <code>echo</code> y se lo mete al productor por la entrada estándar</div>
+<div><span class="flag">docker exec -i</span> — aquí va <b>sin la <code>-t</code></b>. No queremos una terminal, queremos meterle texto por la entrada</div>
+<div><span class="flag">kafka-console-producer</span> — el productor de línea de comandos que trae Kafka</div>
+<div><span class="flag">--property parse.key=true</span> — <b>que parta cada línea en clave y valor.</b> Sin esto la clave viaja dentro del valor, y todos los mensajes caen en la misma partición</div>
+<div><span class="flag">--property key.separator=:</span> — por qué carácter la parte. Lo anterior al primer <code>:</code> es la clave</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver en la terminal T</div>
+<div class="salida">Nada por cada mensaje. Su silencio es el éxito.</div>
+
+<p>Lo interesante pasa en las terminales A y B. Esto salió en una corrida real:</p>
+
+<div class="salida-rot">Terminal A · cons-A</div>
+<div class="salida">Partition:1|RUC-20100066601|comprobante_1
+Partition:0|RUC-20100066602|comprobante_2
+Partition:1|RUC-20100066603|comprobante_3
+Partition:0|RUC-20100066605|comprobante_5</div>
+
+<div class="salida-rot">Terminal B · cons-B</div>
+<div class="salida">Partition:2|RUC-20100066604|comprobante_4
+Partition:2|RUC-20100066606|comprobante_6</div>
+
+<p><b>Cuatro y dos. Suman seis. Y ni uno solo aparece en las dos terminales.</b></p>
+
+<p>Esa es la primera mitad de la afirmación, y ya contesta la reunión del caso. <b>Dos validadores del mismo grupo se reparten el trabajo, no lo duplican.</b></p>
+
+<div class="caja ojo">
+  <span class="rot">Ojo con el «cuatro y dos»</span>
+  <p><b>El reparto es de particiones, no de mensajes.</b> <code>cons-A</code> tenía dos particiones y <code>cons-B</code> una, así que era esperable que a A le tocara más. Y dentro de eso, en qué partición cae cada comprobante lo decide el <i>hash</i> de su clave, que con seis mensajes no reparte parejo.</p>
+  <p style="margin-bottom:0"><b>Con seis mensajes, un reparto de seis y cero es perfectamente posible</b>, y no sería un fallo. Significaría que las seis claves cayeron en particiones del mismo miembro. Lo que demuestra el laboratorio no es que el reparto sea parejo. Es que <b>cada mensaje lo recibe uno solo</b>.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p><b>Entre las dos terminales sumas exactamente seis mensajes, y ningún <code>comprobante_N</code> aparece dos veces.</b></p>
+  <p style="margin-bottom:0">Ese es el resultado, sea cual sea el reparto que te haya tocado.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el mismo comprobante sale en las dos terminales</span>
+  <p style="margin-bottom:0">Revisa el <code>--group</code> de las dos. <b>Tienen que decir exactamente <code>validacion</code>, con la misma ortografía.</b> Si una dice <code>validacion</code> y la otra <code>validación</code> con tilde, son dos grupos distintos, y por eso cada una recibe todo.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si no llega ningún mensaje a ninguna terminal</span>
+  <p>Comprueba desde la terminal T que los mensajes se escribieron:</p>
+  <pre>docker exec kafka-broker-1 kafka-get-offsets \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.validacion --time -1</pre>
+  <p style="margin-bottom:0">Los tres números del final tienen que sumar 6. Si suman 0, el productor no escribió. El motivo más común es haberlo lanzado desde una carpeta distinta o con el tópico mal escrito.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 5 de 7</span>Otra brigada entra a la cocina</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Falta la segunda mitad de la afirmación. Hasta aquí todos los consumidores estaban en el mismo grupo. <b>¿Qué pasa con uno que declara un grupo distinto?</b></p>
+
+<p>En SUNAT es un caso real. El equipo de <b>reportes</b> necesita leer todos los comprobantes para su analítica, y no puede quitarle trabajo al de validación.</p>
+
+<div class="caja ojo">
+  <span class="rot">No cortes nada</span>
+  <p style="margin-bottom:0">Los consumidores <code>cons-A</code> y <code>cons-B</code> <b>siguen corriendo</b> en las terminales A y B. Déjalos. Usa la <b>terminal C</b>, que todavía está libre.</p>
+</div>
+
+<h3>El comando, en la terminal C</h3>
+
+<pre>docker exec -it kafka-broker-1 kafka-console-consumer \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.validacion \
+    --group reportes \
+    --from-beginning \
+    --consumer-property client.id=cons-Z \
+    --property print.partition=true \
+    --property print.key=true --property key.separator='|'</pre>
+
+<div class="desglose">
+<div><span class="flag">--group reportes</span> — <b>un nombre distinto. Eso es todo lo que cambia</b></div>
+<div><span class="flag">--from-beginning</span> — desde el principio del tópico, no solo lo que llegue de ahora en más. <b>Un grupo nuevo no tiene posición guardada</b>, así que hay que decirle desde dónde arrancar</div>
+<div><span class="flag">client.id=cons-Z</span> — el nombre de este consumidor. Le ponemos Z para que se note que es de otra brigada</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver en la terminal C</div>
+<div class="salida">Partition:2|RUC-20100066604|comprobante_4
+Partition:2|RUC-20100066606|comprobante_6
+Partition:0|RUC-20100066602|comprobante_2
+Partition:0|RUC-20100066605|comprobante_5
+Partition:1|RUC-20100066601|comprobante_1
+Partition:1|RUC-20100066603|comprobante_3</div>
+
+<p><b>Los seis.</b> Todos los comprobantes del laboratorio, en una sola terminal, incluidos los que el grupo <code>validacion</code> ya había leído y dado por procesados. <code>cons-Z</code> está solo en su brigada, así que se lleva las tres particiones y todo lo que hay dentro.</p>
+
+<div class="caja tecnico">
+  <span class="rot">Dos cosas sobre el orden</span>
+  <p><b>A ti el orden de las particiones te va a salir distinto.</b> Lo que no cambia es que estén los seis y que salgan agrupados.</p>
+  <p style="margin-bottom:0">Salen agrupados por partición, no en orden de escritura, porque el consumidor recorre una partición y después otra. <b>Kafka garantiza el orden dentro de cada partición, nunca entre particiones.</b></p>
+</div>
+
+<h3>Y ahora lo que cierra el laboratorio, desde la terminal T</h3>
+
+<pre>docker exec kafka-broker-1 kafka-consumer-groups \
+    --bootstrap-server kafka-broker-1:29092 \
+    --describe --group validacion</pre>
+
+<div class="salida-rot">Lo que vas a ver · recortado a lo ancho</div>
+<div class="salida">GROUP       TOPIC                PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG  CLIENT-ID
+validacion  novatech.validacion  0          2               2               0    cons-A
+validacion  novatech.validacion  1          2               2               0    cons-A
+validacion  novatech.validacion  2          2               2               0    cons-B</div>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p><b>El grupo <code>validacion</code> no se movió ni un offset.</b> Que <code>reportes</code> haya leído los seis mensajes no le quitó nada.</p>
+  <p style="margin-bottom:0">Sigue con <code>CURRENT-OFFSET</code> igual a <code>LOG-END-OFFSET</code> en las tres particiones, y <code>LAG</code> en 0. <b>Cada brigada lleva su propia cuenta.</b></p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si en la terminal C no aparece nada</span>
+  <p style="margin-bottom:0">Casi siempre falta el <code>--from-beginning</code>. Sin él, un grupo nuevo arranca en «lo que llegue de ahora en adelante», y como ya nadie está escribiendo, no llega nada. Corta con <code>Ctrl+C</code> y relánzalo con el parámetro.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 6 de 7</span>El techo · cuatro cocineros, tres sectores</h2>
+
+<div class="caja ojo">
+  <span class="rot">Este es el paso que hay que entender</span>
+  <p style="margin-bottom:0"><b>Si algo se te olvida de este laboratorio, que no sea esto.</b> Es el concepto que más cuesta del paradigma, y el que decide cuánto hardware se compra.</p>
+</div>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Volvemos a la pregunta que decide el presupuesto. Si dos validadores cortaron el atraso a la mitad, <b>¿ocho lo cortan a la octava parte?</b></p>
+
+<p>Kafka reparte <b>particiones</b>, no mensajes. Y hay tres. Vamos a poner cuatro consumidores en el mismo grupo y a mirar qué le toca a cada uno.</p>
+
+<div class="caja tecnico">
+  <span class="rot">De ahí sale el techo, y es aritmética</span>
+  <p>Si Kafka reparte particiones, <b>nadie puede recibir media partición</b>. Un tópico de 3 particiones admite como mucho <b>3 miembros con trabajo</b>.</p>
+  <p style="margin-bottom:0">El cuarto entra al grupo, aparece en los listados, consume memoria, y no recibe nada.</p>
+</div>
+
+<h3>Primero, libera la terminal C</h3>
+
+<p>En la <b>terminal C</b>, presiona <b><code>Ctrl+C</code></b> para cortar <code>cons-Z</code>. Ya cumplió su papel en el paso 5.</p>
+
+<h3>Ahora levanta dos consumidores más, en <code>validacion</code></h3>
+
+<p>En la <b>terminal C</b>:</p>
+
+<pre>docker exec -it kafka-broker-1 kafka-console-consumer \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.validacion \
+    --group validacion \
+    --consumer-property client.id=cons-C \
+    --property print.partition=true \
+    --property print.key=true --property key.separator='|'</pre>
+
+<p>Y en la <b>terminal D</b>, el mismo comando con otro nombre:</p>
+
+<pre>docker exec -it kafka-broker-1 kafka-console-consumer \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.validacion \
+    --group validacion \
+    --consumer-property client.id=cons-D \
+    --property print.partition=true \
+    --property print.key=true --property key.separator='|'</pre>
+
+<div class="desglose">
+<div><span class="flag">--group validacion</span> — <b>los cuatro en la misma brigada.</b> Ahora hay cuatro miembros y tres sectores</div>
+</div>
+
+<p><b>Espera unos 30 segundos.</b> El rebalanceo con cuatro miembros tarda más que con dos.</p>
+
+<h3>Pide la lista de miembros, desde la terminal T</h3>
+
+<pre>docker exec kafka-broker-1 kafka-consumer-groups \
+    --bootstrap-server kafka-broker-1:29092 \
+    --describe --group validacion --members</pre>
+
+<div class="desglose">
+<div><span class="flag">--members</span> — en vez de una línea por partición, <b>una línea por miembro</b>, con cuántas particiones tiene cada uno. <b>Es la vista que hace visible al que no tiene ninguna</b></div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver · recortado a lo ancho</div>
+<div class="salida">GROUP       CONSUMER-ID                                  CLIENT-ID  #PARTITIONS
+validacion  cons-C-83fad3cd-cb91-4d3b-8a29-e6f9a173b36d  cons-C     1
+validacion  cons-A-bb74078d-12bc-4fb7-b94e-ad1b90995aed  cons-A     1
+validacion  cons-B-525ed9ef-6195-41e2-b9d1-e7b0e0fd944f  cons-B     1
+validacion  cons-D-440a17ba-b358-4d05-b82f-f7f80b864407  cons-D     0</div>
+
+<p>Cuatro miembros. La columna <code>#PARTITIONS</code> dice <b>1, 1, 1 y 0</b>.</p>
+
+<p><b><code>cons-D</code> está en el grupo, está vivo, está conectado, y no va a recibir un solo mensaje.</b> Su terminal se va a quedar en blanco para siempre. No está roto. Es que no hay una cuarta partición que darle.</p>
+
+<div class="caja tecnico">
+  <span class="rot">A ti el ocioso puede ser otro</span>
+  Puede tocarle a <code>cons-B</code>, a <code>cons-C</code>, al que sea, y las cuatro filas pueden salir en otro orden. <b>Lo que no cambia es que haya exactamente uno con <code>0</code>.</b>
+</div>
+
+<div class="caja sunat">
+  <span class="rot">La respuesta a la pregunta del presupuesto</span>
+  <p><b>Con 3 particiones, el cuarto validador no acelera nada. Ni el quinto, ni el octavo.</b> Pagas por ellos, aparecen en los tableros, y miran.</p>
+  <p style="margin-bottom:0">Y aquí se cierra el laboratorio 05 con este. El número de particiones se decide al crear el tópico y solo se puede <b>subir</b>, nunca bajar. O sea que <b>el día que creas un tópico estás fijando cuánto vas a poder paralelizar su consumo para siempre.</b> Esa es la razón real por la que la elección de particiones es la decisión más difícil de deshacer de Kafka.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p>Salen <b>cuatro líneas</b> y en la columna <code>#PARTITIONS</code> hay <b>exactamente un cero</b>.</p>
+  <p style="margin-bottom:0">Confírmalo escribiendo tres mensajes más desde la terminal T y mirando la terminal del ocioso. <b>No va a llegar nada.</b></p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si te salen menos de cuatro miembros</span>
+  <p>Alguno no llegó a unirse, o le diste poco tiempo al rebalanceo. <b>Espera 30 segundos más y repite el comando.</b></p>
+  <p style="margin-bottom:0">Si sigue faltando uno, mira su terminal. Si ahí hay un error de conexión, córtalo con <code>Ctrl+C</code> y relánzalo.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el grupo aparece en <code>PreparingRebalance</code> o similar</span>
+  <p style="margin-bottom:0">Es el estado normal mientras Kafka rehace el reparto. <b>No hagas nada.</b> Espera medio minuto y vuelve a preguntar.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 7 de 7</span>El rebalanceo · se va un cocinero a mitad de turno</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>En producción los procesos se caen, se reinician y se despliegan. La pregunta que importa es esta. <b>Cuando uno se va, ¿sus particiones quedan huérfanas?</b></p>
+
+<div class="concepto">
+  <span class="rot">Concepto · rebalanceo</span>
+  El reparto que Kafka <b>rehace solo</b> cada vez que un miembro entra o sale del grupo. Nadie lo dispara a mano. Es el jefe de turno redistribuyendo los sectores cuando un cocinero se va.
+</div>
+
+<h3>Corta uno de los que sí tiene trabajo</h3>
+
+<p>Mira la salida del paso 6 y elige un consumidor con <code>#PARTITIONS</code> igual a <b>1</b>. Ve a su terminal y presiona <b><code>Ctrl+C</code></b>.</p>
+
+<p>Eso es todo. El consumidor avisa que se va y termina. <b>Espera unos 20 segundos</b> y pregunta desde la terminal T:</p>
+
+<pre>docker exec kafka-broker-1 kafka-consumer-groups \
+    --bootstrap-server kafka-broker-1:29092 \
+    --describe --group validacion --members</pre>
+
+<div class="salida-rot">Lo que vas a ver · recortado a lo ancho</div>
+<div class="salida">GROUP       CONSUMER-ID                                  CLIENT-ID  #PARTITIONS
+validacion  cons-A-bb74078d-12bc-4fb7-b94e-ad1b90995aed  cons-A     1
+validacion  cons-B-525ed9ef-6195-41e2-b9d1-e7b0e0fd944f  cons-B     1
+validacion  cons-D-440a17ba-b358-4d05-b82f-f7f80b864407  cons-D     1</div>
+
+<p>Quedan tres miembros y tres particiones. <b>El que estaba en cero ya no lo está.</b> Nadie ejecutó un comando de reasignación. Kafka rehízo el reparto solo, y el trabajo del que se fue lo tomó el que estaba mirando.</p>
+
+<h3>Compruébalo con tres comprobantes más, desde la terminal T</h3>
+
+<pre>for i in 7 8 9; do
+  echo "RUC-2010006660${i}:comprobante_${i}" | \
+  docker exec -i kafka-broker-1 kafka-console-producer \
+      --bootstrap-server kafka-broker-1:29092 \
+      --topic novatech.validacion \
+      --property parse.key=true --property key.separator=:
+done</pre>
+
+<p>Los tres aparecen repartidos entre las terminales que siguen vivas. <b>Ninguno se perdió</b>, y ninguno llegó dos veces.</p>
+
+<div class="caja tecnico">
+  <span class="rot">Y el que antes estaba ocioso puede seguir en blanco</span>
+  <p style="margin-bottom:0">En la corrida con la que se midió esta guía, los tres comprobantes cayeron en dos particiones y el miembro recién ascendido no recibió ninguno. <b>Eso no lo contradice.</b> Ahora tiene una partición asignada, que es lo que se estaba demostrando. Con solo tres mensajes, que alguna partición se quede sin nada es lo normal.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p><b>Ya no hay ningún miembro con <code>#PARTITIONS</code> en 0</b>, y entre todas las terminales vivas sumas los tres comprobantes nuevos, sin repetidos.</p>
+  <p style="margin-bottom:0">Eso cierra el círculo del laboratorio. <b>El reparto lo hace Kafka, se rehace solo, y el techo lo pusiste tú al elegir el número de particiones.</b></p>
+</div>
+
+<div class="caja ojo">
+  <span class="rot">El rebalanceo también es un costo</span>
+  <p style="margin-bottom:0">Nadie tiene que reasignar nada cuando un proceso se cae, y eso está muy bien. Pero <b>durante el rebalanceo el grupo para</b>. Si tus procesos se reinician seguido, estás pagando pausas que no ves en ningún tablero.</p>
+</div>
+
+<div class="np"></div>
+<h2>Lo que aprendiste</h2>
+
+<div class="regla"><span class="num">1</span>
+<b><code>--group</code> es la palabra más importante del comando.</b><br>
+Con el mismo nombre, los procesos colaboran. Con nombres distintos, duplican. Y por fuera se ven idénticos. El nombre del grupo es un dato de arquitectura escondido en una línea de configuración.
+</div>
+
+<div class="regla"><span class="num">2</span>
+<b>El paralelismo lo fijaste al crear el tópico.</b><br>
+Kafka reparte particiones, no mensajes. Más consumidores que particiones es plata gastada en procesos que miran. Y las particiones solo suben, nunca bajan.
+</div>
+
+<div class="regla"><span class="num">3</span>
+<b>El rebalanceo es automático, y también es un costo.</b><br>
+Nadie tiene que reasignar nada cuando un proceso se cae. Pero durante el rebalanceo el grupo para. Procesos que se reinician seguido son pausas que estás pagando sin verlas.
+</div>
+
+<div class="regla"><span class="num">4</span>
+<b><code>LAG</code> es el número que se vigila.</b><br>
+Es la única señal temprana de que el consumo va más lento que la producción. Cuando alguien pregunte «¿vamos atrasados?», es esto lo que se mira.
+</div>
+
+<div class="np"></div>
+<h2>Para profundizar</h2>
+
+<p>Lo que sigue quedó fuera del recorrido de clase por tiempo. <b>Todos estos comandos corren tal cual están escritos</b> sobre el clúster que tienes arriba.</p>
+
+<h3>A · Consumir sin grupo</h3>
+
+<pre>docker exec -it kafka-broker-1 kafka-console-consumer \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.validacion --from-beginning</pre>
+
+<div class="desglose">
+<div><span class="flag">sin <code>--group</code></span> — Kafka le inventa uno, del estilo <code>console-consumer-40f2d1ba</code>. <b>Ese consumidor recibe todo</b></div>
+</div>
+
+<p><b>Lo que hay que mirar.</b> Es el caso del paso 5 llevado al extremo. Cada terminal es su propia brigada. Y algo más incómodo, ese grupo inventado queda registrado en el clúster, así que un tablero de grupos de producción se llena de basura si la gente consume así.</p>
+
+<h3>B · Rebobinar un grupo</h3>
+
+<p>Es la operación que se hace cuando hay que reprocesar todo desde el principio.</p>
+
+<div class="caja ojo">
+  <span class="rot">Aquí el envoltorio no te sirve</span>
+  <p style="margin-bottom:0"><code>kafka-cli/reset-group.sh</code> trae el tópico fijo por dentro, y es <code>novatech.fleet.events</code>. Si lo ejecutas después de este laboratorio, <b>rebobina un tópico que tu grupo nunca leyó</b> y deja intacto el <code>novatech.validacion</code> que sí trabajaste. Por eso aquí va el comando crudo, con su <code>--topic</code> explícito.</p>
+</div>
+
+<pre>docker exec kafka-broker-1 kafka-consumer-groups \
+    --bootstrap-server kafka-broker-1:29092 \
+    --reset-offsets --group reportes \
+    --topic novatech.validacion \
+    --to-earliest --execute</pre>
+
+<div class="desglose">
+<div><span class="flag">--reset-offsets</span> — mueve la posición guardada de un grupo. <b>No borra ni un mensaje</b>, solo cambia desde dónde va a leer la próxima vez</div>
+<div><span class="flag">--group reportes</span> — a qué grupo se le mueve la posición</div>
+<div><span class="flag">--topic novatech.validacion</span> — sobre qué tópico, con todas sus particiones</div>
+<div><span class="flag">--to-earliest</span> — al principio de todo. Hay más destinos, como <code>--to-latest</code> o <code>--to-datetime</code></div>
+<div><span class="flag">--execute</span> — aplícalo de verdad. <b>Sin esto solo te muestra lo que haría</b>, que es la forma prudente de mirarlo primero</div>
+</div>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">GROUP     TOPIC                PARTITION  NEW-OFFSET
+reportes  novatech.validacion  0          0
+reportes  novatech.validacion  1          0
+reportes  novatech.validacion  2          0</div>
+
+<p>Y ahora míralo desde el otro lado:</p>
+
+<pre>docker exec kafka-broker-1 kafka-consumer-groups \
+    --bootstrap-server kafka-broker-1:29092 \
+    --describe --group reportes</pre>
+
+<div class="salida-rot">Lo que sale · recortado a lo ancho</div>
+<div class="salida">GROUP     TOPIC                PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG
+reportes  novatech.validacion  0          0               4               4
+reportes  novatech.validacion  1          0               3               3
+reportes  novatech.validacion  2          0               2               2</div>
+
+<p><b>El <code>CURRENT-OFFSET</code> volvió a 0 y el <code>LAG</code> saltó al total.</b> El grupo va a releer los nueve mensajes la próxima vez que alguien lo levante.</p>
+
+<div class="caja ojo">
+  <span class="rot">La condición que hay que conocer</span>
+  <p style="margin-bottom:0"><b>El grupo tiene que estar sin miembros activos.</b> Tras un <code>Ctrl+C</code> hay que esperar a que la sesión caduque, o el reset falla con <i>«Assignments can only be reset if the group is inactive»</i>. En producción eso significa que <b>rebobinar un grupo exige parar los consumidores</b>, y eso hay que planificarlo.</p>
+</div>
+
+<h3>C · Las claves y el particionado</h3>
+
+<p>La clave de un mensaje decide en qué partición cae. Y esa decisión es estable, así que dos mensajes con la misma clave caen <b>siempre</b> en el mismo sitio.</p>
+
+<div class="caja ojo">
+  <span class="rot">Aquí el envoltorio tampoco te sirve</span>
+  <p style="margin-bottom:0"><code>kafka-cli/produce-event.sh</code> escribe en <code>novatech.fleet.events</code>, no en el tópico de este laboratorio. Sirve, pero tus consumidores no lo van a ver. Para comprobarlo sobre <code>novatech.validacion</code>, va el comando crudo.</p>
+</div>
+
+<p>Primero anota dónde está cada partición:</p>
+
+<pre>docker exec kafka-broker-1 kafka-get-offsets \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.validacion --time -1</pre>
+
+<p>Ahora escribe tres mensajes con la <b>misma clave</b>:</p>
+
+<pre>for v in alfa beta gamma; do
+  echo "NVT-1001:evento_${v}" | \
+  docker exec -i kafka-broker-1 kafka-console-producer \
+      --bootstrap-server kafka-broker-1:29092 \
+      --topic novatech.validacion \
+      --property parse.key=true --property key.separator=:
+done</pre>
+
+<div class="desglose">
+<div><span class="flag">NVT-1001</span> — la clave, y es <b>la misma en los tres</b>. Ahí está el experimento</div>
+</div>
+
+<p>Y vuelve a mirar los offsets.</p>
+
+<div class="salida-rot">Antes y después · esto salió en una corrida real</div>
+<div class="salida">antes                        después
+novatech.validacion:0:4      novatech.validacion:0:4
+novatech.validacion:1:3      novatech.validacion:1:3
+novatech.validacion:2:2      novatech.validacion:2:5   ← +3</div>
+
+<p><b>Dos particiones no se movieron ni un offset.</b> Los tres cayeron enteros en la 2, porque el <i>hash</i> de <code>NVT-1001</code> da esa y siempre va a dar esa. Y como cada partición la atiende un solo miembro del grupo, esos tres los lee <b>siempre el mismo</b>, y en orden.</p>
+
+<p>Esta es la herramienta para garantizar que los movimientos de un mismo contribuyente se procesen ordenados. <b>Si el orden importa, la clave no es opcional.</b></p>
+
+<div class="caja sunat">
+  <span class="rot">Y el precio que tiene</span>
+  <p style="margin-bottom:0">Si unos pocos contribuyentes generan la mayor parte del tráfico y particionas por RUC, todo ese volumen cae en las mismas particiones. Se llama <i>hot partitioning</i>, y es <b>el precio de garantizar orden por clave</b>. No hay forma de tener las dos cosas.</p>
+</div>
+
+<h3>D · El techo con seis particiones</h3>
+
+<p>El clúster trae creado <code>novatech.fleet.events</code>, con 6 particiones, y los envoltorios de <code>kafka-cli/</code> trabajan sobre él:</p>
+
+<pre>kafka-cli/consume-as-group.sh mi-grupo
+kafka-cli/list-groups.sh
+kafka-cli/describe-group.sh mi-grupo</pre>
+
+<p><b>Lo que hay que mirar.</b> Con 6 particiones, para ver un miembro ocioso harían falta <b>siete</b> consumidores. Es el mismo experimento del paso 6, con el techo más alto. Sirve para comprobar que la regla no depende del número.</p>
+
+<h3>E · Verlo con los ojos</h3>
+
+<p>Abre <b>http://localhost:8090</b> y ve a <i>Consumers</i>. Ahí están los grupos, sus miembros y su <code>LAG</code>, en una pantalla.</p>
+
+<p>Compara lo que muestra con lo que devolvió <code>kafka-consumer-groups --describe</code>. <b>Es la misma información</b>, y saber qué comando hay detrás de cada pantalla es lo que te deja resolver el día que la interfaz no esté.</p>
+
+<h3>F · El reporte del laboratorio</h3>
+
+<p><code>plantillas/reporte-entregable.md</code>, con las respuestas de referencia en <code>soluciones/reporte-resuelto.md</code>. <b>Míralas después de intentarlo.</b></p>
+
+<h2>Antes de cerrar</h2>
+
+<div class="caja ojo">
+  <span class="rot">Deja el terreno limpio</span>
+  <p><b>Corta con <code>Ctrl+C</code> todos los consumidores que sigan abiertos</b>, en las cuatro terminales. Si los dejas, siguen corriendo y ocupando el clúster.</p>
+  <p>Después, desde la terminal T:</p>
+  <pre>bin/stop-lab.sh</pre>
+  <p style="margin-bottom:0">Y comprueba con <code>docker ps --filter name=kafka-broker</code> que no quede nada.</p>
+</div>
+
+<div class="caja sunat">
+  <span class="rot">Lo que te llevas</span>
+  <p style="margin-bottom:0">Cuando alguien proponga «levantemos más procesos para ir más rápido», ahora sabes cuáles son las dos preguntas que hay que hacer antes de aprobar el gasto. <b>¿Van en el mismo grupo?</b> Y <b>¿cuántas particiones tiene el tópico?</b></p>
+</div>
+
+</body></html>

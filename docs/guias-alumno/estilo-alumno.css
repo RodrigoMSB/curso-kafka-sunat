@@ -1,0 +1,221 @@
+/* ============================================================
+   GUÍAS DE LABORATORIO PARA EL ALUMNO
+   Curso Kafka SUNAT · Netec
+   Paleta: verde profundo + terracota (distinta de las guías
+   de instructor, que usan azul marino + dorado)
+   ============================================================ */
+
+@page { margin: 16mm 15mm 18mm 15mm; }
+
+body {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 11pt;
+  line-height: 1.6;
+  color: #1c1c1c;
+  margin: 0;
+}
+
+/* ---------- PORTADA ---------- */
+.portada {
+  page-break-after: always;
+  padding-top: 42mm;
+  border-top: 8px solid #1d5c4a;
+  min-height: 212mm;
+}
+.portada .kicker {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 8.5pt; letter-spacing: 3px; color: #7a8f88;
+  text-transform: uppercase; margin-bottom: 6mm;
+}
+.portada .labnum {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 13pt; letter-spacing: 4px; color: #c05621;
+  margin-bottom: 14mm;
+}
+.portada h1 {
+  font-size: 42pt; line-height: 1.05; margin: 0 0 8mm 0;
+  color: #1d5c4a; font-weight: normal;
+}
+.portada .sub {
+  font-size: 15pt; color: #4a4a4a; font-style: italic;
+  margin-bottom: 22mm; line-height: 1.45;
+}
+.portada .meta {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 9.5pt; color: #7a8f88; line-height: 1.9;
+  border-left: 3px solid #c05621; padding-left: 5mm;
+}
+
+/* ---------- TÍTULOS ---------- */
+h2 {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 19pt; color: #1d5c4a;
+  margin: 0 0 3mm 0; padding-bottom: 2mm;
+  border-bottom: 3px solid #1d5c4a;
+  page-break-after: avoid;
+}
+h2 .paso {
+  font-size: 11pt; color: #c05621; display: block;
+  letter-spacing: 2.5px; margin-bottom: 1.5mm;
+  text-transform: uppercase;
+}
+h3 {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 13pt; color: #1d5c4a;
+  margin: 8mm 0 3mm 0; page-break-after: avoid;
+}
+h4 {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 9.5pt; color: #7a8f88; letter-spacing: 1.5px;
+  text-transform: uppercase; margin: 6mm 0 2mm 0;
+  page-break-after: avoid;
+}
+p { margin: 0 0 3.5mm 0; }
+
+/* ---------- LO QUE VAS A DEMOSTRAR ---------- */
+.afirmacion {
+  background: #1d5c4a; color: #fff;
+  padding: 6mm 7mm; margin: 5mm 0 6mm 0;
+  page-break-inside: avoid;
+}
+.afirmacion .rot {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 8pt; letter-spacing: 2.5px; text-transform: uppercase;
+  color: #9dc4b6; margin-bottom: 2.5mm; display: block;
+}
+.afirmacion .txt { font-size: 14.5pt; line-height: 1.4; font-style: italic; }
+
+/* ---------- CAJAS ---------- */
+.caja {
+  border: 1px solid #e2e2e2; border-left-width: 4px;
+  padding: 4mm 5mm; margin: 4mm 0;
+  page-break-inside: avoid; background: #fdfdfc;
+}
+.caja .rot {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 8pt; letter-spacing: 2px; text-transform: uppercase;
+  margin-bottom: 2.5mm; display: block; color: #7a8f88;
+}
+.caja p:last-child { margin-bottom: 0; }
+
+.abuelita  { border-left-color: #c05621; background: #fdf8f4; }
+.abuelita .rot { color: #a8481a; }
+
+.tecnico   { border-left-color: #2c7a7b; background: #f4fafa; }
+.tecnico .rot { color: #2c7a7b; }
+
+.sunat     { border-left-color: #1d5c4a; background: #f4f9f7; }
+.sunat .rot { color: #1d5c4a; }
+
+.ojo       { border-left-color: #b03030; background: #fdf6f6; }
+.ojo .rot { color: #b03030; }
+
+.concepto {
+  border: 1px solid #e6e6e6; border-top: 3px solid #7a8f88;
+  padding: 4mm 5mm; margin: 5mm 0; background: #fafafa;
+  page-break-inside: avoid;
+}
+.concepto .rot {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 8pt; letter-spacing: 2px; text-transform: uppercase;
+  color: #7a8f88; margin-bottom: 2.5mm; display: block;
+}
+.concepto b { color: #1d5c4a; }
+
+/* ---------- COMANDOS ---------- */
+pre {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 9pt; line-height: 1.5;
+  background: #1a2b26; color: #e6efeb;
+  padding: 4mm 5mm; margin: 3mm 0; border-radius: 3px;
+  white-space: pre-wrap; word-wrap: break-word;
+  page-break-inside: avoid;
+}
+code {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 9.5pt; background: #eef3f1;
+  padding: 0.3mm 1.3mm; border-radius: 2px; color: #1d5c4a;
+}
+pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+
+.salida {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 8.5pt; background: #f5f5f3;
+  border: 1px dashed #b8b8b8; color: #333;
+  padding: 3.5mm 4mm; margin: 3mm 0;
+  white-space: pre-wrap; page-break-inside: avoid;
+}
+.salida-rot {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 8pt; letter-spacing: 1.5px; text-transform: uppercase;
+  color: #7a8f88; margin: 4mm 0 1mm 0;
+}
+
+/* ---------- DESGLOSE DE PARÁMETROS ---------- */
+.desglose {
+  margin: 3mm 0 5mm 0; padding-left: 4mm;
+  border-left: 2px solid #e2e2e2;
+}
+.desglose div {
+  font-size: 10.5pt; margin-bottom: 2mm; line-height: 1.5;
+}
+.desglose .flag {
+  font-family: 'Courier New', Courier, monospace;
+  color: #1d5c4a; font-weight: bold;
+}
+
+/* ---------- TABLAS ---------- */
+table {
+  border-collapse: collapse; width: 100%; font-size: 10pt;
+  margin: 4mm 0; page-break-inside: avoid;
+}
+th {
+  background: #1d5c4a; color: #fff;
+  font-family: Helvetica, Arial, sans-serif; font-size: 8.5pt;
+  text-align: left; padding: 2.5mm 3mm; font-weight: normal;
+}
+td { padding: 2.5mm 3mm; border-bottom: 1px solid #e4e4e4; vertical-align: top; }
+tr:nth-child(even) td { background: #fafaf9; }
+
+/* ---------- CHECKPOINT · vas bien si… ---------- */
+.check {
+  border: 2px solid #1d5c4a; border-radius: 4px;
+  padding: 4mm 5mm; margin: 5mm 0; background: #f4f9f7;
+  page-break-inside: avoid;
+}
+.check .rot {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 8.5pt; letter-spacing: 2px; text-transform: uppercase;
+  color: #1d5c4a; margin-bottom: 2.5mm; display: block; font-weight: bold;
+}
+
+/* ---------- SI ALGO FALLA ---------- */
+.rescate {
+  border-left: 4px solid #b03030; background: #fdf6f6;
+  padding: 4mm 5mm; margin: 4mm 0; page-break-inside: avoid;
+}
+.rescate .rot {
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 8pt; letter-spacing: 2px; text-transform: uppercase;
+  color: #b03030; margin-bottom: 2.5mm; display: block;
+}
+
+/* ---------- REGLAS FINALES ---------- */
+.regla {
+  margin: 4mm 0; padding-left: 12mm; position: relative;
+  page-break-inside: avoid;
+}
+.regla .num {
+  position: absolute; left: 0; top: -1mm;
+  font-family: Georgia, serif; font-size: 22pt;
+  color: #c05621; line-height: 1;
+}
+.regla b { color: #1d5c4a; }
+
+hr { border: none; border-top: 1px solid #e4e4e4; margin: 7mm 0; }
+.np { page-break-before: always; }
+svg { display: block; margin: 4mm auto; max-width: 100%; }
+.pie {
+  font-family: Helvetica, Arial, sans-serif; font-size: 8.5pt;
+  color: #7a8f88; text-align: center; margin-top: -2mm; font-style: italic;
+}

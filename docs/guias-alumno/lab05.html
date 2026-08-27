@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><link rel="stylesheet" href="estilo-alumno.css"></head>
+<body>
+
+<div class="portada">
+  <div class="kicker">C U R S O &nbsp; D E &nbsp; A D M I N I S T R A C I Ó N &nbsp; D E &nbsp; K A F K A</div>
+  <div class="labnum">LABORATORIO 05</div>
+  <h1>¿Y si nadie<br>los borró?</h1>
+  <div class="sub">Operación de tópicos y retención.<br>Guía para hacerlo por tu cuenta, paso a paso</div>
+  <div class="meta">
+    Confluent Platform 8.2.0 · Kafka 4.2 en modo KRaft · 3 brokers<br>
+    Duración estimada · 60 minutos, y varios son de espera<br>
+    NovaTech Logistics · caso de estudio
+  </div>
+</div>
+
+<h2>Antes de empezar</h2>
+
+<h3>Qué vas a lograr</h3>
+
+<p>Al final de esta guía vas a haber <b>visto desaparecer 100 mensajes de un tópico sin que nadie ejecute un comando de borrado</b>. Y vas a saber exactamente por qué desaparecieron.</p>
+
+<p>Este es el laboratorio que explica <b>por qué Kafka no es una base de datos</b>. En una base de datos, lo que insertaste está hasta que alguien lo borre. En Kafka pasa lo contrario. Lo que escribiste se va solo, y la única razón por la que sigue ahí es que el plazo que tú configuraste todavía no venció.</p>
+
+<div class="afirmacion">
+  <span class="rot">Lo que este laboratorio demuestra</span>
+  <div class="txt">Kafka borra mensajes solo, cuando se lo pediste, y no te avisa.</div>
+</div>
+
+<p>Son tres partes y las tres se ven en pantalla. <b>Solo</b>, porque nadie va a ejecutar un comando de borrado en toda la guía. <b>Cuando se lo pediste</b>, porque el plazo lo vas a escribir tú en el paso 2. <b>Y no te avisa</b>, porque no hay log, ni alerta, ni métrica. El único rastro va a ser que un número cambió.</p>
+
+<h3>Qué necesitas tener listo</h3>
+
+<table>
+<tr><th>Requisito</th><th>Cómo lo compruebas</th></tr>
+<tr><td>Docker Desktop corriendo</td><td>Que el ícono de la ballena esté activo</td></tr>
+<tr><td>6 GB de RAM asignados a Docker</td><td>Ajustes de Docker Desktop, pestaña <i>Resources</i>. Con menos, los tres servidores no arrancan</td></tr>
+<tr><td>Git Bash abierto</td><td>Es la terminal que usamos en todo el curso</td></tr>
+<tr><td>El repositorio del curso</td><td>Debe estar en <code>C:\KAFKA\curso-kafka-sunat</code></td></tr>
+<tr><td>Los puertos 9092, 9093, 9094 y 8090 libres</td><td>El paso 1 te avisa si no lo están</td></tr>
+</table>
+
+<div class="caja ojo">
+  <span class="rot">Antes de tocar nada · dos cosas</span>
+  <p><b>Uno.</b> Actualiza el repositorio, porque el material se corrige durante el curso:</p>
+  <pre>cd /c/KAFKA/curso-kafka-sunat
+git pull</pre>
+  <p><b>Dos.</b> Comprueba que no tengas otro laboratorio levantado:</p>
+  <pre>docker ps --filter name=kafka-broker</pre>
+  <p style="margin-bottom:0">Si aparece algo, no te preocupes. <b>El script del paso 1 baja solo los contenedores de otros laboratorios del curso.</b> Lo que no toca, ni va a tocar, es nada que no sea del curso.</p>
+</div>
+
+<h3>El caso</h3>
+
+<div class="caja">
+  <p>Un lunes por la mañana el área de fiscalización de <b>NovaTech Logistics</b> abre el tablero y la serie de comprobantes del jueves anterior no está.</p>
+  <p>No hay un <code>DELETE</code> en ningún log de auditoría. Nadie tocó nada. El equipo de plataforma jura que el clúster estuvo arriba todo el fin de semana, y tiene razón. Estuvo arriba.</p>
+  <p>La sala se va a pasar la mañana en la pregunta obvia, <b>«¿quién los borró?»</b>. Esa pregunta se puede investigar durante días sin llegar a ninguna parte, porque parte de un supuesto que nadie puso sobre la mesa. El supuesto de que alguien los borró.</p>
+  <p style="margin-bottom:0">Guarda la otra pregunta, que es la que vas a contestar hoy. <b>¿Y si nadie los borró?</b></p>
+</div>
+
+<div class="caja abuelita">
+  <span class="rot">La metáfora de todo el curso · el restaurante</span>
+  <p>Kafka es <b>un restaurante</b>. El <b>mozo</b> que toma y entrega los pedidos es el <b>broker</b>. Un <b>tipo de comanda</b>, como cocina fría, cocina caliente o barra, es el <b>tópico</b>. Los <b>sectores del salón</b> son las <b>particiones</b>. Las <b>libretas de respaldo</b> que copian cada comanda son las <b>réplicas</b>.</p>
+  <p style="margin-bottom:0"><b>Hoy se suma una pieza nueva, y es la protagonista.</b> El <b>espiche</b>, que es el pincho donde el mozo va clavando las comandas del turno.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 1 de 7</span>Levantar el clúster de tres servidores</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Este laboratorio necesita tres servidores de Kafka trabajando juntos, más una interfaz web para mirarlos. Un script del curso los levanta todos.</p>
+
+<p>A diferencia del laboratorio 01, aquí no vas a armar el archivo de configuración. Ya está resuelto, porque lo que se estudia hoy no es cómo se enciende un clúster. Es qué le pasa a los datos que hay dentro.</p>
+
+<h3>Los comandos</h3>
+
+<pre>cd Capitulo_3/lab-05-operacion-topicos
+chmod +x bin/*.sh kafka-cli/*.sh infra/scripts/*.sh
+bin/start-lab.sh</pre>
+
+<div class="desglose">
+<div><span class="flag">cd Capitulo_3/lab-05-operacion-topicos</span> — entra a la carpeta del laboratorio. <b>Todos los comandos de esta guía se ejecutan desde aquí</b>, no desde otra carpeta</div>
+<div><span class="flag">chmod +x</span> — le da permiso de ejecución a los scripts. En Windows con Git Bash a veces se pierde al clonar. <b>Si ya lo hiciste antes, ejecutarlo de nuevo no hace daño</b></div>
+<div><span class="flag">bin/*.sh kafka-cli/*.sh infra/scripts/*.sh</span> — las tres carpetas que traen scripts. El asterisco significa «todos los archivos que terminan en <code>.sh</code>»</div>
+<div><span class="flag">bin/start-lab.sh</span> — el script que levanta el laboratorio. Baja lo que haya quedado de otro lab del curso, crea los tres brokers, espera a que estén sanos, y levanta la interfaz web</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver · recortado, el original trae un banner grande</div>
+<div class="salida">[1/4] Levantando contenedores del clúster NovaTech...
+ ✔ Network novatech-lab05_novatech-network  Created
+ ✔ Container kafka-broker-2                 Healthy
+ ✔ Container kafka-broker-3                 Healthy
+ ✔ Container kafka-broker-1                 Healthy
+ ✔ Container kafbat-ui                      Started
+ ✔ Container gps-producer                   Started
+
+[2/4] Esperando a que los brokers estén operativos...
+  ✓ 3/3 brokers operativos
+
+[3/4] Esperando a que Kafbat UI esté disponible...
+  ✓ Kafbat UI disponible
+
+[4/4] Verificando productor GPS...
+  ✓ Productor GPS activo
+
+════════════════════════════════════════════════════════════
+  CLÚSTER NOVATECH OPERATIVO
+════════════════════════════════════════════════════════════
+
+  Componentes:
+    Broker 1:        localhost:9092
+    Broker 2:        localhost:9093
+    Broker 3:        localhost:9094
+    Kafbat UI:       http://localhost:8090</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>Leíste la línea <code>✓ 3/3 brokers operativos</code> y el bloque <b>CLÚSTER NOVATECH OPERATIVO</b> al final.</p>
+  <p style="margin-bottom:0">Compruébalo tú mismo con <code>docker ps --filter name=kafka-broker</code>. Tienen que salir <b>tres líneas</b>, con <code>kafka-broker-1</code>, <code>-2</code> y <code>-3</code>, y las tres con <code>Up</code> y <code>(healthy)</code> en la columna <code>STATUS</code>.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si algo falla en este paso</span>
+  <p><b>Dice <code>[ERROR] Docker no está corriendo</code>.</b> Abre Docker Desktop y espera a que la ballena deje de moverse. Después repite el comando.</p>
+  <p><b>Dice <code>[ADVERTENCIA] Docker tiene 4 GB de RAM asignados</code>.</b> Ve a los ajustes de Docker Desktop, pestaña <i>Resources</i>, y súbelo a 6 GB. Docker se reinicia solo. Con menos memoria el tercer broker se queda a medias.</p>
+  <p><b>Dice <code>port is already allocated</code>.</b> Algo en tu máquina ya está usando el 9092, el 9093, el 9094 o el 8090. Averigua qué con <code>docker ps</code> y bájalo. Si no es de Docker, es un programa tuyo.</p>
+  <p><b>Dice <code>el nombre 'kafka-broker-1' lo tiene un contenedor que NO es del curso</code>.</b> El script se niega a tocar nada ajeno, y hace bien. Resuélvelo tú con <code>docker rm -f kafka-broker-1</code>, pero <b>solo si sabes que ese contenedor es descartable</b>.</p>
+  <p style="margin-bottom:0"><b>Dice <code>Timeout: solo 2/3 brokers están operativos</code>.</b> Casi siempre es memoria. Sube Docker a 6 GB y ejecuta <code>bin/start-lab.sh</code> otra vez.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 2 de 7</span>Fabricar el tópico que sí podemos ver morir</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Un tópico normal guarda sus datos siete días. Nadie va a esperar siete días. Vamos a crear uno con los plazos en segundos, para poder ver en una sola sesión lo que en producción tarda una semana.</p>
+
+<div class="concepto">
+  <span class="rot">Concepto · tópico</span>
+  Un <b>tópico</b> es el nombre bajo el que se agrupan mensajes del mismo tipo. No se parece a una tabla ni a una cola. Es un registro que solo crece por el final, y leer de él no borra nada. En el restaurante es el <b>tipo de comanda</b>.
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · partición</span>
+  Cada uno de los <b>pedazos en que se corta un tópico</b>. Un tópico de 6 particiones son 6 registros independientes, cada uno con su propio orden interno. Son los <b>sectores del salón</b>, y existen para que el trabajo se pueda repartir entre varios.
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · segmento</span>
+  El <b>archivo físico</b> en el disco del broker donde se van escribiendo los mensajes de <b>una partición</b>, uno detrás de otro. Cada partición tiene en todo momento <b>un segmento activo</b>, que es donde se escribe, y cero o más <b>segmentos cerrados</b>.
+</div>
+
+<div class="caja abuelita">
+  <span class="rot">El espiche · la pieza de hoy</span>
+  <p>El segmento es <b>el espiche</b>, ese pincho donde el mozo clava las comandas del turno.</p>
+  <p>Cuando el turno termina, el mozo <b>no va sacando comanda por comanda del pincho</b>. Baja el espiche entero al depósito, pone uno nuevo, y sigue. Y cuando llega la orden de limpiar lo viejo, <b>lo que se bota es el espiche completo</b>, no las comandas de a una.</p>
+  <p style="margin-bottom:0">De ahí sale la única regla que necesitas para entender todo lo demás. 🍽 <b>Kafka no borra mensajes. Bota espiches enteros.</b></p>
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · retención</span>
+  El <b>plazo que Kafka respeta antes de botar datos viejos</b> de un tópico. Se configura en milisegundos, con <code>retention.ms</code>. Es un plazo por tópico, así que dos tópicos del mismo clúster pueden tener plazos completamente distintos.
+</div>
+
+<h3>Los dos parámetros, y por qué van juntos</h3>
+
+<p><b><code>segment.ms</code></b> dice cada cuánto se cierra el espiche y se empieza uno nuevo. Por defecto son 7 días.</p>
+
+<p><b><code>retention.ms</code></b> dice cuánto tiempo se guarda un espiche <b>ya cerrado</b> antes de botarlo. Por defecto también son 7 días.</p>
+
+<div class="caja ojo">
+  <span class="rot">La frase que no está en ninguna documentación de una línea</span>
+  <p><b>El segmento activo no se bota nunca.</b> Esté como esté de viejo, mientras sea el que está en uso, se queda. Solo los cerrados son candidatos a irse.</p>
+  <p style="margin-bottom:0">Esa frase explica el 90 % de los «configuré retención de un minuto y no pasó nada» que vas a escuchar en tu carrera. Si <code>segment.ms</code> son 7 días y <code>retention.ms</code> es 1 minuto, <b>no se borra nada durante 7 días</b>. Todos los mensajes, viejos y nuevos, viven en el mismo espiche activo, y ese espiche no se puede botar.</p>
+</div>
+
+<h3>Una decisión que parece de comodidad y no lo es</h3>
+
+<div class="concepto">
+  <span class="rot">Concepto · clave (<i>key</i>)</span>
+  Un identificador opcional que se le pega a cada mensaje al escribirlo, aparte de su contenido. En SUNAT sería el RUC, o el número de serie del comprobante. <b>Es lo que Kafka usa para decidir en qué partición cae el mensaje.</b> Hoy vamos a escribir todo sin clave, y eso tiene una consecuencia.
+</div>
+
+<p>El tópico va a tener <b>una sola partición</b>. Eso es lo que hace que el experimento funcione, y conviene entender por qué antes de teclear.</p>
+
+<p>Cuando los mensajes no llevan clave, el productor de consola <b>se pega a una sola partición durante toda su sesión</b>, y en la sesión siguiente elige otra. Con varias particiones, la primera ráfaga cae entera en una y la segunda, que es la que tiene que cerrar el espiche, cae en otra. El espiche que contiene los datos nunca rota, nunca se cierra, y no se borra nada.</p>
+
+<p>Esto está medido sobre este mismo clúster. Con 3 particiones el borrado tardó 265 segundos y dejó una partición sin tocar. Con 1 partición tardó 128 segundos y se llevó todo lo vencido.</p>
+
+<h3>El comando</h3>
+
+<pre>kafka-cli/create-topic.sh novatech.lab05.efimero \
+    --partitions 1 \
+    --rf 3 \
+    --config retention.ms=60000 \
+    --config segment.ms=10000</pre>
+
+<div class="desglose">
+<div><span class="flag">kafka-cli/create-topic.sh</span> — un envoltorio del curso. Por dentro ejecuta <code>kafka-topics --create</code> dentro del contenedor, y antes te imprime una ficha que explica el comando real</div>
+<div><span class="flag">novatech.lab05.efimero</span> — el nombre del tópico</div>
+<div><span class="flag">--partitions 1</span> — <b>el valor que decide si el laboratorio funciona.</b> Un solo pedazo, un solo espiche, un solo contador que mirar</div>
+<div><span class="flag">--rf 3</span> — tres copias de esa partición, en tres brokers distintos. El mismo nivel de resguardo que el resto del clúster</div>
+<div><span class="flag">--config retention.ms=60000</span> — <b>60 segundos.</b> Un espiche cerrado hace más de un minuto es candidato a irse</div>
+<div><span class="flag">--config segment.ms=10000</span> — <b>10 segundos.</b> El espiche se cierra rapidísimo, para que haya candidatos que botar</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver · recortado, la ficha del envoltorio es más larga</div>
+<div class="salida">[Create Topic] novatech.lab05.efimero
+  Particiones:        1
+  Replication factor: 3
+  Configs personalizadas:
+    retention.ms=60000
+    segment.ms=10000
+────────────────────────────────────────────────────────
+WARNING: Due to limitations in metric names, topics with a period ('.') or
+underscore ('_') could collide. To avoid issues it is best to use either,
+but not both.
+Created topic novatech.lab05.efimero.
+  ✓ Tópico novatech.lab05.efimero creado</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  Salió la línea <code>Created topic novatech.lab05.efimero.</code> y debajo el <code>✓</code> verde del envoltorio.
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">Ese WARNING no es un error</span>
+  Sale siempre con este tópico, porque su nombre lleva puntos. Kafka avisa que un nombre que mezcla puntos y guiones bajos podría chocar en sus métricas internas. <b>El tópico se creó igual</b>, y la línea <code>Created topic</code> que va debajo lo confirma.
+</div>
+
+<div class="rescate">
+  <span class="rot">Si dice que el tópico ya existe</span>
+  <p>El mensaje es <code>Topic 'novatech.lab05.efimero' already exists</code>. Te pasa si estás repitiendo el laboratorio. <b>Bórralo y vuelve a crearlo</b>, porque necesitas empezar con los contadores en cero:</p>
+  <pre>kafka-cli/delete-topic.sh novatech.lab05.efimero</pre>
+  <p style="margin-bottom:0"><b>Ese script te va a pedir que escribas el nombre del tópico</b> para confirmar. Escríbelo completo y pulsa Enter. Es la protección para que nadie borre un tópico por accidente.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 3 de 7</span>Describirlo y leer la línea <code>Configs</code></h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Antes de escribirle nada al tópico, hay que saber leerlo. La salida de <code>describe</code> es la ficha técnica de un tópico, y es lo primero que vas a mirar el día que algo raro pase en producción.</p>
+
+<div class="concepto">
+  <span class="rot">Concepto · broker</span>
+  Cada uno de los <b>servidores Kafka</b> del clúster. Este laboratorio levanta tres, que se llaman <code>kafka-broker-1</code>, <code>kafka-broker-2</code> y <code>kafka-broker-3</code>. Es el mozo.
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · réplica e ISR</span>
+  Una <b>réplica</b> es cada una de las copias de una partición. Son las libretas de respaldo.<br><br>
+  El <b>ISR</b> (<i>In-Sync Replicas</i>) es cuáles de esas copias están <b>al día en este momento</b>. Si el ISR tiene los mismos números que las réplicas, ninguna se quedó atrás. Son los que marcaron tarjeta.
+</div>
+
+<h3>El comando</h3>
+
+<pre>kafka-cli/describe-topic.sh novatech.lab05.efimero | head -2</pre>
+
+<div class="desglose">
+<div><span class="flag">kafka-cli/describe-topic.sh</span> — envoltorio del curso. Por dentro llama a <code>kafka-topics --describe</code> dentro del contenedor</div>
+<div><span class="flag">novatech.lab05.efimero</span> — qué tópico queremos mirar</div>
+<div><span class="flag">| head -2</span> — la tubería <code>|</code> pasa la salida al siguiente comando. El listado completo trae más de treinta configuraciones. <b>Las dos primeras líneas son el resumen del tópico y la de su única partición</b>, que es lo que nos interesa</div>
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">El comando real, el que vas a escribir en SUNAT</span>
+  <p>En el servidor de producción no hay Docker ni envoltorios. El comando es este:</p>
+  <pre style="margin-bottom:0">kafka-topics --bootstrap-server kafka-broker-1:29092 \
+    --describe --topic novatech.lab05.efimero</pre>
+</div>
+
+<div class="desglose">
+<div><span class="flag">--bootstrap-server</span> — la puerta de entrada al clúster. <b>Le preguntas a un broker cualquiera y él te contesta por todos.</b> No hace falta que sea el que tiene el dato</div>
+<div><span class="flag">--describe</span> — solo consulta. <b>No modifica nada</b>, así que se puede ejecutar sin miedo en producción</div>
+<div><span class="flag">--topic</span> — sobre qué tópico preguntamos</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver · dos líneas muy largas, que aquí se parten para que quepan</div>
+<div class="salida">Topic: novatech.lab05.efimero  TopicId: JpW30WWRSliVh015ODr0QA  PartitionCount: 1
+  ReplicationFactor: 3  Configs: min.insync.replicas=2,retention.ms=60000,segment.ms=10000
+    Topic: novatech.lab05.efimero  Partition: 0  Leader: 1  Replicas: 1,2,3  Isr: 1,2,3
+    Elr:   LastKnownElr:</div>
+
+<h3>Cómo se lee la primera línea</h3>
+
+<table>
+<tr><th>Campo</th><th>Qué dice</th></tr>
+<tr><td><code>PartitionCount: 1</code></td><td>El tópico tiene un solo pedazo, porque lo pediste así. <b>Es el número que limita cuántos consumidores pueden trabajar en paralelo</b>, y eso lo vas a ver en el laboratorio 06</td></tr>
+<tr><td><code>ReplicationFactor: 3</code></td><td>De ese pedazo hay 3 copias, en 3 brokers distintos. Aguantas perder uno</td></tr>
+<tr><td><code>Configs: …</code></td><td><b>Esta es la parte que importa hoy.</b> Trae tres valores. Los dos plazos que acabas de poner, y uno que ya venía del broker</td></tr>
+</table>
+
+<div class="caja ojo">
+  <span class="rot">La trampa clásica de la línea Configs</span>
+  <p><b><code>Configs</code> no lista la configuración del tópico. Lista solo lo que está cambiado respecto del valor de fábrica.</b></p>
+  <p>Tu tópico tiene más de treinta configuraciones. Aparecen tres porque hay tres cosas cambiadas.</p>
+  <p style="margin-bottom:0">En un tópico que nadie tocó, esta línea se lee casi vacía y se entiende como «este tópico no tiene configuración». Lo que dice en realidad es <b>«este tópico no tiene ningún valor distinto del de fábrica»</b>. Los otros treinta y pico están ahí, con su valor por defecto, decidiendo cosas.</p>
+</div>
+
+<p>Uno de los que <b>no</b> aparece es <code>cleanup.policy</code>, y es justamente el que decide qué pasa cuando un espiche vence. Está en su valor de fábrica, que es <code>delete</code>. El espiche cerrado se bota entero, y eso es lo que vas a ver en los pasos siguientes.</p>
+
+<h3>Cómo se lee la segunda línea</h3>
+
+<table>
+<tr><th>Campo</th><th>Qué dice</th></tr>
+<tr><td><code>Partition: 0</code></td><td>El número de este pedazo. Solo hay uno, así que solo está el 0</td></tr>
+<tr><td><code>Leader: 1</code></td><td>Qué broker atiende las lecturas y escrituras de este pedazo. Los otros dos solo copian. <b>A ti te va a salir otro número</b>, porque Kafka reparte los líderes al crear</td></tr>
+<tr><td><code>Replicas: 1,2,3</code></td><td>En qué brokers está</td></tr>
+<tr><td><code>Isr: 1,2,3</code></td><td>Cuáles están al día. Los tres</td></tr>
+<tr><td><code>Elr</code> y <code>LastKnownElr</code></td><td>Campos nuevos de Kafka 4.x, para escenarios de pérdida más severos que los de este lab. <b>Aquí salen siempre vacíos</b></td></tr>
+</table>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p><code>PartitionCount</code> dice <b>1</b>, <code>ReplicationFactor</code> dice <b>3</b>, y en <code>Configs</code> aparecen <b><code>retention.ms=60000</code> y <code>segment.ms=10000</code></b>.</p>
+  <p style="margin-bottom:0">Y en la segunda línea, <b><code>Isr</code> trae los mismos tres números que <code>Replicas</code></b>, en el orden que sea. Eso significa que las tres copias están al día.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el ISR trae menos de tres números</span>
+  <p>Por ejemplo <code>Replicas: 1,2,3</code> pero <code>Isr: 1,2</code>. Significa que un broker se quedó atrás o se cayó.</p>
+  <p style="margin-bottom:0">Míralo con <code>docker ps --filter name=kafka-broker</code>. Si uno no está en <code>Up (healthy)</code>, espera un minuto y vuelve a mirar. Si sigue caído, levanta el lab de nuevo con <code>bin/start-lab.sh</code>.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 4 de 7</span>Escribir 100 comprobantes y contarlos</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Vamos a llenar el tópico y a aprender a contar lo que hay dentro. Para contar mensajes en Kafka no se usa un <code>SELECT COUNT(*)</code>. Se usan los dos extremos del registro.</p>
+
+<div class="concepto">
+  <span class="rot">Concepto · offset</span>
+  El <b>número de orden de un mensaje dentro de su partición</b>. Empieza en 0 y nunca se reutiliza. Es el número de comanda, y es correlativo. <b>Si el comprobante 0 se botó, el siguiente sigue siendo el 1.</b> Los números no se corren hacia atrás.
+</div>
+
+<p>Los dos extremos que importan son estos. <b><code>--time -1</code></b> te da el offset más nuevo, o sea dónde va a caer el próximo mensaje que se escriba. Es la marca de «hasta aquí escribimos». <b><code>--time -2</code></b> te da el offset más antiguo que todavía existe. Es la marca de «desde aquí se puede leer».</p>
+
+<div class="afirmacion">
+  <span class="rot">La cuenta que vas a usar toda la clase</span>
+  <div class="txt">mensajes vivos = (<code style="color:#fff;background:none">--time -1</code>) menos (<code style="color:#fff;background:none">--time -2</code>)</div>
+</div>
+
+<p>Cuando Kafka bota un espiche, el offset más nuevo <b>no se mueve</b>, porque nadie escribió nada. El que se mueve es el más antiguo, que salta hacia adelante. <b>Ese salto es el borrado, y es el único rastro que vas a tener.</b></p>
+
+<h3>Primero, escribe los 100</h3>
+
+<pre>kafka-cli/produce-bulk.sh novatech.lab05.efimero 100</pre>
+
+<div class="desglose">
+<div><span class="flag">kafka-cli/produce-bulk.sh</span> — envoltorio del curso. Fabrica los mensajes solo, con contenido de relleno, y se los pasa a <code>kafka-console-producer</code></div>
+<div><span class="flag">novatech.lab05.efimero</span> — a qué tópico se escribe</div>
+<div><span class="flag">100</span> — cuántos mensajes generar</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver · recortado, sin la ficha del envoltorio</div>
+<div class="salida">[Produce Bulk] 100 mensajes -> novatech.lab05.efimero
+────────────────────────────────────────────────────────
+  ✓ 100 mensajes publicados en 1s (~100 msg/seg)</div>
+
+<div class="caja tecnico">
+  <span class="rot">Esa cifra de msg/seg no es una medición</span>
+  La calcula el envoltorio dividiendo mensajes entre segundos, y la mayor parte de esos segundos son el arranque de la máquina virtual de Java. <b>A ti te va a salir otro número</b>, y en Docker Desktop sobre Windows suele ser bastante menor. <b>Sirve para comparar entre corridas, no para decir cuánto rinde Kafka.</b> Para eso está el laboratorio 07, que usa la herramienta oficial de rendimiento.
+</div>
+
+<h3>Ahora pregunta por los dos extremos</h3>
+
+<pre>docker exec kafka-broker-1 kafka-get-offsets \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.lab05.efimero --time -1
+
+docker exec kafka-broker-1 kafka-get-offsets \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.lab05.efimero --time -2</pre>
+
+<div class="desglose">
+<div><span class="flag">docker exec</span> — ejecuta el comando <b>dentro</b> de un contenedor que ya está corriendo. <b>En el servidor de SUNAT esta parte no existe</b>, porque el comando se llama solo</div>
+<div><span class="flag">kafka-broker-1</span> — en cuál de los tres contenedores. Cualquiera sirve, porque le pregunta al clúster entero</div>
+<div><span class="flag">kafka-get-offsets</span> — la herramienta que pregunta por los extremos del registro. <b>No lee mensajes, solo cuenta</b></div>
+<div><span class="flag">--bootstrap-server kafka-broker-1:29092</span> — el puerto <b>interno</b> del broker, porque con <code>docker exec</code> estamos hablándole desde dentro de la red de Docker. Desde tu máquina sería <code>localhost:9092</code></div>
+<div><span class="flag">--topic</span> — sobre qué tópico preguntamos</div>
+<div><span class="flag">--time -1</span> — el offset más nuevo. Dónde va a caer el próximo mensaje</div>
+<div><span class="flag">--time -2</span> — el offset más antiguo que todavía existe. Desde dónde se puede leer</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver · una línea por comando</div>
+<div class="salida">novatech.lab05.efimero:0:100
+novatech.lab05.efimero:0:0</div>
+
+<p>El formato es <code>tópico:partición:offset</code>.</p>
+
+<table>
+<tr><th>Línea</th><th>Traducción</th></tr>
+<tr><td><code>novatech.lab05.efimero:0:100</code></td><td>Partición 0, offset más nuevo igual a 100. Se escribieron 100 mensajes, numerados del 0 al 99</td></tr>
+<tr><td><code>novatech.lab05.efimero:0:0</code></td><td>Partición 0, offset más antiguo igual a 0. <b>No se ha botado nada todavía</b></td></tr>
+</table>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>El primer comando termina en <code>:100</code> y el segundo en <code>:0</code>. <b>Mensajes vivos: 100 menos 0, o sea 100.</b></p>
+  <p style="margin-bottom:0"><b>Anota ese par de números en un papel.</b> Todo el laboratorio se juega en que el segundo deje de ser 0.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si <code>produce-bulk.sh</code> se queda colgado sin decir nada</span>
+  <p>Casi siempre es que <b>el tópico no existe</b>. Te saltaste el paso 2, o lo escribiste con una letra distinta.</p>
+  <p>Este clúster tiene <b>la creación automática de tópicos desactivada a propósito</b>, así que el productor no falla. Reintenta en silencio, para siempre.</p>
+  <p style="margin-bottom:0">Corta con <code>Ctrl+C</code>, comprueba el nombre con <code>kafka-cli/list-topics.sh</code>, crea el tópico y repite.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si sale <code>Error: No such container: kafka-broker-1</code></span>
+  <p style="margin-bottom:0">El clúster no está arriba. Vuelve al paso 1 y ejecuta <code>bin/start-lab.sh</code>.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 5 de 7</span>Cerrar el espiche</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Este es el paso que casi todo el mundo se salta, y por saltárselo concluye que la retención no funciona.</p>
+
+<div class="caja ojo">
+  <span class="rot">Lo que <code>segment.ms</code> significa de verdad</span>
+  <p><code>segment.ms=10000</code> <b>no</b> quiere decir que un temporizador cierre el espiche a los 10 segundos.</p>
+  <p>Quiere decir que <b>la próxima vez que llegue un mensaje</b>, si el espiche tiene más de 10 segundos de vida, se cierra y se abre uno nuevo.</p>
+  <p style="margin-bottom:0"><b>Kafka no rota espiches en un tópico donde no está pasando nada.</b> Y no lo hace por una razón sensata. Cerrar un espiche cuesta trabajo en disco, y no tiene sentido gastarlo en un tópico que nadie está usando.</p>
+</div>
+
+<p>La consecuencia es directa. <b>Si escribes 100 mensajes y te vas a esperar, no se borra nada nunca.</b> Los 100 quedan en el espiche activo, el espiche activo no se bota, y puedes esperar hasta mañana. Necesitas escribir algo más, después de que pasen los 10 segundos, para que el espiche viejo se cierre.</p>
+
+<h3>Espera quince segundos y escribe unos pocos más</h3>
+
+<pre>kafka-cli/produce-bulk.sh novatech.lab05.efimero 5</pre>
+
+<div class="desglose">
+<div><span class="flag">5</span> — cinco mensajes bastan. <b>Lo que importa no es cuántos, sino que lleguen después de los 10 segundos</b> de vida del espiche</div>
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">Ojo con el contador</span>
+  Con estos 5 mensajes extra, <code>--time -1</code> ya no es 100 sino <b>105</b>. Los 5 nuevos están en el espiche activo, que es el que no se puede botar.
+</div>
+
+<h3>Ahora mira los archivos que el broker tiene en disco</h3>
+
+<pre>MSYS_NO_PATHCONV=1 docker exec kafka-broker-1 \
+    ls /var/lib/kafka/data/novatech.lab05.efimero-0</pre>
+
+<div class="desglose">
+<div><span class="flag">MSYS_NO_PATHCONV=1</span> — <b>obligatorio en Git Bash sobre Windows.</b> Sin esto, Git Bash convierte <code>/var/lib/…</code> en una ruta de tu disco C: antes de que Docker la vea, y el comando falla con un error que no tiene nada que ver con el problema real. <b>En macOS y en Linux la variable se ignora</b>, así que ponerla no molesta</div>
+<div><span class="flag">docker exec kafka-broker-1</span> — ejecuta dentro del contenedor del primer broker</div>
+<div><span class="flag">ls</span> — lista los archivos de un directorio</div>
+<div><span class="flag">/var/lib/kafka/data/novatech.lab05.efimero-0</span> — el directorio donde el broker guarda los espiches de esa partición. <b>El nombre del directorio es <code>&lt;tópico&gt;-&lt;partición&gt;</code></b>, así que el <code>-0</code> del final es la partición 0</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">00000000000000000000.index
+00000000000000000000.log
+00000000000000000000.timeindex
+00000000000000000100.index
+00000000000000000100.log
+00000000000000000100.snapshot
+00000000000000000100.timeindex
+leader-epoch-checkpoint
+partition.metadata</div>
+
+<table>
+<tr><th>Archivo</th><th>Qué es</th></tr>
+<tr><td><code>00000000000000000000.log</code></td><td>El primer espiche. <b>Su nombre es el offset del primer mensaje que contiene</b>, que es el 0. Ya está cerrado, y tiene el reloj corriendo</td></tr>
+<tr><td><code>00000000000000000100.log</code></td><td>El espiche nuevo, el activo. Arranca en el offset 100, o sea que trae los 5 últimos</td></tr>
+<tr><td><code>.index</code> y <code>.timeindex</code></td><td>Índices, para no tener que recorrer el <code>.log</code> entero cada vez que se busca algo</td></tr>
+<tr><td><code>partition.metadata</code></td><td>La identidad de esta partición. No es un espiche</td></tr>
+</table>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p><b>Ves dos archivos <code>.log</code>, con nombres distintos.</b> Uno que arranca en ceros y otro que arranca en 100.</p>
+  <p style="margin-bottom:0">Ese primer <code>.log</code> es el que tiene los 100 comprobantes, está cerrado, y es el que vas a ver desaparecer.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si solo ves un <code>.log</code></span>
+  <p><b>El espiche no rotó, y sin eso el resto del laboratorio no va a mostrar nada</b>, porque no hay ningún espiche cerrado que botar.</p>
+  <p>Casi siempre es que los 5 mensajes llegaron demasiado pronto, antes de que el espiche cumpliera sus 10 segundos.</p>
+  <p style="margin-bottom:0"><b>Espera diez segundos más, vuelve a escribir 5 mensajes y repite el <code>ls</code>.</b> Puedes hacerlo las veces que haga falta.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si sale <code>No such file or directory</code> con una ruta rara que empieza por <code>C:/</code></span>
+  <p style="margin-bottom:0">Se te olvidó el <code>MSYS_NO_PATHCONV=1</code> del principio del comando, y Git Bash convirtió la ruta. Vuelve a ejecutarlo completo.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 6 de 7</span>Esperar, y contar de nuevo</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Ya están puestas tres de las cuatro condiciones para que el borrado ocurra.</p>
+
+<table>
+<tr><th>Condición</th><th>Cómo la cumpliste</th></tr>
+<tr><td>El espiche <code>0</code> está cerrado</td><td>Paso 5, con la segunda tanda de mensajes</td></tr>
+<tr><td>Sus mensajes tienen más de 60 segundos</td><td>Paso 2, con <code>retention.ms=60000</code></td></tr>
+<tr><td>La política es <code>cleanup.policy=delete</code></td><td>Viene de fábrica. Es la que no aparecía en <code>Configs</code></td></tr>
+<tr><td><b>Que pase la ronda del broker</b></td><td><b>Esta no depende de ti.</b> Hay que esperar</td></tr>
+</table>
+
+<div class="concepto">
+  <span class="rot">Concepto · la ronda del broker</span>
+  <code>log.retention.check.interval.ms</code> es cada cuánto el broker se molesta en mirar si hay espiches vencidos. <b>Por defecto son 5 minutos.</b> Kafka no borra en el instante en que vence el plazo. Borra en la próxima pasada de la ronda.
+</div>
+
+<p>Esto no es un defecto del laboratorio. Es exactamente el comportamiento del clúster de producción, y es la mitad de la afirmación que estamos demostrando. <b>No te avisa, y ni siquiera está mirando todo el tiempo.</b></p>
+
+<h3>El comando, repetido cada tanto</h3>
+
+<pre>docker exec kafka-broker-1 kafka-get-offsets \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.lab05.efimero --time -2</pre>
+
+<div class="desglose">
+<div><span class="flag">--time -2</span> — solo nos interesa el offset más antiguo. <b>El más nuevo ya sabemos que no se va a mover</b>, porque nadie está escribiendo</div>
+</div>
+
+<p>Ejecútalo, espera un minuto, y ejecútalo otra vez. Repite hasta que el número cambie. <b>Puede tardar hasta cinco minutos.</b></p>
+
+<div class="salida-rot">Primero, varias veces, lo mismo de antes</div>
+<div class="salida">novatech.lab05.efimero:0:0</div>
+
+<div class="salida-rot">Y en algún momento, sin que nadie haya ejecutado nada</div>
+<div class="salida">novatech.lab05.efimero:0:105</div>
+
+<h3>La cuenta final</h3>
+
+<table>
+<tr><th>Medición</th><th>Antes</th><th>Después</th></tr>
+<tr><td>offset más nuevo (<code>--time -1</code>)</td><td>105</td><td>105 · no se movió, nadie escribió</td></tr>
+<tr><td>offset más antiguo (<code>--time -2</code>)</td><td>0</td><td><b>105</b></td></tr>
+<tr><td><b>mensajes vivos</b></td><td>105</td><td><b>0</b></td></tr>
+</table>
+
+<p><b>No quedó ninguno.</b> Los 100 comprobantes de la primera ráfaga y los 5 de la segunda, todos. Para cuando llegó la ronda del broker, los 5 de la segunda tanda también habían pasado los 60 segundos, así que también estaban vencidos.</p>
+
+<div class="caja tecnico">
+  <span class="rot">Si a ti te salió 100 en vez de 105</span>
+  Está igual de bien. Significa que la ronda llegó antes y los 5 últimos todavía no habían vencido. Te quedan 5 vivos en lugar de 0. <b>Lo que se demuestra es lo mismo.</b> Se fue todo lo que había pasado el plazo, y nadie ejecutó nada.
+</div>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p><b>El número que valía 0 dejó de valer 0.</b> Eso es todo. Eso es el borrado.</p>
+  <p style="margin-bottom:0">No hay una alerta, no hay una entrada en un log de auditoría, no hay una métrica que saltara. <b>El único rastro es ese número.</b></p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si tras cinco minutos el número sigue en 0</span>
+  <p>Casi siempre es el paso 5. <b>Vuelve a mirar si hay dos archivos <code>.log</code>.</b> Si hay uno solo, el espiche nunca se cerró y no hay nada que botar.</p>
+  <pre>MSYS_NO_PATHCONV=1 docker exec kafka-broker-1 \
+    ls /var/lib/kafka/data/novatech.lab05.efimero-0</pre>
+  <p style="margin-bottom:0">Escribe 5 mensajes más, comprueba que aparezca el segundo <code>.log</code>, y espera la siguiente ronda.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el offset saltó pero a un número raro, ni 100 ni 105</span>
+  <p style="margin-bottom:0">Te pasa si repetiste alguna tanda de mensajes, y no es un problema. <b>Lo que hay que mirar no es el número exacto, sino que dejó de ser 0.</b> Compara con el <code>--time -1</code> de ese momento para saber cuántos te quedan vivos.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 7 de 7</span>Ver el borrado en el disco</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>El contador ya te dijo que los mensajes se fueron. Ahora vamos a mirar el disco, porque ahí se ve <b>cómo</b> Kafka los bota, y es en dos tiempos.</p>
+
+<h3>El comando</h3>
+
+<pre>MSYS_NO_PATHCONV=1 docker exec kafka-broker-1 \
+    ls /var/lib/kafka/data/novatech.lab05.efimero-0</pre>
+
+<div class="salida-rot">Lo que vas a ver, si llegas rápido</div>
+<div class="salida">00000000000000000000.index.deleted
+00000000000000000000.log.deleted
+00000000000000000000.timeindex.deleted
+00000000000000000100.index.deleted
+00000000000000000100.log.deleted
+00000000000000000100.snapshot.deleted
+00000000000000000100.timeindex.deleted
+00000000000000000105.log
+00000000000000000105.snapshot
+leader-epoch-checkpoint
+partition.metadata</div>
+
+<div class="caja tecnico">
+  <span class="rot">Kafka borra en dos tiempos</span>
+  <p>Los espiches viejos siguen ahí, pero <b>renombrados a <code>.deleted</code></b>.</p>
+  <p>Primero renombra, y <b>desde ese instante el archivo ya no existe para ningún consumidor</b>. Un minuto después lo borra de verdad del disco.</p>
+  <p style="margin-bottom:0">Ese minuto es otro parámetro, <code>file.delete.delay.ms</code>, que de fábrica vale 60000.</p>
+</div>
+
+<h3>Espera un minuto más y repite el <code>ls</code></h3>
+
+<div class="salida-rot">Lo que queda</div>
+<div class="salida">00000000000000000105.log
+00000000000000000105.snapshot
+leader-epoch-checkpoint
+partition.metadata</div>
+
+<p>Los <code>.deleted</code> desaparecieron. Queda un espiche nuevo, vacío, esperando el próximo mensaje. Y fíjate en su nombre. <b>Arranca en 105, no en 0.</b> Los números de offset no se corren hacia atrás nunca.</p>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p>Viste los archivos con <code>.deleted</code> al final, o directamente el estado final con un solo <code>.log</code> cuyo nombre arranca en un número que no es cero.</p>
+  <p style="margin-bottom:0">Con eso cierras el círculo. <b>Pediste un plazo, se cumplió, y el disco quedó limpio sin que tú ejecutaras un borrado.</b></p>
+</div>
+
+<div class="caja sunat">
+  <span class="rot">Qué significa esto para SUNAT</span>
+  <p>El día que un tópico de producción pierda datos que alguien esperaba tener, <b>la primera línea que hay que ir a mirar es la de <code>Configs</code></b>, con <code>describe</code>. No el log de auditoría.</p>
+  <p style="margin-bottom:0">Y hay algo que no tiene vuelta atrás. <b>Subir la retención hoy no rescata lo que ya se fue.</b> Un <code>--alter</code> mueve el plazo de los mensajes que siguen vivos. Los que se botaron no vuelven.</p>
+</div>
+
+<div class="np"></div>
+<h2>Lo que aprendiste</h2>
+
+<div class="regla"><span class="num">1</span>
+<b><code>retention.ms</code> sin <code>segment.ms</code> no hace nada.</b><br>
+El plazo se cuenta desde que el espiche se <b>cierra</b>, no desde que el mensaje se escribió. Lo viste en el paso 5. Los 100 comprobantes no se movieron hasta que escribiste otros 5. Con los valores de fábrica, que son 7 días y 7 días, un dato puede vivir hasta 14 días en un tópico que en el papel dice 7.
+</div>
+
+<div class="regla"><span class="num">2</span>
+<b>El segmento activo es intocable.</b><br>
+Un tópico sin escrituras nuevas no borra nada, por vencido que esté. Si tienes un tópico que dejó de recibir tráfico, sus últimos mensajes se quedan ahí para siempre.
+</div>
+
+<div class="regla"><span class="num">3</span>
+<b>El borrado no es un evento observable.</b><br>
+No hay alerta. Si alguien tiene que enterarse de que un dato venció, ese aviso lo construyes tú, fuera de Kafka. La única señal es que el offset más antiguo saltó.
+</div>
+
+<div class="regla"><span class="num">4</span>
+<b>La retención es una decisión de negocio.</b><br>
+«¿Cuántos días hay que poder reprocesar un comprobante?» no la contesta el equipo de plataforma. La contesta quien responde por el proceso. El equipo de plataforma solo la escribe en <code>--config</code>. Y un tópico sin retención declarada también es una decisión, la de quedarse con los 7 días de fábrica.
+</div>
+
+<div class="np"></div>
+<h2>Para profundizar</h2>
+
+<p>Lo que sigue quedó fuera del recorrido de clase por tiempo, no por dificultad. <b>Todos estos comandos se ejecutaron contra este mismo clúster antes de publicarlos</b>, así que corren tal cual están escritos. El análisis queda para ti.</p>
+
+<p>Salvo <code>novatech.fleet.gps</code>, que el clúster trae creado, los tópicos que aparecen aquí no existen todavía. Cada bloque incluye su creación.</p>
+
+<h3>A · Cambiar la configuración en caliente</h3>
+
+<p><b>Este es el que más rinde de todos</b>, porque es la operación que de verdad vas a hacer todas las semanas. Una regulación cambia y hay que pasar la auditoría de 90 días a un año, sin reiniciar nada.</p>
+
+<pre>kafka-cli/create-topic.sh novatech.audit.events --partitions 6 --rf 3 \
+    --config retention.ms=7776000000 --config compression.type=gzip \
+    --config min.insync.replicas=2
+
+kafka-cli/alter-topic-config.sh novatech.audit.events --add retention.ms=31536000000
+kafka-cli/describe-topic.sh novatech.audit.events | grep -E "^  retention.ms="</pre>
+
+<div class="desglose">
+<div><span class="flag">--add retention.ms=31536000000</span> — un año en milisegundos. <b>El tópico sigue atendiendo tráfico mientras el cambio se aplica</b></div>
+<div><span class="flag">grep -E "^  retention.ms="</span> — filtra la línea que nos interesa. <b>Los dos espacios del principio no son decorativos</b>, anclan al inicio de línea. Sin ellos, <code>retention.ms</code> también coincide dentro de <code>local.retention.ms</code></div>
+</div>
+
+<div class="salida-rot">Antes y después, recortado</div>
+<div class="salida">antes     retention.ms=7776000000  ... synonyms={DYNAMIC_TOPIC_CONFIG:retention.ms=7776000000}
+después   retention.ms=31536000000 ... synonyms={DYNAMIC_TOPIC_CONFIG:retention.ms=31536000000}</div>
+
+<p><b>Fíjate en lo que no pasó.</b> <code>DYNAMIC_TOPIC_CONFIG</code> ya estaba ahí antes del cambio. No lo puso el <code>--alter</code>. Lo puso el <code>--config</code> con que se creó el tópico. Todo valor que escribas tú, al crear o al modificar, queda marcado así.</p>
+
+<p>Y ahora deshaz el cambio, que es la parte que sorprende:</p>
+
+<pre>kafka-cli/alter-topic-config.sh novatech.audit.events --delete retention.ms
+kafka-cli/describe-topic.sh novatech.audit.events | grep -E "^  retention.ms="</pre>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">  retention.ms=604800000 sensitive=false synonyms={}</div>
+
+<div class="caja ojo">
+  <span class="rot">Este es el camino que hay que saber reconocer</span>
+  <p style="margin-bottom:0">Los 90 días desaparecieron y el tópico volvió a los 7 días de fábrica, con el <code>synonyms</code> otra vez vacío. <b>Un <code>--delete</code> no pone el valor en cero. Lo devuelve al del broker</b>, que casi nunca es el que querías.</p>
+</div>
+
+<h3>B · Los 7 + 7 días de un tópico recién salido de fábrica</h3>
+
+<p>Es la versión aritmética de lo que la doble tanda del paso 5 ya te mostró en vivo. El clúster trae creado <code>novatech.fleet.gps</code>, con 6 particiones y ningún plazo propio.</p>
+
+<pre>kafka-cli/describe-topic.sh novatech.fleet.gps \
+    | grep -E "^  (retention.ms|segment.ms|cleanup.policy)="</pre>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">  cleanup.policy=delete sensitive=false synonyms={DEFAULT_CONFIG:log.cleanup.policy=delete}
+  retention.ms=604800000 sensitive=false synonyms={}
+  segment.ms=604800000 sensitive=false synonyms={}</div>
+
+<p>Los dos números son el mismo. 604 800 000 milisegundos, divididos entre 1000, entre 60, entre 60 y entre 24, dan <b>7 días</b>. El espiche se cierra cada 7 días, y el plazo de 7 días empieza a contar cuando el espiche se cierra. <b>Un mensaje puede vivir hasta 14 días en un tópico que en el papel dice «7 días de retención».</b> Nadie mintió. El plazo no se cuenta desde donde uno cree.</p>
+
+<p>Y ese <code>synonyms={}</code> vacío significa «aquí no escribió nadie, esto es lo que manda el broker».</p>
+
+<p><b>La pregunta que vale.</b> ¿Cuántos de los tópicos que tu equipo tiene hoy en producción están en este estado, y quién decidió que 7 días era el número?</p>
+
+<h3>C · Cuatro tópicos, cuatro personalidades</h3>
+
+<p>Cada perfil de dato pide una configuración distinta. Créalos y descríbelos uno por uno.</p>
+
+<pre># Telemetría de alta frecuencia: 1 hora de retención, compresión rápida
+kafka-cli/create-topic.sh novatech.gps.realtime --partitions 12 --rf 3 \
+    --config retention.ms=3600000 --config compression.type=lz4 \
+    --config segment.ms=600000
+
+# Estado actual por vehículo: compactación en vez de retención
+kafka-cli/create-topic.sh novatech.vehicle.state --partitions 6 --rf 3 \
+    --config cleanup.policy=compact --config min.cleanable.dirty.ratio=0.1
+
+# Alertas críticas: máxima durabilidad, retención ilimitada
+kafka-cli/create-topic.sh novatech.alerts.critical --partitions 3 --rf 3 \
+    --config min.insync.replicas=3 --config retention.ms=-1 \
+    --config unclean.leader.election.enable=false</pre>
+
+<div class="desglose">
+<div><span class="flag">retention.ms=-1</span> — sin plazo. <b>Se guarda para siempre</b>, hasta que el disco diga otra cosa</div>
+<div><span class="flag">min.insync.replicas=3</span> — hacen falta las tres copias al día para aceptar una escritura</div>
+</div>
+
+<p><b>La pregunta que vale.</b> <code>min.insync.replicas=3</code> sobre <code>--rf 3</code> significa que si <b>un solo</b> broker se cae, el tópico deja de aceptar escrituras. ¿En qué caso eso es lo que quieres?</p>
+
+<h3>D · La otra política · compactación</h3>
+
+<p><code>cleanup.policy</code> acepta también <code>compact</code>, que no mira el reloj. Mira la <b>clave</b> de cada mensaje y guarda solo el último valor de cada clave, para siempre. Sirve para estados, o sea «¿cómo está ahora?», en vez de eventos, o sea «¿cuándo pasó?».</p>
+
+<pre>kafka-cli/produce-bulk.sh novatech.vehicle.state 100 --key-pattern NVT</pre>
+
+<div class="desglose">
+<div><span class="flag">--key-pattern NVT</span> — le pone a cada mensaje una clave <code>NVT-1</code>, <code>NVT-2</code> y así. <b>Sin clave no hay compactación posible</b>, porque no habría por qué agrupar</div>
+</div>
+
+<div class="caja ojo">
+  <span class="rot">La trampa de este bloque</span>
+  <p style="margin-bottom:0">La compactación es asíncrona, y <code>min.cleanable.dirty.ratio</code> decide cuándo vale la pena hacerla. <b>Inmediatamente después de escribir están todos los mensajes.</b> Ver el resultado toma bastante más que los 60 segundos del recorrido de hoy, así que no te alarmes si no cambia nada en diez minutos.</p>
+</div>
+
+<h3>E · Particiones · el camino de ida</h3>
+
+<pre>kafka-cli/alter-topic-partitions.sh novatech.gps.realtime 18
+kafka-cli/alter-topic-partitions.sh novatech.gps.realtime 6</pre>
+
+<p>El primero funciona. El segundo falla, y el error dice exactamente por qué:</p>
+
+<div class="salida-rot">Lo que sale del segundo</div>
+<div class="salida">Error while executing topic command : The topic novatech.gps.realtime
+currently has 18 partition(s); 6 would not be an increase.</div>
+
+<p><b>Por qué falla.</b> La partición de un mensaje se decide con el <i>hash</i> de su clave sobre el número de particiones. Si bajaras de 18 a 6, las claves que hoy caen en la partición 14 pasarían a caer en otra, y sus mensajes viejos se quedarían donde están. El orden por clave, que es lo único que Kafka garantiza, se rompería en silencio. <b>Kafka prefiere fallar.</b></p>
+
+<h3>F · Verlo con los ojos</h3>
+
+<p>Abre <b>http://localhost:8090</b> y ve a <i>Topics</i>. Compara lo que la interfaz muestra con lo que devolvió la línea de comandos. La pestaña <i>Settings</i> de cada tópico es el equivalente visual de <code>describe-topic.sh</code>.</p>
+
+<p>Vale la pena hacerlo, porque en producción vas a discutir con gente que solo mira la interfaz. <b>Saber qué comando hay detrás de cada pantalla es lo que te deja resolver cuando la interfaz no está.</b></p>
+
+<h3>G · El reporte del laboratorio</h3>
+
+<p><code>plantillas/reporte-entregable.md</code> recorre estas actividades con sus preguntas. Las respuestas de referencia están en <code>soluciones/reporte-resuelto.md</code>. <b>Míralas después de intentarlo</b>, no antes.</p>
+
+<h2>Antes de cerrar</h2>
+
+<div class="caja ojo">
+  <span class="rot">Deja el terreno limpio</span>
+  <p>Si vas a seguir con el laboratorio 06, <b>puedes dejar el clúster arriba</b>. Es el mismo.</p>
+  <p>Si terminas por hoy:</p>
+  <pre>bin/stop-lab.sh</pre>
+  <p style="margin-bottom:0">Y comprueba con <code>docker ps --filter name=kafka-broker</code> que no quede nada corriendo.</p>
+</div>
+
+<div class="caja">
+  <p style="margin-bottom:0"><b>Las tres preguntas del laboratorio</b>, para responderte a ti mismo antes de cerrar el archivo. ¿Quién borró los comprobantes? ¿Qué comando de los que ejecutaste hoy borró algo? Y si mañana un tópico de producción pierde datos que alguien esperaba tener, ¿cuál es la primera línea que vas a ir a mirar, y con qué comando?</p>
+</div>
+
+</body></html>

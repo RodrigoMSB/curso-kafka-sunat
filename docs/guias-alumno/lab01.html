@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><link rel="stylesheet" href="estilo-alumno.css"></head>
+<body>
+
+<div class="portada">
+  <div class="kicker">C U R S O &nbsp; D E &nbsp; A D M I N I S T R A C I Ó N &nbsp; D E &nbsp; K A F K A</div>
+  <div class="labnum">LABORATORIO 01</div>
+  <h1>Encender<br>Kafka desde<br>cero</h1>
+  <div class="sub">Guía para hacerlo por tu cuenta,<br>paso a paso</div>
+  <div class="meta">
+    Confluent Platform 8.2.0 · Kafka 4.2 en modo KRaft<br>
+    Duración estimada · 45 minutos<br>
+    NovaTech Logistics · caso de estudio
+  </div>
+</div>
+
+<h2>Antes de empezar</h2>
+
+<h3>Qué vas a lograr</h3>
+
+<p>Al final de esta guía vas a tener <b>un servidor de Kafka funcionando</b>, levantado por ti desde cero, con su primer tópico creado.</p>
+
+<p>Y más importante que eso: <b>vas a entender por qué cada paso es necesario</b>, en vez de haber copiado comandos.</p>
+
+<div class="afirmacion">
+  <span class="rot">Lo que este laboratorio demuestra</span>
+  <div class="txt">Un servidor de Kafka no arranca sin una identidad grabada en su disco. Y esa identidad se decide una sola vez.</div>
+</div>
+
+<h3>Qué necesitas tener listo</h3>
+
+<table>
+<tr><th>Requisito</th><th>Cómo lo compruebas</th></tr>
+<tr><td>Docker Desktop corriendo</td><td>Que el ícono de la ballena esté activo</td></tr>
+<tr><td>Git Bash abierto</td><td>Es la terminal que usamos en todo el curso</td></tr>
+<tr><td>El repositorio del curso</td><td>Debe estar en <code>C:\KAFKA\curso-kafka-sunat</code></td></tr>
+</table>
+
+<div class="caja ojo">
+  <span class="rot">Antes de tocar nada · dos cosas</span>
+  <p><b>Uno.</b> Actualiza el repositorio, porque el material se corrige durante el curso:</p>
+  <pre>cd /c/KAFKA/curso-kafka-sunat
+git pull</pre>
+  <p style="margin-bottom:0"><b>Dos.</b> Comprueba que no tengas otro laboratorio levantado, porque ocuparía los mismos puertos:</p>
+  <pre>docker ps --filter name=kafka-broker</pre>
+  <p style="margin-bottom:0">Si aparece algo, bájalo antes con <code>docker compose -p novatech-labNN down -v</code>, reemplazando NN por el número del laboratorio que aparezca.</p>
+</div>
+
+<h3>El caso</h3>
+
+<div class="caja">
+  <p><b>NovaTech Logistics</b> coordina envíos, flota y entregas en tiempo real, y está montando su plataforma de eventos sobre Kafka.</p>
+  <p style="margin-bottom:0">Su director de tecnología tiene una regla: <b>no deja operar a nadie que no sepa encender la plataforma desde cero.</b> Eso es lo que vas a hacer hoy.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 1 de 7</span>Mirar qué trae Kafka por dentro</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Antes de encender nada, vamos a <b>abrir la caja</b>. Kafka viene empaquetado en lo que se llama una <i>imagen</i>, y adentro trae los programas que vas a usar todo el curso.</p>
+
+<div class="caja abuelita">
+  <span class="rot">Para entenderlo mejor</span>
+  Imagina que la empresa compra un camión nuevo. <b>Antes de manejarlo, abres el capó y miras qué motor trae.</b> No lo enciendes todavía: solo quieres saber con qué estás trabajando.
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · imagen</span>
+  Una <b>imagen</b> es un paquete que trae un programa y todo lo que necesita para funcionar. Cuando la ejecutas, se convierte en un <b>contenedor</b>: una copia viva de ese paquete, corriendo.
+</div>
+
+<h3>El comando</h3>
+
+<pre>cd Capitulo_2/lab-01-inicializacion-kraft
+kafka-cli/inspect-image.sh</pre>
+
+<div class="desglose">
+<div><span class="flag">cd Capitulo_2/lab-01-inicializacion-kraft</span> — entra a la carpeta del laboratorio</div>
+<div><span class="flag">kafka-cli/inspect-image.sh</span> — un script del curso que abre la imagen de Kafka y te muestra qué contiene. <b>No levanta ningún servidor</b></div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">Primero una caja explicativa que anuncia los cuatro pasos que va a dar.
+Después:
+
+  [1/4] la imagen y cuánto pesa
+  [2/4] los programas kafka-* que trae adentro
+  [3/4] la versión de Java sobre la que corre
+  [4/4] un archivo de configuración de ejemplo</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  Viste los cuatro pasos numerados y terminó sin errores. <b>Si el paso [1/4] se demora varios minutos, es porque está descargando la imagen por primera vez</b> — son unos 800 MB y solo pasa una vez.
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">Lo que hay que retener</span>
+  <p>Esos programas <code>kafka-topics</code>, <code>kafka-storage</code> y los demás <b>son los mismos que vas a usar en un servidor real.</b></p>
+  <p style="margin-bottom:0">La diferencia es que aquí los invocamos a través de Docker, y en producción están instalados directamente en el sistema. <b>Los comandos no cambian.</b></p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 2 de 7</span>Leer la configuración de fábrica</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>La imagen trae un archivo de configuración de ejemplo. <b>No es el que va a usar nuestro servidor</b> — el nuestro lo armamos nosotros. Pero mirarlo sirve para ver qué decisiones trae Kafka por defecto.</p>
+
+<div class="caja abuelita">
+  <span class="rot">Para entenderlo mejor</span>
+  Es el <b>manual de fábrica</b> que viene en la guantera. No es cómo tú vas a manejar el camión, pero conviene leerlo antes.
+</div>
+
+<h3>El comando</h3>
+
+<pre>MSYS_NO_PATHCONV=1 docker run --rm confluentinc/cp-kafka:8.2.0 \
+    cat /etc/kafka/server.properties | head -50</pre>
+
+<div class="desglose">
+<div><span class="flag">MSYS_NO_PATHCONV=1</span> — solo hace falta en Git Bash sobre Windows. Le dice que <b>no toque las rutas de este comando</b>. Sin esto, Windows convertiría <code>/etc/kafka/…</code> —que es una ruta dentro del contenedor— en una ruta de tu disco C:, y fallaría</div>
+<div><span class="flag">docker run</span> — crea un contenedor nuevo a partir de la imagen</div>
+<div><span class="flag">--rm</span> — lo borra apenas termina. Es de usar y tirar</div>
+<div><span class="flag">cat /etc/kafka/server.properties</span> — el comando que se ejecuta adentro. <code>cat</code> muestra el contenido de un archivo</div>
+<div><span class="flag">| head -50</span> — la tubería <code>|</code> toma la salida y se la pasa al siguiente comando. <code>head -50</code> se queda con las primeras cincuenta líneas</div>
+</div>
+
+<h3>Tres preguntas para responder mirando la salida</h3>
+
+<table>
+<tr><th>Pregunta</th><th>Dónde está la respuesta</th></tr>
+<tr><td>¿Qué roles trae este servidor por defecto?</td><td>La línea <code>process.roles</code></td></tr>
+<tr><td>¿En qué puerto escucha?</td><td>La línea <code>listeners</code></td></tr>
+<tr><td>¿Dónde guarda los datos?</td><td><b>No aparece. Sigue leyendo</b></td></tr>
+</table>
+
+<div class="salida-rot">Las dos primeras respuestas</div>
+<div class="salida">process.roles=broker,controller
+listeners=PLAINTEXT://:9092,CONTROLLER://:9093</div>
+
+<div class="caja tecnico">
+  <span class="rot">Qué significan</span>
+  <p><b><code>process.roles=broker,controller</code></b> — este servidor cumple dos papeles a la vez. Como <b>broker</b> recibe y entrega mensajes; como <b>controller</b> coordina el clúster. En instalaciones grandes esos roles se separan.</p>
+  <p style="margin-bottom:0"><b><code>listeners</code></b> — las puertas por donde escucha. El 9092 para clientes, el 9093 para la coordinación interna.</p>
+</div>
+
+<h3>La tercera pregunta necesita otro comando</h3>
+
+<p>La propiedad que buscas está en la línea 73, y el <code>head -50</code> la dejó fuera. <b>En vez de leer el archivo entero, pregúntale directamente por ella:</b></p>
+
+<pre>docker run --rm confluentinc/cp-kafka:8.2.0 \
+    sh -c "grep '^log.dirs' /etc/kafka/server.properties"</pre>
+
+<div class="desglose">
+<div><span class="flag">sh -c "…"</span> — abre una consola dentro del contenedor para ejecutar lo que va entre comillas. <b>Hace falta porque el <code>grep</code> tiene que correr allá adentro</b></div>
+<div><span class="flag">grep '^log.dirs'</span> — busca las líneas que <b>empiezan</b> por <code>log.dirs</code>. El símbolo <code>^</code> significa «principio de línea»; sin él saldrían también los comentarios que la mencionan de paso</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">log.dirs=/tmp/kraft-combined-logs</div>
+
+<div class="caja ojo">
+  <span class="rot">Aquí hay dos cosas importantes</span>
+  <p><b>La primera es una trampa de nombre.</b> En Kafka, «log» no significa los mensajes que escupe un programa. <b>El log ES la base de datos de Kafka</b>: el registro donde queda escrito cada mensaje. <code>log.dirs</code> dice dónde vive ese registro en el disco.</p>
+  <p style="margin-bottom:0"><b>La segunda es dónde lo pone el ejemplo:</b> en <code>/tmp</code>, que en Linux es una carpeta que se vacía al reiniciar el sistema. <b>Un servidor que guarda sus datos ahí los pierde en el próximo reinicio.</b> Por eso este archivo es un ejemplo y no una configuración de producción.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  Respondiste las tres preguntas y entiendes por qué la tercera necesitó un comando aparte.
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 3 de 7</span>Generar la identidad del clúster</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Todo clúster de Kafka nace con un <b>identificador único</b>. Se genera una vez, se graba en el disco de cada servidor, y no se cambia nunca más.</p>
+
+<div class="caja abuelita">
+  <span class="rot">Para entenderlo mejor</span>
+  Es el <b>nombre de la empresa pintado en la puerta del camión.</b> Todos los camiones de la flota llevan el mismo. Si uno trae otro nombre pintado, no es de esta flota.
+</div>
+
+<h3>El comando</h3>
+
+<pre>kafka-cli/generate-cluster-id.sh</pre>
+
+<div class="desglose">
+<div><span class="flag">kafka-cli/generate-cluster-id.sh</span> — un script del curso. Por dentro ejecuta <code>kafka-storage random-uuid</code>, que genera un identificador nuevo. <b>No toca ningún clúster ni ningún disco</b></div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">Una caja explicativa, y dentro de ella una línea como esta:
+
+  hisDgG37QLqymPQNOoKg4g</div>
+
+<div class="caja ojo">
+  <span class="rot">Copia ese valor ahora</span>
+  <p><b>Lo vas a necesitar en el paso siguiente.</b> Pégalo en un bloc de notas.</p>
+  <p style="margin-bottom:0"><b>Y no uses el del ejemplo ni el de un compañero: usa el tuyo.</b> Cada ejecución genera uno distinto y son 22 caracteres irrepetibles.</p>
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">Por qué Kafka es tan estricto con esto</span>
+  <p>Cuando un servidor arranca, <b>lo primero que hace es leer su identidad en el disco.</b> Si no la encuentra, se niega a partir. Si encuentra una distinta a la que le dijeron, muere con un error llamado <code>InconsistentClusterIdException</code>.</p>
+  <p style="margin-bottom:0"><b>¿Por qué tanto rigor?</b> Porque el peor desastre posible es un servidor escribiendo datos de un clúster en el disco de otro. Eso corrompe la información en silencio. <b>Kafka prefiere no arrancar antes que arriesgarse.</b></p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 4 de 7</span>Preparar el plano del servidor</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Necesitamos un archivo que le diga a Docker cómo armar nuestro servidor. Ese archivo se llama <code>docker-compose.yml</code>.</p>
+
+<p>El laboratorio trae una versión resuelta. <b>La copiamos y le cambiamos una sola línea: la identidad que acabas de generar.</b></p>
+
+<h3>Los comandos</h3>
+
+<pre>cp soluciones/docker-compose-1-broker.SOLUCION.yml mi-cluster/docker-compose.yml
+code mi-cluster/docker-compose.yml</pre>
+
+<div class="desglose">
+<div><span class="flag">cp &lt;origen&gt; &lt;destino&gt;</span> — copia el plano resuelto a tu carpeta de trabajo. <b>Este comando no imprime nada: en Unix, el silencio significa que salió bien</b></div>
+<div><span class="flag">code &lt;archivo&gt;</span> — lo abre en VSCode. Si no tienes VSCode, usa <code>notepad mi-cluster/docker-compose.yml</code></div>
+</div>
+
+<h3>El cambio que tienes que hacer</h3>
+
+<p>Busca la línea que dice <code>CLUSTER_ID</code>, cerca de la línea 22. <b>Reemplaza el valor entre comillas por el tuyo</b>, el que generaste en el paso 3. Las comillas se quedan.</p>
+
+<div class="salida-rot">Debe quedar así, con tu identificador</div>
+<div class="salida">      CLUSTER_ID: 'hisDgG37QLqymPQNOoKg4g'</div>
+
+<p>Guarda con <b>Ctrl+S</b>.</p>
+
+<h3>Las tres líneas del archivo que vale la pena entender</h3>
+
+<div class="concepto">
+  <span class="rot">1 · KAFKA_PROCESS_ROLES</span>
+  <p>Dice <code>'broker,controller'</code>. <b>Este servidor va a cumplir los dos papeles a la vez.</b></p>
+  <p style="margin-bottom:0">Y fíjate en algo que <b>no</b> está en el archivo: ZooKeeper. En versiones antiguas de Kafka hacía falta un sistema aparte para coordinar el clúster. <b>Desde Kafka 4 ya no existe: la coordinación es parte de Kafka.</b> Eso se llama modo KRaft.</p>
+</div>
+
+<div class="concepto">
+  <span class="rot">2 · KAFKA_LISTENERS y KAFKA_ADVERTISED_LISTENERS</span>
+  <p><b>Los listeners son las puertas que el servidor abre.</b> Hay tres: una para clientes externos, una para hablar con otros servidores, y una para la coordinación.</p>
+  <p style="margin-bottom:0"><b>Los advertised listeners son la dirección que el servidor le publica a sus clientes</b> para que vuelvan. Si esa dirección está mal, el cliente conecta la primera vez y falla después. <b>Es el error más común de Kafka en producción</b>, y lo vas a ver a fondo en el laboratorio 04.</p>
+</div>
+
+<div class="concepto">
+  <span class="rot">3 · Los tres REPLICATION_FACTOR en 1</span>
+  <p><b>El factor de replicación es cuántas copias se guardan de cada dato.</b> Aquí es 1 porque tenemos un solo servidor: no hay dónde poner una segunda copia.</p>
+  <p style="margin-bottom:0"><b>En producción ese valor es 3, siempre.</b> Y en el laboratorio 02, cuando levantes tres servidores, estas líneas cambian.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 5 de 7</span>Encender el servidor</h2>
+
+<h3>Antes de ejecutar, una pregunta</h3>
+
+<div class="caja">
+  <p>Nosotros escribimos la identidad en el archivo de configuración. <b>Pero nadie la grabó todavía en el disco del servidor.</b></p>
+  <p style="margin-bottom:0">Entonces, ¿va a arrancar? <b>Piénsalo antes de seguir leyendo.</b></p>
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">La respuesta</span>
+  <p>Sí va a arrancar. <b>La imagen de Confluent, la primera vez que arranca, si le pasas un <code>CLUSTER_ID</code> y el disco está vacío, formatea el almacenamiento sola.</b></p>
+  <p style="margin-bottom:0"><b>Pero esa cortesía existe solo la primera vez y solo con el disco vacío.</b> Retén eso: en el desafío final vas a ver qué pasa cuando no se cumple.</p>
+</div>
+
+<h3>Los comandos</h3>
+
+<pre>cd mi-cluster
+docker compose up -d</pre>
+
+<div class="desglose">
+<div><span class="flag">cd mi-cluster</span> — entra a la carpeta donde está tu plano</div>
+<div><span class="flag">docker compose up -d</span> — crea y levanta todo lo que el plano declara. La <code>-d</code> significa <i>detached</i>: corre en segundo plano y te devuelve la terminal</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">[+] up 3/3
+ ✔ Network novatech-lab01_default   Created
+ ✔ Volume novatech-lab01_kafka-data Created
+ ✔ Container kafka-broker           Started</div>
+
+<h3>Comprueba que está vivo</h3>
+
+<pre>docker ps --filter name=kafka-broker</pre>
+
+<div class="desglose">
+<div><span class="flag">docker ps</span> — lista los contenedores que están corriendo</div>
+<div><span class="flag">--filter name=kafka-broker</span> — muestra solo los que se llaman así. <b>En un servidor con muchos contenedores, este filtro es tu mejor amigo</b></div>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  La columna <code>STATUS</code> dice <b><code>Up</code></b> y en <code>PORTS</code> aparece <code>0.0.0.0:9092-&gt;9092/tcp</code>.
+</div>
+
+<div class="rescate">
+  <span class="rot">Si dice Restarting</span>
+  <p>Significa que el servidor arranca y se muere en bucle. <b>Casi siempre es el <code>CLUSTER_ID</code> mal pegado</b> — un espacio de más, una comilla que se perdió.</p>
+  <p style="margin-bottom:0">Míralo tú mismo con: <code>docker logs kafka-broker</code></p>
+</div>
+
+<h3>Tómale el pulso</h3>
+
+<pre>cd ..
+docker exec kafka-broker kafka-broker-api-versions \
+    --bootstrap-server kafka-broker:29092</pre>
+
+<div class="desglose">
+<div><span class="flag">cd ..</span> — vuelve a la raíz del laboratorio</div>
+<div><span class="flag">docker exec</span> — ejecuta un comando <b>dentro</b> de un contenedor que ya está corriendo</div>
+<div><span class="flag">kafka-broker</span> — en cuál contenedor</div>
+<div><span class="flag">kafka-broker-api-versions</span> — un comando de Kafka que pregunta qué operaciones soporta el servidor</div>
+<div><span class="flag">--bootstrap-server kafka-broker:29092</span> — a qué servidor le habla y por qué puerta. <b>Usamos el 29092 —la puerta interna— porque con <code>docker exec</code> estamos dentro de la red de Docker</b></div>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>Sale <b>una lista larga</b> de operaciones. <b>Aquí lo largo es la buena noticia:</b> si el servidor estuviera caído verías una sola línea corta con un error.</p>
+  <p style="margin-bottom:0">Fíjate en la primera línea: dice <code>id: 1</code> —el número de este servidor— y <code>isFenced: false</code>, que significa que está habilitado para atender clientes.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 6 de 7</span>Crear tu primer tópico</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<div class="concepto">
+  <span class="rot">Concepto · tópico</span>
+  Un <b>tópico</b> es donde se anotan los mensajes, en orden, uno tras otro. Es el registro donde queda escrito cada evento.<br><br>
+  <b>Y algo que lo distingue de una cola tradicional:</b> leer un mensaje no lo borra. Queda ahí, y otro sistema puede leerlo después.
+</div>
+
+<h3>El comando</h3>
+
+<pre>docker exec kafka-broker kafka-topics \
+    --bootstrap-server kafka-broker:29092 \
+    --create --topic test-solitario \
+    --partitions 1 --replication-factor 1</pre>
+
+<div class="desglose">
+<div><span class="flag">docker exec kafka-broker</span> — ejecuta dentro del contenedor del servidor</div>
+<div><span class="flag">kafka-topics</span> — la herramienta que administra tópicos. <b>Es el comando que más vas a usar en tu vida de administrador</b></div>
+<div><span class="flag">--bootstrap-server kafka-broker:29092</span> — a qué servidor le habla y por qué puerta</div>
+<div><span class="flag">--create</span> — la acción: crear</div>
+<div><span class="flag">--topic test-solitario</span> — el nombre del tópico</div>
+<div><span class="flag">--partitions 1</span> — <b>en cuántos pedazos se divide.</b> Las particiones permiten que varios servidores trabajen en paralelo</div>
+<div><span class="flag">--replication-factor 1</span> — cuántas copias se guardan. <b>Con un solo servidor no puede ser más de 1</b></div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">Created topic test-solitario.</div>
+
+<h3>Comprueba que existe</h3>
+
+<pre>docker exec kafka-broker kafka-topics \
+    --bootstrap-server kafka-broker:29092 \
+    --list</pre>
+
+<div class="desglose">
+<div><span class="flag">--list</span> — en vez de crear, lista los tópicos que existen</div>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  Sale <b>una sola línea</b>: <code>test-solitario</code>.<br><br>
+  <b>Y fíjate en lo que NO aparece:</b> Kafka tiene tópicos internos propios, pero nacen cuando alguien los necesita. Tu clúster es tan nuevo que todavía no ha necesitado ninguno.
+</div>
+
+<h3>Ahora provoca un error a propósito</h3>
+
+<p>Intenta crear un tópico pidiendo <b>tres copias</b>, cuando solo tienes un servidor:</p>
+
+<pre>docker exec kafka-broker kafka-topics \
+    --bootstrap-server kafka-broker:29092 \
+    --create --topic test-triple \
+    --partitions 1 --replication-factor 3</pre>
+
+<div class="desglose">
+<div><span class="flag">--replication-factor 3</span> — <b>aquí está la trampa.</b> Pide tres copias de cada partición, y solo hay un servidor donde ponerlas</div>
+</div>
+
+<div class="salida-rot">El error que vas a ver</div>
+<div class="salida">Error while executing topic command : Unable to replicate the partition 3 time(s):
+The target replication factor of 3 cannot be reached because only 1 broker(s) are registered.</div>
+
+<div class="caja tecnico">
+  <span class="rot">Dos cosas que aprender de este error</span>
+  <p><b>La primera:</b> Kafka no dice «error 47». <b>Te dice exactamente qué pediste y qué tiene.</b> Acostúmbrate a leer los errores de Kafka completos, porque casi siempre traen la respuesta adentro.</p>
+  <p><b>La segunda:</b> debajo del mensaje hay varias líneas que empiezan con <code>at java.base…</code>. <b>Esa es la traza interna de Java y no te dice nada útil.</b> La información está en la primera línea.</p>
+  <p style="margin-bottom:0"><b>Y el remate:</b> si vuelves a listar, <code>test-triple</code> no existe. <b>Kafka valida antes de crear: o nace completo, o no nace.</b></p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 7 de 7</span>El desafío · cambiar la identidad</h2>
+
+<h3>De qué se trata</h3>
+
+<p>Al principio de esta guía se afirmó que <b>la identidad del clúster se graba en el disco y no se cambia</b>. Ahora vas a comprobarlo tú.</p>
+
+<p>Vas a <b>destruir el servidor completo, incluido su disco</b>, y hacerlo renacer con una identidad nueva.</p>
+
+<h3>Destruye todo</h3>
+
+<pre>cd mi-cluster
+docker compose down -v
+cd ..</pre>
+
+<div class="desglose">
+<div><span class="flag">docker compose down</span> — apaga y elimina los contenedores del plano</div>
+<div><span class="flag">-v</span> — <b>esta es la letra peligrosa. Borra también los volúmenes</b>, o sea el disco con la identidad grabada</div>
+</div>
+
+<div class="caja ojo">
+  <span class="rot">La diferencia entre down y down -v</span>
+  <p><b><code>down</code></b> a secas apaga los contenedores pero <b>conserva el disco.</b> Al volver a levantar, los datos siguen ahí.</p>
+  <p style="margin-bottom:0"><b><code>down -v</code></b> borra el disco también. <b>Es la decisión que más vas a tomar en este curso</b>, y en producción es la diferencia entre reiniciar un servicio y perder los datos.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  Salen tres líneas con <code>Removed</code>: el contenedor, el volumen y la red. <b>Y las tres llevan el prefijo <code>novatech-lab01</code></b> — el comando solo tocó lo suyo.
+</div>
+
+<h3>Genera una identidad nueva</h3>
+
+<pre>kafka-cli/generate-cluster-id.sh</pre>
+
+<p>Cópiala. <b>Compárala con la anterior: son completamente distintas.</b></p>
+
+<h3>Cámbiala en el plano y enciende</h3>
+
+<pre>code mi-cluster/docker-compose.yml</pre>
+
+<p>Reemplaza el <code>CLUSTER_ID</code> por el nuevo y guarda. Después:</p>
+
+<pre>cd mi-cluster
+docker compose up -d
+cd ..</pre>
+
+<div class="caja tecnico">
+  <span class="rot">Por qué esto funciona</span>
+  Borraste el disco con la <code>-v</code>, así que el servidor arranca con el almacenamiento vacío. <b>Y con el disco vacío, la cortesía de la primera vez opera otra vez:</b> formatea solo, con la identidad nueva.
+</div>
+
+<h3>Y ahora ábrele el disco</h3>
+
+<p>Espera unos diez segundos y ejecuta:</p>
+
+<pre>bin/verify-storage.sh kafka-broker</pre>
+
+<div class="desglose">
+<div><span class="flag">bin/verify-storage.sh</span> — un script del curso que le pide al servidor la información grabada en su disco</div>
+<div><span class="flag">kafka-broker</span> — <b>el nombre del contenedor, y es obligatorio.</b> En este laboratorio se llama así, sin número. Desde el laboratorio 02 serán <code>kafka-broker-1</code>, <code>-2</code> y <code>-3</code></div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">Found log directory:
+  /var/lib/kafka/data
+Found metadata: {cluster.id=TU_IDENTIDAD_NUEVA,
+  directory.id=HR1Dn3R4w9C9Do8T3lvRLQ, node.id=1, version=1}</div>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  El <code>cluster.id</code> que aparece <b>es el que generaste hace tres minutos</b>, no el anterior.<br><br>
+  Eso cierra el círculo: <b>generaste una identidad, la escribiste en el plano, el servidor la grabó en su disco, y la leíste de vuelta.</b>
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">Los tres valores que aparecen</span>
+  <p><b><code>cluster.id</code></b> — la identidad del clúster. <b>Todos los servidores de un mismo clúster llevan exactamente esta misma.</b></p>
+  <p><b><code>node.id</code></b> — quién es este servidor dentro del clúster. Único por servidor.</p>
+  <p style="margin-bottom:0"><b><code>directory.id</code></b> — identifica este directorio de datos en particular. <b>Es distinto en cada servidor y no se copia entre ellos.</b></p>
+</div>
+
+<div class="np"></div>
+<h2>Lo que aprendiste</h2>
+
+<div class="regla"><span class="num">1</span>
+<b>Un servidor de Kafka no arranca sin identidad grabada en su disco.</b><br>
+Y si encuentra una distinta a la esperada, se niega a partir. Prefiere no arrancar antes que mezclar datos de dos clústeres.
+</div>
+
+<div class="regla"><span class="num">2</span>
+<b>El factor de replicación no puede superar el número de servidores.</b><br>
+Con uno, el máximo es 1. Con tres, puedes pedir 3 — y en producción es lo que corresponde.
+</div>
+
+<div class="regla"><span class="num">3</span>
+<b>Los datos nunca van en <code>/tmp</code>.</b><br>
+Esa carpeta se vacía al reiniciar el sistema. En producción los datos van en un disco dedicado, con espacio monitoreado.
+</div>
+
+<div class="regla"><span class="num">4</span>
+<b>La diferencia entre <code>down</code> y <code>down -v</code> es la diferencia entre apagar y destruir.</b><br>
+Ten claro cuál estás ejecutando, siempre.
+</div>
+
+<h2>Para profundizar</h2>
+
+<p>Si quieres ir más allá, prueba esto por tu cuenta:</p>
+
+<table>
+<tr><th>Ejercicio</th><th>Qué vas a descubrir</th></tr>
+<tr><td>Levanta el servidor, apágalo con <code>down</code> sin <code>-v</code>, cambia el <code>CLUSTER_ID</code> en el plano y vuelve a levantar</td><td>El error <code>InconsistentClusterIdException</code> en vivo. <b>Léelo completo</b></td></tr>
+<tr><td>Crea un tópico con <code>--partitions 3</code> y descríbelo con <code>--describe</code></td><td>Cómo Kafka reparte las particiones cuando solo hay un servidor</td></tr>
+<tr><td>Mira los archivos del disco con <code>MSYS_NO_PATHCONV=1 docker exec kafka-broker ls /var/lib/kafka/data</code></td><td>Que cada partición es una carpeta, y adentro hay archivos <code>.log</code></td></tr>
+<tr><td>Corre <code>docker logs kafka-broker</code> completo</td><td>Todo lo que Kafka hace al arrancar, incluido el formateo automático</td></tr>
+</table>
+
+<h2>Antes de cerrar</h2>
+
+<div class="caja ojo">
+  <span class="rot">Deja el terreno limpio</span>
+  <p>Si vas a hacer otro laboratorio, <b>baja este primero</b> o los puertos van a estar ocupados:</p>
+  <pre>cd mi-cluster
+docker compose down -v
+cd ..</pre>
+  <p style="margin-bottom:0">Y comprueba con <code>docker ps --filter name=kafka-broker</code> que no quede nada.</p>
+</div>
+
+</body></html>
