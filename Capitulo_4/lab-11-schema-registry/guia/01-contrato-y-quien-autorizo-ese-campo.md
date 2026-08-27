@@ -8,9 +8,15 @@
 > cuyo trabajo es **decir que no**.
 
 **Duración.** Si lo repites tú solo, la corrida completa de los 4 pasos tomó
-**7 segundos medidos** de punta a punta, en 12 comandos, y **cero segundos de
+**7 segundos medidos** de punta a punta, en 14 comandos, y **cero segundos de
 espera**: aquí no hay ninguna ronda del broker que aguardar. En clase toma 20
 minutos, porque el laboratorio entero es explicación.
+
+**Todo lo que este laboratorio le pide al Schema Registry va por `curl`.** No es
+purismo: el Registry es una API REST, en el servidor de SUNAT no hay envoltorios
+de curso, y `curl` está en todas partes. Los envoltorios de `schema-cli/`
+existen, hacen lo mismo y se nombran donde corresponde — pero dependen de
+`python3`, que Git Bash para Windows no trae. *(Ver Para profundizar I.)*
 **Antes de empezar:** el clúster tiene que estar arriba (`bin/start-lab.sh`),
 con sus 3 brokers y el Schema Registry respondiendo en el puerto 8081.
 
@@ -230,44 +236,49 @@ cat infra/schemas/pedido.avsc
 ellos no es un pedido válido. Guarda eso, porque es la mitad de la explicación
 del Paso 2.
 
-Ahora se registra:
+Ahora se registra. 🔴 **Este laboratorio habla con el Registry por `curl`, y no
+es por purismo:** Schema Registry es una API REST y nada más, y el comando que
+sigue es exactamente el que vas a escribir en el servidor de SUNAT, donde no hay
+envoltorios de curso ni se puede dar por sentado que haya un intérprete
+instalado.
 
 ```bash
-schema-cli/register-schema.sh novatech.lab10.pedidos-value infra/schemas/pedido.avsc
-```
-
-| Parte del comando | Para qué está |
-|---|---|
-| `schema-cli/register-schema.sh` | Envoltorio del curso. Por dentro hace un `POST` a la API REST del Registry con el archivo embebido en JSON |
-| `novatech.lab10.pedidos-value` | El **subject**. El `-value` no es decorativo: dice que este contrato es para el **valor** del mensaje, no para su clave |
-| `infra/schemas/pedido.avsc` | El archivo con el schema |
-
-El comando real que corre por debajo, y que es el que vas a escribir en el
-servidor de SUNAT donde no hay envoltorios:
-
-```bash
-curl -s -X POST \
+curl -s -w "\nHTTP %{http_code}\n" -X POST \
     -H "Content-Type: application/vnd.schemaregistry.v1+json" \
-    --data '{"schema": "<el .avsc, escapado como texto>"}' \
+    --data "{\"schema\": \"$(tr -d '\n' < infra/schemas/pedido.avsc | sed 's/"/\\"/g')\"}" \
     http://localhost:8081/subjects/novatech.lab10.pedidos-value/versions
 ```
 
-| Parámetro | Para qué está |
+Es el comando más incómodo del laboratorio y conviene desarmarlo entero, porque
+los mismos cinco pedazos se repiten en los Pasos 2 y 4:
+
+| Parte del comando | Para qué está |
 |---|---|
+| `-s` | Silencia la barra de progreso de `curl`, que en una respuesta corta estorba más que ayuda |
+| `-w "\nHTTP %{http_code}\n"` | 🔴 **Imprime el código HTTP al final.** Sin esto no lo ves, y en este laboratorio el código *es* la respuesta |
 | `-X POST` | Registrar es escribir. El `GET` sobre la misma URL solo lista las versiones |
 | `-H "Content-Type: ...v1+json"` | El tipo de contenido propio del Registry. Sin esta cabecera contesta `415` |
-| `--data '{"schema": ...}'` | 🔴 El schema **no viaja como JSON**: viaja como una **cadena de texto** dentro de un JSON. Por eso el envoltorio usa `python3` para escaparlo, y por eso escribir este `curl` a mano es incómodo |
+| `--data "{\"schema\": \"...\"}"` | El cuerpo. 🔴 **El schema no viaja como JSON: viaja como una cadena de texto dentro de un JSON**, y de ahí sale todo lo feo de esta línea |
+| `tr -d '\n' < ...avsc` | Aplasta el archivo a una sola línea. Una cadena JSON no puede llevar saltos de línea |
+| `sed 's/"/\\"/g'` | Escapa cada comilla del schema, para que no cierre la cadena que lo contiene |
+| la URL | `/subjects/<subject>/versions`. El **subject** es `novatech.lab10.pedidos-value`, y el `-value` no es decorativo: dice que este contrato es para el **valor** del mensaje, no para su clave |
+
+> 💡 **El atajo del curso.** El laboratorio trae un envoltorio que hace lo mismo
+> y cabe en una línea:
+>
+> ```bash
+> schema-cli/register-schema.sh novatech.lab10.pedidos-value infra/schemas/pedido.avsc
+> ```
+>
+> Úsalo si lo prefieres, con una advertencia: **por dentro usa `python3`**, que
+> no viene instalado en Git Bash para Windows. El `curl` de arriba no depende de
+> nada que no tengas.
 
 **Qué sale.**
 
-```json
-{
-    "id": 1,
-    "version": 1,
-    "guid": "f7c3dc5b-9a9f-1792-4c66-77095fdbd42d",
-    "schemaType": "AVRO",
-    "schema": "{\"type\":\"record\",\"name\":\"Pedido\",...}"
-}
+```
+{"id":1,"version":1,"guid":"f7c3dc5b-9a9f-1792-4c66-77095fdbd42d","schemaType":"AVRO","schema":"{\"type\":\"record\",\"name\":\"Pedido\",...}"}
+HTTP 200
 ```
 
 **Cómo se lee.** Son dos números distintos y conviene no confundirlos nunca:
@@ -341,41 +352,68 @@ más seguro que existe.
 Ahora, antes de intentar registrarlo, se lo preguntamos al Registry. Esto es
 importante en la vida real: **existe una forma de preguntar sin escribir.**
 
+El comando es el mismo del Paso 1 con **una sola diferencia**: la URL. En vez de
+`/subjects/.../versions`, que registra, va a `/compatibility/...`, que solo
+pregunta.
+
 ```bash
-schema-cli/check-compatibility.sh novatech.lab10.pedidos-value infra/schemas/pedido-v3-incompatible.avsc
+curl -s -w "\nHTTP %{http_code}\n" -X POST \
+    -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+    --data "{\"schema\": \"$(tr -d '\n' < infra/schemas/pedido-v3-incompatible.avsc | sed 's/"/\\"/g')\"}" \
+    http://localhost:8081/compatibility/subjects/novatech.lab10.pedidos-value/versions/latest
 ```
 
 | Parte del comando | Para qué está |
 |---|---|
-| `check-compatibility.sh` | `POST` a `/compatibility/subjects/<subject>/versions/latest`. 🔴 **Es de solo consulta**: pregunta y no registra nada, pase lo que pase |
-| `novatech.lab10.pedidos-value` | Contra qué subject se compara |
-| `...pedido-v3-incompatible.avsc` | El schema propuesto |
+| `/compatibility/subjects/<subject>/versions/latest` | 🔴 **Es de solo consulta**: pregunta y no registra nada, pase lo que pase. El `latest` dice contra qué versión comparar |
+| todo lo demás | Idéntico al Paso 1: el mismo escape, la misma cabecera, el mismo `-w` |
+
+> 💡 **El atajo del curso**, si prefieres y tienes `python3`:
+> `schema-cli/check-compatibility.sh novatech.lab10.pedidos-value infra/schemas/pedido-v3-incompatible.avsc`
 
 **Qué sale.**
 
-```json
-{
-    "is_compatible": false
-}
+```
+{"is_compatible":false}
+HTTP 200
 ```
 
 **Cómo se lee.** Una sola palabra, y es la respuesta a la pregunta de la sala.
-Este es el comando que un equipo pone en su *pipeline* de integración continua:
-**se pregunta antes de desplegar, no después.**
 
-Y ahora sí, se intenta registrar:
+🔴 **Y fíjate en la trampa del `HTTP 200`:** el código dice que **la pregunta se
+respondió**, no que la respuesta sea que sí. Un *pipeline* que solo mire el
+código HTTP de este comando va a creer que todo está bien y va a desplegar
+igual. **Lo que hay que leer es el cuerpo.**
+
+Este es el comando que un equipo pone en su integración continua: **se pregunta
+antes de desplegar, no después.**
+
+Y ahora sí, se intenta registrar. Es el comando del Paso 1, con el archivo
+cambiado y doblado a 88 columnas para poder leerlo:
 
 ```bash
-schema-cli/register-schema.sh novatech.lab10.pedidos-value infra/schemas/pedido-v3-incompatible.avsc
+curl -s -w "\nHTTP %{http_code}\n" -X POST \
+    -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+    --data "{\"schema\": \"$(tr -d '\n' < infra/schemas/pedido-v3-incompatible.avsc | sed 's/"/\\"/g')\"}" \
+    http://localhost:8081/subjects/novatech.lab10.pedidos-value/versions \
+  | fold -s -w 88
 ```
+
+| Parte del comando | Para qué está |
+|---|---|
+| `\| fold -s -w 88` | Corta la respuesta en líneas de 88 caracteres. El `-s` corta en espacios, no a mitad de palabra. **Sin esto la respuesta es una sola línea larguísima y en proyector no se lee** |
 
 **Qué sale.**
 
-```json
-{
-    "error_code": 40901,
-    "message": "Schema being registered is incompatible with an earlier schema for subject \"novatech.lab10.pedidos-value\", details: [{errorType:'READER_FIELD_MISSING_DEFAULT_VALUE', description:'The field 'tarjeta_credito' at path '/fields/6' in the new schema has no default value and is missing in the old schema', additionalInfo:'tarjeta_credito'}, {oldSchemaVersion: 1}, {oldSchema: '{\"type\":\"record\",\"name\":\"Pedido\",...}'}, {validateFields: 'false', compatibility: 'BACKWARD'}]"
-}
+```
+{"error_code":40901,"message":"Schema being registered is incompatible with an earlier
+schema for subject \"novatech.lab10.pedidos-value\", details:
+[{errorType:'READER_FIELD_MISSING_DEFAULT_VALUE', description:'The field
+'tarjeta_credito' at path '/fields/6' in the new schema has no default value and is
+missing in the old schema', additionalInfo:'tarjeta_credito'}, {oldSchemaVersion: 1},
+{oldSchema: '{\"type\":\"record\",\"name\":\"Pedido\",...}'},
+{validateFields: 'false', compatibility: 'BACKWARD'}]"}
+HTTP 409
 ```
 
 **Cómo se lee.** Esa pared de texto es el laboratorio entero. Vale la pena
@@ -389,9 +427,14 @@ hay cuatro datos adentro:
 | `oldSchemaVersion: 1` | Contra qué versión comparó. Bajo BACKWARD compara contra **la última**, no contra todas |
 | `compatibility: 'BACKWARD'` | 🔴 **Con qué regla juzgó.** El mismo cambio, bajo otro modo, tendría otro veredicto. La compuerta no es una ley universal: es una política que alguien configuró |
 
-Y el `error_code: 40901` es el código propio del Registry, no el de HTTP. El
-HTTP que devolvió es un **409 Conflict** — el comando que lo muestra está en
-*Para profundizar I*.
+Y abajo del todo, **`HTTP 409`**. No es `400 Bad Request`: el schema no está mal
+escrito —es Avro perfectamente válido—, **está en conflicto con algo que ya
+existe**. El `error_code: 40901` del cuerpo es el subcódigo propio del Registry
+dentro de ese 409.
+
+🔴 **Compara este `409` con el `200` de hace un minuto.** El mismo archivo, la
+misma cabecera, el mismo escape: lo único que cambió fue la URL. Preguntar
+siempre devuelve 200; **registrar es el que se atreve a devolver 409.**
 
 **Lo que hay que decir en este punto**, porque es la lección y no se deduce
 sola: el desarrollador del martes **no habría llegado al jueves**. Su despliegue
@@ -579,35 +622,47 @@ forma de cambio que el Paso 2. Y dos diferencias que lo cambian todo:
 
 Pregúntale otra vez al Registry:
 
+Los mismos dos comandos del Paso 2, con el archivo cambiado:
+
 ```bash
-schema-cli/check-compatibility.sh novatech.lab10.pedidos-value infra/schemas/pedido-v2-compatible.avsc
+curl -s -w "\nHTTP %{http_code}\n" -X POST \
+    -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+    --data "{\"schema\": \"$(tr -d '\n' < infra/schemas/pedido-v2-compatible.avsc | sed 's/"/\\"/g')\"}" \
+    http://localhost:8081/compatibility/subjects/novatech.lab10.pedidos-value/versions/latest
 ```
 
 **Qué sale.**
 
-```json
-{
-    "is_compatible": true
-}
 ```
+{"is_compatible":true}
+HTTP 200
+```
+
+🔴 **El mismo `HTTP 200` que devolvió el `false` del Paso 2.** Es la prueba de
+lo que se dijo allá: el código no es el veredicto.
 
 Y se registra:
 
 ```bash
-schema-cli/register-schema.sh novatech.lab10.pedidos-value infra/schemas/pedido-v2-compatible.avsc
+curl -s -w "\nHTTP %{http_code}\n" -X POST \
+    -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+    --data "{\"schema\": \"$(tr -d '\n' < infra/schemas/pedido-v2-compatible.avsc | sed 's/"/\\"/g')\"}" \
+    http://localhost:8081/subjects/novatech.lab10.pedidos-value/versions \
+  | fold -s -w 88
 ```
 
 **Qué sale.**
 
-```json
-{
-    "id": 2,
-    "version": 2,
-    "guid": "8039c9ea-b34f-edeb-4674-e9dd977a4b01",
-    "schemaType": "AVRO",
-    "schema": "{\"type\":\"record\",\"name\":\"Pedido\",...,{\"name\":\"prioridad\",\"type\":[\"null\",\"string\"],\"default\":null}]}"
-}
 ```
+{"id":2,"version":2,"guid":"8039c9ea-b34f-edeb-4674-e9dd977a4b01","schemaType":"AVRO","s
+chema":"{\"type\":\"record\",\"name\":\"Pedido\",...,{\"name\":\"prioridad\",
+\"type\":[\"null\",\"string\"],\"default\":null}]}"}
+HTTP 200
+```
+
+**Cómo se lee.** `HTTP 200`, no 409. **Es el mismo comando que hace dos minutos
+devolvió un conflicto**, contra el mismo subject y la misma versión vigente. Lo
+único distinto es que este schema trae `default`.
 
 **Cómo se lee.** `version: 2`. El subject ahora tiene dos versiones, y la vieja
 **no se borró**:
@@ -639,7 +694,8 @@ sobrescribe: es un registro histórico, y por eso vive en un tópico de Kafka**
 | Y el Registry dice **por qué** | `READER_FIELD_MISSING_DEFAULT_VALUE`, con el nombre del campo |
 | No hay puerta trasera para el productor | `SerializationException`, y el tópico en `0 mensajes` |
 | Pero la compuerta sí deja pasar | El mismo comando con el otro contrato: sin error, `1 mensajes` |
-| El cambio correcto entra sin drama | `is_compatible: true` → `version: 2` |
+| El cambio correcto entra sin drama | `is_compatible: true` → `version: 2`, `HTTP 200` |
+| Y todo eso sin depender de nada instalado | Los seis comandos del Registry son `curl` |
 
 **Las cinco reglas que se llevan a SUNAT:**
 
@@ -679,7 +735,7 @@ Este era el primer paso del recorrido viejo. Cámbialo de orden: córrelo
 **antes** del Paso 1 y verás la lista vacía.
 
 ```bash
-schema-cli/list-subjects.sh
+curl -s http://localhost:8081/subjects
 ```
 
 ```
@@ -719,7 +775,7 @@ vuelves a consumir?
 ```bash
 kafka-cli/produce-flood-pedidos.sh 50
 kafka-cli/produce-clientes-seed.sh
-schema-cli/list-subjects.sh
+curl -s http://localhost:8081/subjects
 ```
 
 **Lo que hay que mirar:** después de los clientes, la lista de subjects trae
@@ -773,17 +829,19 @@ Ahora sí, ponle al subject un modo propio, que gana sobre el global:
 curl -s -X PUT -H "Content-Type: application/vnd.schemaregistry.v1+json" \
     --data '{"compatibility":"FORWARD"}' \
     http://localhost:8081/config/novatech.lab10.pedidos-value
-schema-cli/check-compatibility.sh novatech.lab10.pedidos-value infra/schemas/pedido-v3-incompatible.avsc
+curl -s -X POST -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+    --data "{\"schema\": \"$(tr -d '\n' < infra/schemas/pedido-v3-incompatible.avsc | sed 's/"/\\"/g')\"}" \
+    http://localhost:8081/compatibility/subjects/novatech.lab10.pedidos-value/versions/latest
 ```
 
 **Qué sale, medido:**
 
 ```
-{"compatibility":"FORWARD"}
-{
-    "is_compatible": true
-}
+{"compatibility":"FORWARD"}{"is_compatible":true}
 ```
+
+*(Salen pegadas, sin salto de línea entre las dos: el Registry no termina sus
+respuestas con `\n`. Es feo y es lo que imprime.)*
 
 🔴 **El mismo archivo que el Paso 2 rechazó, ahora pasa.** No cambió el schema:
 cambió quién lo juzga. Bajo `FORWARD` el lector es el **viejo**, y un lector
@@ -795,14 +853,13 @@ Y para volver:
 curl -s -X PUT -H "Content-Type: application/vnd.schemaregistry.v1+json" \
     --data '{"compatibility":"BACKWARD"}' \
     http://localhost:8081/config/novatech.lab10.pedidos-value
-schema-cli/check-compatibility.sh novatech.lab10.pedidos-value infra/schemas/pedido-v3-incompatible.avsc
+curl -s -X POST -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+    --data "{\"schema\": \"$(tr -d '\n' < infra/schemas/pedido-v3-incompatible.avsc | sed 's/"/\\"/g')\"}" \
+    http://localhost:8081/compatibility/subjects/novatech.lab10.pedidos-value/versions/latest
 ```
 
 ```
-{"compatibility":"BACKWARD"}
-{
-    "is_compatible": false
-}
+{"compatibility":"BACKWARD"}{"is_compatible":false}
 ```
 
 🔴 **Restáuralo siempre**, o el resto del laboratorio deja de comportarse como
@@ -845,11 +902,11 @@ contratos, porque los dos leen del mismo tópico.
 ### G · Inspección visual
 
 Kafbat UI, en **http://localhost:8090** → pestaña *Schema Registry*. Compara lo
-que la interfaz muestra con lo que devolvió `get-schema.sh`. La vista de
-versiones es el equivalente visual de la lista `[1,2]` del Paso 4.
+que la interfaz muestra con lo que devuelve la API. La vista de versiones es el
+equivalente visual de la lista `[1,2]` del Paso 4.
 
 ```bash
-schema-cli/get-schema.sh novatech.lab10.pedidos-value
+curl -s http://localhost:8081/subjects/novatech.lab10.pedidos-value/versions/latest
 ```
 
 ### H · El reporte del lab
@@ -858,26 +915,36 @@ schema-cli/get-schema.sh novatech.lab10.pedidos-value
 con sus preguntas. Las respuestas de referencia están en
 `soluciones/reporte-resuelto.md`.
 
-### I · El código HTTP del rechazo
+### I · Los envoltorios del curso, y por qué el recorrido no los usa
 
-El envoltorio muestra el cuerpo de la respuesta, no su código. Para ver el
-código:
+El laboratorio trae cuatro envoltorios que hacen lo mismo que los `curl` del
+recorrido, más cortos:
 
 ```bash
-curl -s -o /dev/null -w "HTTP %{http_code}\n" -X POST \
-    -H "Content-Type: application/vnd.schemaregistry.v1+json" \
-    --data "{\"schema\": $(python3 -c "import json;print(json.dumps(open('infra/schemas/pedido-v3-incompatible.avsc').read()))")}" \
-    http://localhost:8081/subjects/novatech.lab10.pedidos-value/versions
+schema-cli/list-subjects.sh
+schema-cli/get-schema.sh novatech.lab10.pedidos-value
+schema-cli/register-schema.sh <subject> <archivo.avsc>
+schema-cli/check-compatibility.sh <subject> <archivo.avsc>
 ```
 
-```
-HTTP 409
+Funcionan, e imprimen la respuesta ya formateada, que se lee mejor. **Úsalos si
+te sirven.**
+
+🔴 **Pero el recorrido de clase va por `curl`, y hay dos razones.** La primera
+es que Schema Registry **es** una API REST: verlo con `curl` es verlo como es,
+y en el servidor de SUNAT no va a haber una carpeta `schema-cli/`.
+
+La segunda es más concreta: **los cuatro usan `python3` para escapar el schema y
+para formatear la salida**, y `python3` no viene instalado con Git Bash para
+Windows. Compruébalo antes de necesitarlo:
+
+```bash
+python3 --version
 ```
 
-**Lo que hay que mirar:** `409 Conflict`, no `400 Bad Request`. El schema no
-está mal escrito —es Avro perfectamente válido—: **está en conflicto con algo
-que ya existe.** El `40901` del cuerpo es el subcódigo propio del Registry
-dentro de ese 409.
+Si ese comando falla, los cuatro envoltorios fallan con él —mueren antes de
+llegar al `curl`, por el `set -euo pipefail`— y el recorrido en `curl` sigue
+funcionando igual.
 
 ---
 

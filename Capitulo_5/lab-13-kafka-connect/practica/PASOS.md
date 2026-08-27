@@ -8,8 +8,15 @@
 **Antes de empezar:** `bin/start-lab.sh` terminado, los 3 brokers arriba,
 PostgreSQL sano y Kafka Connect respondiendo en `http://localhost:8083`.
 
-**Cuánto toma:** la corrida completa son **19 segundos medidos**, de los cuales
-**10 son esperar** al conector. La ejecución pura son 9 segundos.
+**Sobre los comandos:** los que hablan con Connect son `curl`, porque Connect
+solo se configura por su API REST. El laboratorio trae envoltorios más cortos en
+`connect-cli/`, pero usan `python3`, que Git Bash no trae. Si el tuyo lo tiene,
+sírvete.
+
+**Cuánto toma:** la corrida completa son **21 segundos medidos**, de los cuales
+**9 son esperar** al conector. La ejecución pura son 12 segundos. Los dos tramos
+de espera midieron entre 1 y 8 segundos según la corrida: no esperes el mismo
+número dos veces.
 
 ---
 
@@ -61,15 +68,22 @@ dice cómo se va a llamar el tópico. ¿De dónde va a salir el nombre?
 Ahora sí:
 
 ```bash
-connect-cli/create-source.sh
-connect-cli/status-connector.sh novatech-source-pedidos
+curl -s -w "\nHTTP %{http_code}\n" -X POST \
+    -H "Content-Type: application/json" \
+    --data @infra/connect/jdbc-source-pedidos.json \
+    http://localhost:8083/connectors \
+  | fold -s -w 88
+
+curl -s http://localhost:8083/connectors/novatech-source-pedidos/status \
+  | tr ',' '\n'
 ```
 
 | Hueco | Lo que salió |
 |---|---|
+| El código `HTTP` del `create` | |
 | `tasks` en la respuesta del `create` | |
-| `connector.state` | |
-| `tasks[0].state` | |
+| `connector.state` (bajo `"connector":{`) | |
+| `tasks[0].state` (bajo `"tasks":[{`) | |
 
 > ⚠️ Si el `status` te contesta `404 No status found`, no está roto: el estado
 > se publica un instante después. Vuelve a correr el mismo comando.
@@ -90,6 +104,11 @@ kafka-cli/list-topics.sh
 | ¿Cuántos tópicos hay ahora? | |
 | ¿Cuál es el nuevo? | |
 | ¿Qué comando lo creó? | |
+
+> ⚠️ **Si el tópico todavía no está, llegaste antes que el conector.** Espera
+> unos segundos y repite. Mientras no exista, `kafka-get-offsets` contesta
+> `Could not match any topic-partitions` y el consumidor avisa
+> `UNKNOWN_TOPIC_OR_PARTITION`. Las tres cosas significan lo mismo.
 
 ```bash
 docker exec kafka-broker-1 kafka-get-offsets \

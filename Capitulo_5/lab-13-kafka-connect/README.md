@@ -2,7 +2,7 @@
 
 **Curso**: Administración de Confluent Apache Kafka (SUNAT)  
 **Unidad**: 4 - Avanzado, ecosistema, HA/DR y seguridad  
-**Duración estimada**: 20 minutos de dictado · 19 segundos de ejecución medidos (10 de ellos, esperando al conector)
+**Duración estimada**: 20 minutos de dictado · 21 segundos de ejecución medidos (9 de ellos, esperando al conector)
 
 ---
 

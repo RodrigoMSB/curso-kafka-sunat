@@ -8,6 +8,11 @@
 **Antes de empezar:** `bin/start-lab.sh` terminado, los 3 brokers arriba y
 Schema Registry respondiendo en `http://localhost:8081`.
 
+**Sobre los comandos:** todos los que hablan con el Registry son `curl`, porque
+el Registry es una API REST y no hace falta nada instalado. El laboratorio trae
+envoltorios más cortos en `schema-cli/`, pero usan `python3`, que Git Bash no
+trae. Si el tuyo lo tiene, sírvete.
+
 **Cuánto toma:** la corrida completa son **7 segundos medidos** de ejecución.
 Aquí no hay nada que esperar. Todo el tiempo que le dediques es tiempo de
 pensar.
@@ -33,7 +38,10 @@ vuelve al Paso 1 de la guía antes de seguir.
 Ahora regístralo:
 
 ```bash
-schema-cli/register-schema.sh novatech.lab10.pedidos-value infra/schemas/pedido.avsc
+curl -s -w "\nHTTP %{http_code}\n" -X POST \
+    -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+    --data "{\"schema\": \"$(tr -d '\n' < infra/schemas/pedido.avsc | sed 's/"/\\"/g')\"}" \
+    http://localhost:8081/subjects/novatech.lab10.pedidos-value/versions
 ```
 
 Anota de la salida:
@@ -42,7 +50,7 @@ Anota de la salida:
 |---|---|
 | `version` | |
 | `id` | |
-| `schemaType` | |
+| `HTTP` (la última línea) | |
 
 **La pregunta del paso:** `version` e `id` salieron los dos en 1. ¿Son el mismo
 número por casualidad o por definición? ¿Cuál de los dos viaja pegado a cada
@@ -67,24 +75,34 @@ diff infra/schemas/pedido.avsc infra/schemas/pedido-v3-incompatible.avsc
 Ahora pregúntale al Registry sin escribir nada:
 
 ```bash
-schema-cli/check-compatibility.sh novatech.lab10.pedidos-value infra/schemas/pedido-v3-incompatible.avsc
+curl -s -w "\nHTTP %{http_code}\n" -X POST \
+    -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+    --data "{\"schema\": \"$(tr -d '\n' < infra/schemas/pedido-v3-incompatible.avsc | sed 's/"/\\"/g')\"}" \
+    http://localhost:8081/compatibility/subjects/novatech.lab10.pedidos-value/versions/latest
 ```
 
 | Hueco | Lo que salió |
 |---|---|
 | `is_compatible` | |
+| El código `HTTP` de ese mismo comando | |
+| 🔴 ¿El código HTTP te dijo que el cambio era compatible? ¿Qué te dijo entonces? | |
 | ¿Acertaste tu predicción? | |
 
 E intenta registrarlo:
 
 ```bash
-schema-cli/register-schema.sh novatech.lab10.pedidos-value infra/schemas/pedido-v3-incompatible.avsc
+curl -s -w "\nHTTP %{http_code}\n" -X POST \
+    -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+    --data "{\"schema\": \"$(tr -d '\n' < infra/schemas/pedido-v3-incompatible.avsc | sed 's/"/\\"/g')\"}" \
+    http://localhost:8081/subjects/novatech.lab10.pedidos-value/versions \
+  | fold -s -w 88
 ```
 
 Del mensaje de error, saca estos cuatro datos —están todos ahí adentro:
 
 | Dato | Lo que salió |
 |---|---|
+| El código `HTTP` de la última línea | |
 | `error_code` | |
 | `errorType` | |
 | Qué campo nombra como culpable | |
@@ -183,8 +201,15 @@ diff infra/schemas/pedido.avsc infra/schemas/pedido-v2-compatible.avsc
 | ¿Qué **dos** cosas trae este campo que el del Paso 2 no tenía? | |
 
 ```bash
-schema-cli/check-compatibility.sh novatech.lab10.pedidos-value infra/schemas/pedido-v2-compatible.avsc
-schema-cli/register-schema.sh novatech.lab10.pedidos-value infra/schemas/pedido-v2-compatible.avsc
+curl -s -w "\nHTTP %{http_code}\n" -X POST \
+    -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+    --data "{\"schema\": \"$(tr -d '\n' < infra/schemas/pedido-v2-compatible.avsc | sed 's/"/\\"/g')\"}" \
+    http://localhost:8081/compatibility/subjects/novatech.lab10.pedidos-value/versions/latest
+curl -s -w "\nHTTP %{http_code}\n" -X POST \
+    -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+    --data "{\"schema\": \"$(tr -d '\n' < infra/schemas/pedido-v2-compatible.avsc | sed 's/"/\\"/g')\"}" \
+    http://localhost:8081/subjects/novatech.lab10.pedidos-value/versions \
+  | fold -s -w 88
 curl -s http://localhost:8081/subjects/novatech.lab10.pedidos-value/versions
 ```
 
@@ -192,6 +217,7 @@ curl -s http://localhost:8081/subjects/novatech.lab10.pedidos-value/versions
 |---|---|
 | `is_compatible` | |
 | `version` del registro nuevo | |
+| El código `HTTP` del registro (compáralo con el del Paso 2) | |
 | Lista de versiones del subject | |
 
 **La pregunta del paso:** la v1 sigue en la lista. ¿Qué se rompería si alguien

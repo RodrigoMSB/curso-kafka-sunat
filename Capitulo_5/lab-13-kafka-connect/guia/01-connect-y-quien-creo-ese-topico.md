@@ -8,10 +8,21 @@
 > va a llenar igual.
 
 **Duración.** Si lo repites tú solo, la corrida completa de los 4 pasos tomó
-**19 segundos medidos** de punta a punta, en 7 comandos — y **10 de esos 19
+**21 segundos medidos** de punta a punta, en 11 comandos — y **9 de esos 21
 fueron esperar sin hacer nada**, por un motivo que el Paso 2 explica y que el
-Paso 4 vuelve a mostrar. La ejecución pura son **9 segundos**. En clase toma 20
+Paso 4 vuelve a mostrar. La ejecución pura son **12 segundos**. En clase toma 20
 minutos, porque casi todo el tiempo es explicación.
+
+🔴 **Los dos tramos de espera no duran lo mismo dos veces seguidas.** En las
+corridas medidas fueron de **1 a 8 segundos** cada uno, y eso también es parte
+de la lección: la latencia de este laboratorio no la pone tu máquina, la pone un
+temporizador.
+**Todo lo que este laboratorio le pide a Connect va por `curl`.** No es purismo:
+Kafka Connect **solo** se configura por su API REST —no hay archivo que editar ni
+servicio que reiniciar— y `curl` está en cualquier servidor. Los envoltorios de
+`connect-cli/` existen, hacen lo mismo y se nombran donde corresponde, pero
+dependen de `python3`, que Git Bash para Windows no trae.
+
 **Antes de empezar:** el clúster tiene que estar arriba (`bin/start-lab.sh`),
 con sus 3 brokers, PostgreSQL y Kafka Connect respondiendo en el puerto 8083.
 
@@ -292,57 +303,62 @@ cat infra/connect/jdbc-source-pedidos.json
 | `poll.interval.ms: 5000` | Cada cuánto vuelve a mirar |
 | `value.converter` | En qué formato deja el mensaje. Aquí JSON. En el Lab 11 hubiera sido Avro |
 
-Ahora se envía:
+Ahora se envía. 🔴 **Este laboratorio habla con Connect por `curl`**, porque
+Connect **es** una API REST y no hay otra forma de configurarlo: no existe un
+archivo que editar ni un servicio que reiniciar. Es también el comando que vas a
+escribir en el servidor de SUNAT.
 
 ```bash
-connect-cli/create-source.sh
+curl -s -w "\nHTTP %{http_code}\n" -X POST \
+    -H "Content-Type: application/json" \
+    --data @infra/connect/jdbc-source-pedidos.json \
+    http://localhost:8083/connectors \
+  | fold -s -w 88
 ```
 
 | Parte del comando | Para qué está |
 |---|---|
-| `connect-cli/create-source.sh` | Envoltorio del curso. Hace un `POST` del archivo a la API REST de Connect |
+| `-s` | Silencia la barra de progreso de `curl` |
+| `-w "\nHTTP %{http_code}\n"` | 🔴 **Imprime el código HTTP al final.** Es el que dice si el conector quedó creado |
+| `-X POST` a `/connectors` | Crear un conector es una llamada REST |
+| `-H "Content-Type: application/json"` | Sin esta cabecera Connect contesta `415` |
+| `--data @archivo` | 🔴 **La arroba** le dice a `curl` que el cuerpo sale de ese archivo tal cual. El JSON del conector ya tiene la forma que Connect espera, así que no hay que escapar nada — al revés de lo que pasa en el Lab 11 |
+| `\| fold -s -w 88` | Corta la respuesta en líneas de 88 caracteres, cortando en espacios. Sin esto es una sola línea larguísima y en proyector no se lee |
 
-El comando real que corre por debajo:
-
-```bash
-curl -s -X POST -H "Content-Type: application/json" \
-    --data @infra/connect/jdbc-source-pedidos.json \
-    http://localhost:8083/connectors
-```
-
-| Parámetro | Para qué está |
-|---|---|
-| `-X POST` a `/connectors` | Crear un conector es una llamada REST. 🔴 **No hay archivo de configuración que editar ni servicio que reiniciar** |
-| `--data @archivo` | La arroba le dice a `curl` que el cuerpo sale de ese archivo, no de la línea |
+> 💡 **El atajo del curso**, si prefieres y tienes `python3`:
+> `connect-cli/create-source.sh`. Hace este mismo `POST` y formatea la
+> respuesta. **Ojo: usa `python3`, que Git Bash para Windows no trae.**
 
 **Qué sale.** Connect devuelve la configuración completa tal como la guardó, más
-un campo nuevo:
+un campo nuevo, y el código al final:
 
-```json
-{
-    "name": "novatech-source-pedidos",
-    "config": { ... },
-    "tasks": [],
-    "type": "source"
-}
+```
+{"name":"novatech-source-pedidos","config":{"connector.class":"io.confluent.connect.jdbc
+.JdbcSourceConnector","tasks.max":"1", ... ,"name":"novatech-source-pedidos"},"tasks":[]
+,"type":"source"}
+HTTP 201
 ```
 
-**Cómo se lee.** `"tasks": []`, vacío. **Todavía no hay ayudante.** El conector
-quedó registrado, y el reparto de tasks ocurre un instante después. Por eso el
-paso siguiente no es opcional:
+**Cómo se lee.** **`HTTP 201 Created`** — el conector quedó. Y `"tasks":[]`,
+vacío: **todavía no hay ayudante.** El conector quedó registrado, y el reparto
+de tasks ocurre un instante después. Por eso el paso siguiente no es opcional:
 
 ```bash
-connect-cli/status-connector.sh novatech-source-pedidos
+curl -s http://localhost:8083/connectors/novatech-source-pedidos/status \
+  | tr ',' '\n'
 ```
 
+| Parte del comando | Para qué está |
+|---|---|
+| `/connectors/<nombre>/status` | El estado en vivo. Es un `GET`, así que no lleva `-X` ni cabecera |
+| `\| tr ',' '\n'` | Parte la respuesta en una línea por coma. **Es un corte bruto, no un formateador de JSON** —deja llaves y corchetes descolgados— pero es suficiente para leer los campos y no necesita nada instalado |
+
 > ⚠️ **Si lo corres pegado al comando anterior puede contestarte esto**, y está
-> medido:
+> medido en cuatro corridas de cuatro:
 >
-> ```json
-> {
->     "error_code": 404,
->     "message": "No status found for connector novatech-source-pedidos"
-> }
+> ```
+> {"error_code":404
+> "message":"No status found for connector novatech-source-pedidos"}
 > ```
 >
 > **No está roto y el conector no falló.** El estado se publica un instante
@@ -353,33 +369,25 @@ connect-cli/status-connector.sh novatech-source-pedidos
 
 **Qué sale.**
 
-```json
-{
-    "name": "novatech-source-pedidos",
-    "connector": {
-        "state": "RUNNING",
-        "worker_id": "kafka-connect:8083",
-        "version": "10.9.0"
-    },
-    "tasks": [
-        {
-            "id": 0,
-            "state": "RUNNING",
-            "worker_id": "kafka-connect:8083",
-            "version": "10.9.0"
-        }
-    ],
-    "type": "source"
-}
+```
+{"name":"novatech-source-pedidos"
+"connector":{"state":"RUNNING"
+"worker_id":"kafka-connect:8083"
+"version":"10.9.0"}
+"tasks":[{"id":0
+"state":"RUNNING"
+"worker_id":"kafka-connect:8083"
+"version":"10.9.0"}]
+"type":"source"}
 ```
 
 **Cómo se lee.** 🔴 **Hay dos `state`, y no son el mismo.** Esta distinción es
 lo que más se confunde en producción:
 
-| Cuál | Qué dice |
-|---|---|
-| `connector.state` | Si la **instrucción** está aceptada y vigente |
-| `tasks[0].state` | Si el **ayudante** está trabajando |
+| Cuál | Dónde está en la salida | Qué dice |
+|---|---|---|
+| `connector.state` | El `"state":"RUNNING"` que viene **debajo de `"connector":{`** | Si la **instrucción** está aceptada y vigente |
+| `tasks[0].state` | El `"state":"RUNNING"` que viene **debajo de `"tasks":[{`** | Si el **ayudante** está trabajando |
 
 **Los dos tienen que decir `RUNNING`.** Un conector `RUNNING` con su task en
 `FAILED` es el caso que más caro sale: la instrucción está ahí, se ve verde por
@@ -413,6 +421,20 @@ novatech.lab09.pedidos.procesados
 **Cómo se lee.** Apareció `novatech.lab09.pedidos`. **Esa es la respuesta al
 título de la guía:** lo creó el conector, con el nombre que salió de pegar
 `topic.prefix` + el nombre de la tabla.
+
+> ⚠️ **Si todavía no aparece, no está roto: llegaste antes que el ayudante.** El
+> conector tarda hasta 5 segundos en su primera pasada, y esto está medido
+> corriendo los comandos uno pegado al otro. Según lo rápido que vayas te vas a
+> topar con una de estas tres, y las tres son la misma cosa:
+>
+> | Comando | Lo que contesta si aún no hay tópico |
+> |---|---|
+> | `list-topics.sh` | El tópico simplemente no está en la lista |
+> | `kafka-get-offsets` | `Error occurred: Could not match any topic-partitions with the specified filters` |
+> | `kafka-console-consumer` | Un `WARN ... {novatech.lab09.pedidos=UNKNOWN_TOPIC_OR_PARTITION}`, y después **funciona igual** en cuanto el tópico nace |
+>
+> **Espera unos segundos y repite el comando.** Es el reloj del laboratorio, no
+> un fallo.
 
 Y no apareció vacío:
 
@@ -511,13 +533,26 @@ kafka-cli/insertar-pedido.sh 2001 "Pedido de la clase" 5 25000.00
 | `5` | La cantidad |
 | `25000.00` | El monto |
 
-El comando real que corre por debajo:
+El comando real que corre por debajo — 🔴 **no lo ejecutes, ya lo hiciste**;
+está aquí para que veas que no hay nada más:
 
 ```bash
-psql -U novatech -d novatech_orders -c \
+docker exec postgres psql -U novatech -d novatech_orders -c \
   "INSERT INTO pedidos (cliente_id, producto, cantidad, monto, estado)
    VALUES (2001, 'Pedido de la clase', 5, 25000.00, 'pendiente') RETURNING id;"
 ```
+
+| Parte del comando | Para qué está |
+|---|---|
+| `docker exec postgres` | Entra al contenedor de PostgreSQL. 🔴 **En el servidor de SUNAT esta parte no existe**: ahí `psql` está en el `PATH` y la base es local o se alcanza con `-h` |
+| `psql -U novatech -d novatech_orders` | El cliente de PostgreSQL, con su usuario y su base |
+| `-c "INSERT ... RETURNING id;"` | La sentencia. El `RETURNING id` es de PostgreSQL: devuelve el `id` que le tocó a la fila nueva |
+
+> ⚠️ **Si copias solo la línea del `psql`, sin el `docker exec` de delante**, tu
+> terminal contesta
+> `psql: error: connection to server on socket "/tmp/.s.PGSQL.5432" failed`. No
+> es la base del laboratorio la que falla: es tu máquina diciendo que ahí no hay
+> ningún PostgreSQL.
 
 **Qué sale.**
 
@@ -744,8 +779,13 @@ datos. El laboratorio lo trae entero y funciona.
 
 ```bash
 kafka-cli/verificar-tabla-procesados.sh     # vacía: (0 rows)
-connect-cli/create-sink.sh
-connect-cli/status-connector.sh novatech-sink-procesados
+
+curl -s -w "\nHTTP %{http_code}\n" -X POST -H "Content-Type: application/json" \
+    --data @infra/connect/jdbc-sink-procesados.json \
+    http://localhost:8083/connectors | fold -s -w 88
+
+curl -s http://localhost:8083/connectors/novatech-sink-procesados/status | tr ',' '\n'
+
 kafka-cli/publicar-procesado.sh 6
 kafka-cli/verificar-tabla-procesados.sh
 ```
@@ -780,7 +820,7 @@ echo '{"cliente_id":99,"producto":"sin id","cantidad":1,"monto":1.0,"estado":"x"
 | docker exec -i kafka-broker-1 kafka-console-producer \
     --bootstrap-server kafka-broker-1:29092 \
     --topic novatech.lab09.pedidos.procesados
-connect-cli/status-connector.sh novatech-sink-procesados
+curl -s http://localhost:8083/connectors/novatech-sink-procesados/status | tr ',' '\n'
 ```
 
 **Salida real, un segundo después:**
@@ -840,8 +880,16 @@ una carga de dos millones de filas de una vez?
 ### F · El importe en base64
 
 ```bash
-connect-cli/delete-connector.sh novatech-source-pedidos
+curl -s -X DELETE -w "HTTP %{http_code}\n" \
+    http://localhost:8083/connectors/novatech-source-pedidos
 ```
+
+```
+HTTP 204
+```
+
+*(`204 No Content` es la respuesta correcta a un borrado: se hizo y no hay nada
+que devolver.)*
 
 Agrega `"numeric.mapping": "best_fit"` al JSON del conector y vuelve a crearlo.
 
@@ -867,6 +915,40 @@ la interfaz distingue los dos `state`**, que es el punto de *Para profundizar D*
 `plantillas/reporte-entregable.md` recorre las actividades del recorrido viejo
 con sus preguntas. Las respuestas de referencia están en
 `soluciones/reporte-resuelto.md` y en `soluciones/respuestas-desafio.md`.
+
+### I · Los envoltorios del curso, y por qué el recorrido no los usa
+
+El laboratorio trae cinco envoltorios que hacen lo mismo que los `curl` del
+recorrido, más cortos:
+
+```bash
+connect-cli/list-connectors.sh
+connect-cli/status-connector.sh <nombre>
+connect-cli/create-source.sh
+connect-cli/create-sink.sh
+connect-cli/delete-connector.sh <nombre>
+```
+
+Funcionan, e imprimen la respuesta ya formateada, que se lee mucho mejor que el
+`tr ',' '\n'` del recorrido. **Úsalos si te sirven.**
+
+🔴 **Pero el recorrido de clase va por `curl`, y hay dos razones.** La primera es
+que Kafka Connect **es** una API REST y no tiene otra interfaz: verlo con `curl`
+es verlo como es, y en el servidor de SUNAT no va a haber una carpeta
+`connect-cli/`.
+
+La segunda es más concreta: **los cinco usan `python3` para formatear la
+salida**, y `python3` no viene instalado con Git Bash para Windows.
+Compruébalo antes de necesitarlo:
+
+```bash
+python3 --version
+```
+
+Si ese comando falla, los cinco envoltorios fallan con él —mueren antes de
+imprimir, por el `set -euo pipefail`— y el recorrido en `curl` sigue funcionando
+igual. **Medido:** el `POST` con `--data @archivo` devolvió `HTTP 201` sin
+Python de por medio.
 
 ---
 

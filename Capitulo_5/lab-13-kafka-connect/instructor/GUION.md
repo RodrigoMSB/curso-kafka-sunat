@@ -16,7 +16,7 @@ completo. De las 26 actividades del recorrido viejo quedan **cuatro pasos**.
 |---|---|---|
 | Clúster arriba | `bin/start-lab.sh` termina con «CLÚSTER NOVATECH LAB 13 OPERATIVO» | 15 min antes |
 | Estado correcto | `bin/90-test-lab.sh` → 🔴 **2 verificaciones OK, no 3** | 10 min antes |
-| Ningún conector creado | `connect-cli/list-connectors.sh` devuelve `[]` | 10 min antes |
+| Ningún conector creado | `curl -s http://localhost:8083/connectors` devuelve `[]` | 10 min antes |
 | El tópico de la demo **no** existe | `kafka-cli/list-topics.sh` **sin** `novatech.lab09.pedidos` | 10 min antes |
 | PostgreSQL con sus 5 filas | `docker exec postgres psql -U novatech -d novatech_orders -c "SELECT count(*) FROM pedidos;"` → `5` | 10 min antes |
 | El comando largo, copiado | Ten a mano el `kafka-console-consumer` del Paso 3 en un archivo de texto | 5 min antes |
@@ -32,7 +32,7 @@ JDBC al arrancar. Deja 15 minutos, no 10.
 **Si el conector ya existe** (porque ensayaste), bórralo y vuelve a levantar:
 
 ```bash
-connect-cli/delete-connector.sh novatech-source-pedidos
+curl -s -X DELETE http://localhost:8083/connectors/novatech-source-pedidos
 bin/start-lab.sh
 ```
 
@@ -67,8 +67,8 @@ inicial y se acabó.
 
 | Reloj | Cuánto | Cómo se obtuvo | Para qué sirve |
 |---|---|---|---|
-| **Ejecución pura** | **9 s** | 🟢 **Medido**, corrida completa del recorrido recortado (los 4 pasos, 7 comandos), 26-ago-2026 | Lo que le toma a la máquina. Es el número que le sirve al alumno que repite el lab en su casa |
-| **Espera del conector** | **10 s** de un total de 19 | 🟢 **Medido**, misma corrida: dos tramos de 5 s. El tramo del Paso 4 se midió en **6 s** en dos corridas independientes | Son las dos pasadas del `poll.interval.ms`. 🔴 **Es tiempo de reloj que hay que llenar hablando**, y el guion lo usa para preguntar |
+| **Ejecución pura** | **12 s** | 🟢 **Medido**, corrida completa del recorrido, ejecutando los 11 comandos **extraídos de la guía**, 26-ago-2026 | Lo que le toma a la máquina. Es el número que le sirve al alumno que repite el lab en su casa |
+| **Espera del conector** | **9 s** de un total de 21 | 🟢 **Medido**, misma corrida: dos tramos. 🔴 **No son estables**: entre corridas fueron de **1 s a 8 s** cada uno | Son las dos pasadas del `poll.interval.ms`. 🔴 **Es tiempo de reloj que hay que llenar hablando**, y el guion lo usa para preguntar. **No prometas un número a la sala**: promete «unos segundos» |
 | **Dictado** | **20 min** | 🟡 **Estimado**, no medido | 🔴 **Es el que manda.** El techo de 20 minutos aplica a este |
 
 🟡 **La estimación de dictado sigue siendo una estimación.** Sale de repartir
@@ -78,6 +78,10 @@ primer dictado es el que lo convierte en dato: si te pasas de 20 minutos, eso es
 un hallazgo que hay que reportar, con el bloque que se te fue.
 
 La modalidad es **demostrativa**: tú ejecutas en pantalla y explicas mientras.
+
+🔴 **Los comandos de Connect y los dos consumidores son largos.** Tenlos copiados
+en un archivo de texto antes de entrar a clase y pégalos. **No los escribas a
+mano delante de la sala.**
 
 ### Lo que se botó de este guion
 
@@ -220,15 +224,23 @@ Después recorre los campos. **Si vas apretado de tiempo, solo estos cuatro:**
 > aparezca al instante, no está roto**: está en medio de sus cinco segundos.»
 
 ```bash
-connect-cli/create-source.sh
+curl -s -w "\nHTTP %{http_code}\n" -X POST \
+    -H "Content-Type: application/json" \
+    --data @infra/connect/jdbc-source-pedidos.json \
+    http://localhost:8083/connectors \
+  | fold -s -w 88
 ```
 
-> «Un `POST`. No hay archivo de configuración que editar, ni servicio que
-> reiniciar. Y fíjense en lo que devuelve: `tasks` viene **vacío**. Todavía no
-> hay ayudante.»
+> «Un `POST` con `curl`. **Esto es todo lo que hay**: Kafka Connect no tiene
+> archivo de configuración que editar ni servicio que reiniciar. Es una API REST
+> y punto.
+>
+> Miren la última línea: **HTTP 201, Created.** El conector quedó. Y miren lo que
+> devuelve: `tasks` viene **vacío**. Todavía no hay ayudante.»
 
 ```bash
-connect-cli/status-connector.sh novatech-source-pedidos
+curl -s http://localhost:8083/connectors/novatech-source-pedidos/status \
+  | tr ',' '\n'
 ```
 
 **Cómo leerlo en voz alta:**
@@ -246,8 +258,8 @@ connect-cli/status-connector.sh novatech-source-pedidos
 | Síntoma | Causa | Qué hacer |
 |---|---|---|
 | `404 No status found` | 🔴 **Medido y normal.** El estado se publica un instante después de aceptar la instrucción | **Vuelve a correr el mismo comando.** En la corrida medida ya respondía al segundo intento. Dilo en voz alta: es la vida real |
-| `tasks[0].state: FAILED` | PostgreSQL no responde, o credenciales | `connect-cli/status-connector.sh` trae el `trace`. Mira su `Caused by` |
-| El `create` devuelve `409` | El conector ya existe de un ensayo | `connect-cli/delete-connector.sh novatech-source-pedidos` y repite. En el descanso, `bin/start-lab.sh` |
+| `tasks[0].state: FAILED` | PostgreSQL no responde, o credenciales | El mismo `curl` del `status` trae el `trace`. Mira su `Caused by` |
+| El `create` devuelve `409` | El conector ya existe de un ensayo | `curl -s -X DELETE http://localhost:8083/connectors/novatech-source-pedidos` y repite. En el descanso, `bin/start-lab.sh` |
 
 ---
 
@@ -351,9 +363,9 @@ novatech.lab09.pedidos:0:6
 > ejecutó un productor. Nadie escribió código. Se escribió una fila en una base
 > de datos y apareció un mensaje en Kafka.»
 
-*(Medido: **6 segundos** desde el `INSERT`, en dos corridas independientes. Si
-te sale 3 o 9, es normal: depende de en qué punto de sus cinco segundos estaba
-el ayudante.)*
+*(Medido: entre **1 y 8 segundos** desde el `INSERT`, según la corrida. Depende
+de en qué punto de sus cinco segundos estaba el ayudante cuando insertaste. 🔴
+**Por eso no anuncies un número antes de ejecutarlo.**)*
 
 ```bash
 docker exec kafka-broker-1 kafka-console-consumer \
@@ -397,24 +409,31 @@ docker exec kafka-broker-1 kafka-console-consumer \
 
 ---
 
-## 🔴 Nota de riesgo · `python3`
+## Nota · los envoltorios de `connect-cli/` y `python3`
 
-Los cinco envoltorios de `connect-cli/` usan `python3` para imprimir la
-respuesta legible. **Git Bash para Windows no trae Python.** Si en la VM de
-Netec no está instalado, `create-source.sh` y `status-connector.sh` fallan, y
-con ellos el Bloque 2 completo.
+**El recorrido de este guion no depende de `python3`.** Los comandos de Connect
+son `curl`, y `curl` viene con Git Bash. **Medido:** el `POST` con
+`--data @archivo` devolvió `HTTP 201` sin Python de por medio.
 
-**Compruébalo en la VM antes de la clase, no en la clase:**
+Eso es deliberado: los cinco envoltorios de `connect-cli/` usan `python3` para
+formatear la salida, y **Git Bash para Windows no trae Python**. Si en la VM de
+Netec no está, los cinco mueren antes de imprimir —por el `set -euo pipefail`— y
+el laboratorio seguiría funcionando igual.
+
+**Aun así, compruébalo antes de la clase**, porque si está, los envoltorios
+formatean la salida mucho mejor que el `tr ',' '\n'` del recorrido:
 
 ```bash
 python3 --version
 connect-cli/list-connectors.sh
 ```
 
-Si el primero falla, avisa. **No tiene arreglo en vivo.** El camino alternativo
-sí existe y no usa Python —`curl -s -X POST -H "Content-Type: application/json"
---data @infra/connect/jdbc-source-pedidos.json http://localhost:8083/connectors`—
-pero hay que tenerlo preparado antes, no improvisarlo.
+**Y hay una ganancia pedagógica en el `curl` que conviene decir en voz alta:**
+
+> «Fíjense en que aquí no hay ninguna herramienta de Kafka. Esto es `curl`
+> contra una API REST. Kafka Connect no se configura de ninguna otra manera: no
+> hay un archivo, no hay una consola. Todo lo que hicimos hoy lo puede hacer su
+> *pipeline* de despliegue con la misma llamada.»
 
 ---
 

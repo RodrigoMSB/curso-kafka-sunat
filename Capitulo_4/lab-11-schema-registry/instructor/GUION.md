@@ -74,6 +74,11 @@ es un hallazgo que hay que reportar, con el bloque que se te fue.
 
 La modalidad es **demostrativa**: tú ejecutas en pantalla y explicas mientras.
 
+🔴 **Los seis comandos del Registry son `curl` de cuatro líneas.** Tenlos
+copiados en un archivo de texto antes de entrar a clase y pégalos. **No los
+escribas a mano delante de la sala**: el escape de comillas del `sed` es fácil
+de equivocar y el error que devuelve —`HTTP 400`— no dice qué te faltó.
+
 ### Lo que se botó de este guion
 
 | Bloque botado | Dónde quedó |
@@ -177,13 +182,17 @@ cat infra/schemas/pedido.avsc
 > eso, porque es la mitad de la explicación de lo que viene.»
 
 ```bash
-schema-cli/register-schema.sh novatech.lab10.pedidos-value infra/schemas/pedido.avsc
+curl -s -w "\nHTTP %{http_code}\n" -X POST \
+    -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+    --data "{\"schema\": \"$(tr -d '\n' < infra/schemas/pedido.avsc | sed 's/"/\\"/g')\"}" \
+    http://localhost:8081/subjects/novatech.lab10.pedidos-value/versions
 ```
 
 **Qué esperar:**
 
-```json
-{ "id": 1, "version": 1, "schemaType": "AVRO", "schema": "..." }
+```
+{"id":1,"version":1,"guid":"...","schemaType":"AVRO","schema":"..."}
+HTTP 200
 ```
 
 **Cómo leerlo en voz alta:**
@@ -215,11 +224,15 @@ diff infra/schemas/pedido.avsc infra/schemas/pedido-v3-incompatible.avsc
 desarrollador del martes, y son ellos. No lo corrijas todavía.
 
 ```bash
-schema-cli/check-compatibility.sh novatech.lab10.pedidos-value infra/schemas/pedido-v3-incompatible.avsc
+curl -s -w "\nHTTP %{http_code}\n" -X POST \
+    -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+    --data "{\"schema\": \"$(tr -d '\n' < infra/schemas/pedido-v3-incompatible.avsc | sed 's/"/\\"/g')\"}" \
+    http://localhost:8081/compatibility/subjects/novatech.lab10.pedidos-value/versions/latest
 ```
 
-```json
-{ "is_compatible": false }
+```
+{"is_compatible":false}
+HTTP 200
 ```
 
 > «Una sola palabra. Y fíjense que este comando **no registró nada**: solo
@@ -227,10 +240,15 @@ schema-cli/check-compatibility.sh novatech.lab10.pedidos-value infra/schemas/ped
 > no en la consola.»
 
 ```bash
-schema-cli/register-schema.sh novatech.lab10.pedidos-value infra/schemas/pedido-v3-incompatible.avsc
+curl -s -w "\nHTTP %{http_code}\n" -X POST \
+    -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+    --data "{\"schema\": \"$(tr -d '\n' < infra/schemas/pedido-v3-incompatible.avsc | sed 's/"/\\"/g')\"}" \
+    http://localhost:8081/subjects/novatech.lab10.pedidos-value/versions \
+  | fold -s -w 88
 ```
 
-**Qué esperar:** una pared de texto con `error_code: 40901`.
+**Qué esperar:** una pared de texto doblada a 88 columnas, con
+`"error_code":40901` al principio y **`HTTP 409`** en la última línea.
 
 **Cómo leerla en voz alta.** 🔴 **No la resumas. Léela.** Hay cuatro datos
 adentro y cada uno vale:
@@ -243,6 +261,10 @@ adentro y cada uno vale:
 > condiciones, no una: no tiene default, **y** no está en el schema viejo.
 >
 > `oldSchemaVersion: 1` — contra qué versión comparó.
+>
+> Y abajo del todo, **HTTP 409**. Cuatro-cero-nueve es *conflicto*, no *error de
+> formato*. El schema está perfectamente bien escrito: choca con algo que ya
+> existe.
 >
 > Y la última, que es la que más importa: `compatibility: BACKWARD`. **Con qué
 > regla juzgó.** Esto no es una ley universal. Es una política que alguien
@@ -261,7 +283,7 @@ adentro y cada uno vale:
 |---|---|---|
 | `version: 2` en el Paso 1 | El subject ya existía de un ensayo | No se arregla en vivo. Sigue: los números cambian, la demostración no. Y vuelve a levantar el lab en el descanso |
 | `is_compatible: true` en el Paso 2 | El modo del subject no es BACKWARD | `curl -s -X PUT -H "Content-Type: application/vnd.schemaregistry.v1+json" --data '{"compatibility":"BACKWARD"}' http://localhost:8081/config/novatech.lab10.pedidos-value` |
-| El envoltorio no imprime nada | Falta `python3` en el PATH | 🔴 **No hay arreglo en vivo.** Ver la nota al final de este guion |
+| `HTTP 400` al registrar | Se rompió el escape de comillas al copiar el comando | El `sed 's/"/\\"/g'` es el pedazo frágil. Vuelve a pegar el comando completo. **Medido:** sin ese `sed`, el Registry contesta exactamente `HTTP 400` |
 | `Connection refused` en :8081 | El Registry tarda más que los brokers | `docker logs schema-registry \| tail -20`. Espera. Suele ser 30-60 s |
 
 ---
@@ -372,14 +394,23 @@ diff infra/schemas/pedido.avsc infra/schemas/pedido-v2-compatible.avsc
 > asumir cuando el dato viejo no trae este campo.»
 
 ```bash
-schema-cli/check-compatibility.sh novatech.lab10.pedidos-value infra/schemas/pedido-v2-compatible.avsc
-schema-cli/register-schema.sh novatech.lab10.pedidos-value infra/schemas/pedido-v2-compatible.avsc
+curl -s -w "\nHTTP %{http_code}\n" -X POST \
+    -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+    --data "{\"schema\": \"$(tr -d '\n' < infra/schemas/pedido-v2-compatible.avsc | sed 's/"/\\"/g')\"}" \
+    http://localhost:8081/compatibility/subjects/novatech.lab10.pedidos-value/versions/latest
+curl -s -w "\nHTTP %{http_code}\n" -X POST \
+    -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+    --data "{\"schema\": \"$(tr -d '\n' < infra/schemas/pedido-v2-compatible.avsc | sed 's/"/\\"/g')\"}" \
+    http://localhost:8081/subjects/novatech.lab10.pedidos-value/versions \
+  | fold -s -w 88
 curl -s http://localhost:8081/subjects/novatech.lab10.pedidos-value/versions
 ```
 
 ```
-{ "is_compatible": true }
-{ "id": 2, "version": 2, ... }
+{"is_compatible":true}
+HTTP 200
+{"id":2,"version":2,...}
+HTTP 200
 [1,2]
 ```
 
@@ -412,22 +443,30 @@ curl -s http://localhost:8081/subjects/novatech.lab10.pedidos-value/versions
 
 ---
 
-## 🔴 Nota de riesgo · `python3`
+## Nota · los envoltorios de `schema-cli/` y `python3`
 
-Los cuatro envoltorios de `schema-cli/` usan `python3` para escapar el schema y
-para imprimir la respuesta legible. **Git Bash para Windows no trae Python.**
-Si en la VM de Netec no está instalado, los cuatro fallan y con ellos los
-Bloques 2 y 4 completos.
+**El recorrido de este guion no depende de `python3`.** Los seis comandos del
+Registry son `curl`, y `curl` viene con Git Bash.
 
-**Compruébalo en la VM antes de la clase, no en la clase:**
+Eso es deliberado: los cuatro envoltorios de `schema-cli/` usan `python3` para
+escapar el schema y para formatear la salida, y **Git Bash para Windows no trae
+Python**. Si en la VM de Netec no está, los cuatro mueren antes de llegar al
+`curl` —por el `set -euo pipefail`— y el laboratorio seguiría funcionando igual.
+
+**Aun así, compruébalo antes de la clase**, porque si está, los envoltorios son
+más cómodos y la salida se lee mejor:
 
 ```bash
 python3 --version
 schema-cli/list-subjects.sh
 ```
 
-Si el primero falla, avisa. **No tiene arreglo en vivo** y hay que resolverlo
-antes, no durante.
+**Y hay una ganancia pedagógica en el `curl` que conviene decir en voz alta:**
+
+> «Fíjense en que aquí no hay ninguna herramienta de Kafka. Esto es `curl`
+> contra una API REST. Schema Registry no es magia: es un servicio HTTP, y todo
+> lo que hicimos hoy se puede hacer desde cualquier cosa que sepa hablar HTTP —
+> su *pipeline*, su tablero, un script de dos líneas.»
 
 ---
 
