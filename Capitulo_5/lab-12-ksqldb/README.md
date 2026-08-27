@@ -2,7 +2,7 @@
 
 **Curso**: Administración de Confluent Apache Kafka (SUNAT)  
 **Unidad**: 4 - Avanzado, ecosistema, HA/DR y seguridad  
-**Duración estimada**: ~60 minutos
+**Duración estimada**: 20 minutos de dictado · 17 segundos de recorrido medidos (+66 s de siembra de datos, antes de clase)
 
 ---
 
@@ -45,7 +45,16 @@ bin/start-lab.sh
 
 ⏰ La primera vez tarda 3-5 minutos (descarga de imágenes + arranque de ksqlDB).
 
-Luego abre `guia/01-ksqldb-fundamentos.md`.
+Luego abre la guía: [`guia/01-sql-sobre-lo-que-todavia-no-paso.md`](guia/01-sql-sobre-lo-que-todavia-no-paso.md).
+
+| Carpeta | Para qué |
+|---|---|
+| `guia/` | El recorrido de clase, con la explicación antes de cada comando |
+| `instructor/GUION.md` | Lo que el relator usa en pantalla: qué decir, qué preguntar, y el tiempo por bloque |
+| `practica/PASOS.md` | Los comandos en seco, para repetir el lab solo después de la clase |
+| `soluciones/` | Respuestas de referencia |
+
+🔴 **El `start-lab.sh` no siembra los datos.** ksqlDB necesita pedidos Avro con sus esquemas registrados antes de que haya nada que consultar: son cuatro comandos y 66 segundos, y están en *Para profundizar A* de la guía.
 
 ---
 
