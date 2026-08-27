@@ -2,7 +2,7 @@
 
 **Curso**: Administración de Confluent Apache Kafka (SUNAT)  
 **Unidad**: 4 - Avanzado, ecosistema, HA/DR y seguridad  
-**Duración estimada**: ~60 minutos (sesión de cierre; el flujo automatizado permite ajustar al grupo)
+**Duración estimada**: 20 minutos de dictado · 24 segundos de recorrido medidos (+19 s de arranque, que incluyen la PKI completa)
 
 ---
 
@@ -60,7 +60,16 @@ chmod +x bin/*.sh kafka-cli/*.sh infra/scripts/*.sh
 bin/start-lab.sh
 ```
 
-`start-lab.sh` genera los certificados, levanta el clúster seguro, crea los tópicos y las ACLs. Luego abre `guia/01-tls-y-certificados.md`.
+`start-lab.sh` genera los certificados, levanta el clúster seguro, crea los tópicos y las ACLs. Luego abre la guía: [`guia/01-seguridad-y-lo-que-rechaza.md`](guia/01-seguridad-y-lo-que-rechaza.md).
+
+| Carpeta | Para qué |
+|---|---|
+| `guia/` | El recorrido de clase, con la explicación antes de cada comando |
+| `instructor/GUION.md` | Lo que el relator usa en pantalla: qué decir, qué preguntar, y el tiempo por bloque |
+| `practica/PASOS.md` | Los comandos en seco, para repetir el lab solo después de la clase |
+| `soluciones/` | Respuestas de referencia |
+
+🔴 **Dos de los cinco comandos del recorrido tienen que fallar.** Si funcionaran, el clúster estaría roto.
 
 Para el cierre integrador automático: `bin/run-capstone.sh`.
 
