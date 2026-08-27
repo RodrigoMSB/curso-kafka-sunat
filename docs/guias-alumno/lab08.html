@@ -132,6 +132,14 @@ kafka-cli/describe-topic.sh novatech.lab08.pedidos</pre>
 </div>
 
 <div class="rescate">
+  <span class="rot">Si sale <code>port is already allocated</code></span>
+  <p>Hay otro laboratorio del curso arriba que el <code>start-lab.sh</code> no supo bajar. <b>Este limpia <code>kafka-broker-1</code> a <code>-4</code> y <code>kafbat-ui</code>, y se le escapan <code>kafka-broker</code>, el del lab 01, y <code>gps-producer</code>, que dejan corriendo los labs 05, 06 y 07.</b></p>
+  <p style="margin-bottom:0">Míralo y bájalo tú:</p>
+  <pre style="margin-bottom:0">docker ps --filter name=kafka --format "{{.Names}}\t{{.Label \"com.docker.compose.project\"}}"
+docker compose -p novatech-labNN down -v --remove-orphans</pre>
+</div>
+
+<div class="rescate">
   <span class="rot">Si sale <code>Timeout: solo 2/3 brokers están operativos</code></span>
   <p style="margin-bottom:0">Es memoria. <b>Este laboratorio va a levantar cuatro brokers</b>, así que necesita más que los anteriores. Sube Docker Desktop a 8 GB en <i>Resources</i> y ejecuta <code>bin/start-lab.sh</code> otra vez.</p>
 </div>

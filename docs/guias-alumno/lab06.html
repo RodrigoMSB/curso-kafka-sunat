@@ -95,7 +95,7 @@ bin/start-lab.sh</pre>
 <div class="desglose">
 <div><span class="flag">cd Capitulo_3/lab-06-produccion-consumo-cli</span> — la carpeta de este laboratorio. <b>Es distinta de la del 05</b>, aunque el clúster que levanta sea equivalente</div>
 <div><span class="flag">chmod +x bin/*.sh kafka-cli/*.sh</span> — permiso de ejecución para los scripts. En Git Bash a veces se pierde al clonar</div>
-<div><span class="flag">bin/start-lab.sh</span> — levanta los tres brokers y la interfaz web. <b>Si había otro laboratorio del curso arriba, lo baja primero</b></div>
+<div><span class="flag">bin/start-lab.sh</span> — levanta los tres brokers y la interfaz web. <b>Antes limpia cinco nombres de contenedor</b> que puedan haber quedado de otro lab del curso, que son <code>kafka-broker-1</code>, <code>-2</code>, <code>-3</code>, <code>kafbat-ui</code> y <code>gps-producer</code>. <b>No limpia <code>kafka-broker</code>, el del lab 01, ni <code>kafka-broker-4</code>, el del lab 08</b>, así que si vienes de uno de esos dos bájalo tú con <code>docker compose -p novatech-labNN down -v</code></div>
 </div>
 
 <div class="salida-rot">Lo que vas a ver · recortado, el original trae un banner grande</div>

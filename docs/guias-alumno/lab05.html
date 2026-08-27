@@ -45,9 +45,14 @@
   <p><b>Uno.</b> Actualiza el repositorio, porque el material se corrige durante el curso:</p>
   <pre>cd /c/KAFKA/curso-kafka-sunat
 git pull</pre>
-  <p><b>Dos.</b> Comprueba que no tengas otro laboratorio levantado:</p>
-  <pre>docker ps --filter name=kafka-broker</pre>
-  <p style="margin-bottom:0">Si aparece algo, no te preocupes. <b>El script del paso 1 baja solo los contenedores de otros laboratorios del curso.</b> Lo que no toca, ni va a tocar, es nada que no sea del curso.</p>
+  <p><b>Dos.</b> Comprueba si tienes otro laboratorio del curso levantado:</p>
+  <pre>docker ps --filter name=kafka --format "{{.Names}}\t{{.Label \"com.docker.compose.project\"}}"</pre>
+  <p>La segunda columna te dice de qué laboratorio es cada contenedor. <b>Si aparece alguno, bájalo tú</b>, poniendo el número que veas:</p>
+  <pre>docker compose -p novatech-labNN down -v --remove-orphans</pre>
+  <div class="caja ojo" style="margin-bottom:0">
+    <span class="rot">Y no confíes en que el script lo haga por ti</span>
+    <p style="margin-bottom:0"><code>bin/start-lab.sh</code> elimina los contenedores llamados <code>kafka-broker-1</code>, <code>-2</code>, <code>-3</code>, <code>kafbat-ui</code> y <code>gps-producer</code> que sean de otro laboratorio del curso. <b>No elimina <code>kafka-broker</code>, que es el del laboratorio 01 y no lleva número, ni <code>kafka-broker-4</code>, que es el del laboratorio 08.</b> Si vienes de uno de esos dos, el puerto va a seguir ocupado y el arranque va a fallar.</p>
+  </div>
 </div>
 
 <h3>El caso</h3>
@@ -84,7 +89,7 @@ bin/start-lab.sh</pre>
 <div><span class="flag">cd Capitulo_3/lab-05-operacion-topicos</span> — entra a la carpeta del laboratorio. <b>Todos los comandos de esta guía se ejecutan desde aquí</b>, no desde otra carpeta</div>
 <div><span class="flag">chmod +x</span> — le da permiso de ejecución a los scripts. En Windows con Git Bash a veces se pierde al clonar. <b>Si ya lo hiciste antes, ejecutarlo de nuevo no hace daño</b></div>
 <div><span class="flag">bin/*.sh kafka-cli/*.sh infra/scripts/*.sh</span> — las tres carpetas que traen scripts. El asterisco significa «todos los archivos que terminan en <code>.sh</code>»</div>
-<div><span class="flag">bin/start-lab.sh</span> — el script que levanta el laboratorio. Baja lo que haya quedado de otro lab del curso, crea los tres brokers, espera a que estén sanos, y levanta la interfaz web</div>
+<div><span class="flag">bin/start-lab.sh</span> — el script que levanta el laboratorio. Crea los tres brokers, espera a que estén sanos, y levanta la interfaz web. <b>Antes limpia cinco nombres de contenedor que puedan haber quedado de otro lab del curso</b>, y esos cinco no son todos, como dice la caja de arriba</div>
 </div>
 
 <div class="salida-rot">Lo que vas a ver · recortado, el original trae un banner grande</div>

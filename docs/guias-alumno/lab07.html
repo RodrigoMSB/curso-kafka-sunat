@@ -126,7 +126,10 @@ bin/start-lab.sh</pre>
 
 <div class="rescate">
   <span class="rot">Si algo falla al levantar</span>
-  <p style="margin-bottom:0">Es lo mismo de los laboratorios anteriores. <b>Docker apagado</b>, abre Docker Desktop. <b><code>port is already allocated</code></b>, algo usa el 9092, el 9093, el 9094 o el 8090. <b><code>Timeout: solo 2/3 brokers</code></b>, sube Docker a 6 GB y repite.</p>
+  <p>Es lo mismo de los laboratorios anteriores. <b>Docker apagado</b>, abre Docker Desktop. <b><code>Timeout: solo 2/3 brokers</code></b>, sube Docker a 6 GB y repite.</p>
+  <p style="margin-bottom:0">Y si dice <b><code>port is already allocated</code></b>, hay otro laboratorio del curso arriba que el <code>start-lab.sh</code> no supo bajar. <b>Los dos que se le escapan son <code>kafka-broker</code>, el del lab 01, y <code>kafka-broker-4</code>, el del lab 08.</b> Míralo y bájalo tú:</p>
+  <pre style="margin-bottom:0">docker ps --filter name=kafka --format "{{.Names}}\t{{.Label \"com.docker.compose.project\"}}"
+docker compose -p novatech-labNN down -v --remove-orphans</pre>
 </div>
 
 <div class="np"></div>
