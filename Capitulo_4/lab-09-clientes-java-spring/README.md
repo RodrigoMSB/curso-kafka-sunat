@@ -2,7 +2,7 @@
 
 **Curso**: Administración de Confluent Apache Kafka (SUNAT)  
 **Unidad**: 4 - Avanzado, ecosistema, HA/DR y seguridad  
-**Duración estimada**: ~60 minutos
+**Duración estimada**: 20 minutos de dictado · 8 segundos de ejecución medidos
 
 ---
 
@@ -64,7 +64,16 @@ java -version   # debe decir 21
 mvn -version
 ```
 
-Luego abre `guia/01-cliente-kafka-clients.md`.
+Luego abre la guía: [`guia/01-clientes-y-donde-quedaron-tus-flags.md`](guia/01-clientes-y-donde-quedaron-tus-flags.md).
+
+| Carpeta | Para qué |
+|---|---|
+| `guia/` | El recorrido de clase, con la explicación antes de cada comando |
+| `instructor/GUION.md` | Lo que el relator usa en pantalla: qué decir, qué preguntar, y el tiempo por bloque |
+| `practica/PASOS.md` | Los comandos en seco, para repetir el lab solo después de la clase |
+| `soluciones/` | Respuestas de referencia |
+
+🔴 **Este lab necesita Maven en la máquina** (`mvn -v`). Es lo único del curso que no vive en Docker.
 
 ---
 

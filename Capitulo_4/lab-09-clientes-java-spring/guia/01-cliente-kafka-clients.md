@@ -1,61 +1,16 @@
-# Parte 1: Cliente con kafka-clients (API nativa)
+# Esta guía se movió
 
-## Objetivo
+El Lab 09 ahora tiene **una sola guía**:
 
-Producir y consumir mensajes con la librería cruda `kafka-clients`, entendiendo la configuración mínima de un cliente.
+### → [`01-clientes-y-donde-quedaron-tus-flags.md`](01-clientes-y-donde-quedaron-tus-flags.md)
 
-## Contexto
+Lo que antes estaba repartido en cuatro archivos (`01-cliente-kafka-clients`,
+`02-serializacion`, `03-spring-kafka` y `04-consumer-groups-y-desafio`) está
+ahí: el recorrido principal en la sección **5 · LOS PASOS**, y el resto de las
+actividades —el consumidor Java, los serializers, Spring, los consumer groups y
+el desafío— en la sección **7 · PARA PROFUNDIZAR**, con su comando completo.
 
-Antes de cualquier framework, así se habla con Kafka desde Java: defines unas propiedades, creas un `KafkaProducer` o `KafkaConsumer`, y envías o haces `poll`. El proyecto `cliente-java/` ya trae ese código.
+Los originales quedaron en `_fuente-extra/guia/`.
 
----
-
-## Actividad 1: Compilar el proyecto
-
-```bash
-cd cliente-java
-mvn -q compile
-```
-
-Si compila sin errores, las dependencias (kafka-clients 4.2.1, Jackson 3) se resolvieron bien.
-
-> Si el primer compile falla por una versión, revisa `pom.xml` (ver `docs/troubleshooting.md`).
-
----
-
-## Actividad 2: Arrancar el consumidor (déjalo escuchando)
-
-En una terminal:
-
-```bash
-mvn -q compile exec:java -Dexec.mainClass="com.novatech.kafka.ConsumidorApp" -Dexec.args="grupo-java-nativo"
-```
-
-Queda esperando mensajes. Déjalo abierto.
-
----
-
-## Actividad 3: Producir desde otra terminal
-
-En una segunda terminal (mismo directorio `cliente-java/`):
-
-```bash
-mvn -q compile exec:java -Dexec.mainClass="com.novatech.kafka.ProductorApp" -Dexec.args="20"
-```
-
-Envía 20 pedidos. Verás la partición y el offset de cada uno. Mira la primera terminal: el consumidor los recibe.
-
-### Anota
-
-| Pregunta | Tu respuesta |
-|----------|-------------|
-| ¿En qué particiones cayeron los 20 pedidos? | |
-| ¿El consumidor los recibió en el mismo orden dentro de cada partición? | |
-| ¿Qué 4 propiedades mínimas configura el productor? (revisa `ProductorApp`) | |
-| ¿Qué hace `acks=all`? | |
-
----
-
-## Siguiente paso
-
-Continúa con [Parte 2: Serialización de objetos](02-serializacion.md).
+> Este archivo existe solo porque `bin/start-lab.sh` todavía imprime el nombre
+> antiguo al terminar. Se puede borrar en cuanto esa línea se actualice.
