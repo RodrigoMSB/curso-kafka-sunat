@@ -38,7 +38,7 @@ fi
 echo -e "${CYAN}[1/3] Limpiando estado actual...${NC}"
 SOL="$(find soluciones -name 'docker-compose*.yml' 2>/dev/null | head -1)"
 [ -n "$SOL" ] && docker compose -f "$SOL" down -v --remove-orphans >/dev/null 2>&1 || true
-botar_contenedores_del_curso "95-recuperar-lab" kafka-broker-1 kafka-broker-2 kafka-broker-3 || exit 1
+botar_contenedores_del_curso "95-recuperar-lab" "$PROYECTO" || exit 1
 
 echo -e "${CYAN}[2/3] Reconstruyendo línea base funcional...${NC}"
 docker compose -f "$SOL" up -d >/dev/null 2>&1

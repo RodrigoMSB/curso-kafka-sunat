@@ -69,7 +69,7 @@ else
     echo -e "${YELLOW}[1/3] Preparando el terreno...${NC}"
     # Solo llega aqui si NO hay un contenedor nuestro. Si el nombre lo tiene
     # algo ajeno, esta funcion lo dice y aborta sin tocarlo.
-    botar_contenedores_del_curso "start-lab" "$CONTENEDOR" || exit 1
+    botar_contenedores_del_curso "start-lab" "$PROYECTO" || exit 1
     compose down --remove-orphans >/dev/null 2>&1 || true
 
     echo ""

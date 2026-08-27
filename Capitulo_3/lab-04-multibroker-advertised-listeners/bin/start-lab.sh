@@ -22,25 +22,14 @@ source "$(dirname "$0")/common.sh"
 # un contenedor ajeno que ocupe el nombre NO se toca (CONVENCIONES).
 
 LAB_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-PROYECTO="novatech-lab04"
 COMPOSE_FILE="${LAB_DIR}/soluciones/docker-compose-3-brokers.SOLUCION.yml"
 CONTENEDORES="kafka-broker-1 kafka-broker-2 kafka-broker-3"
-
-# ── 1. Bajar otros labs del curso que esten arriba ──────────
-# Comparten container_name (deuda declarada), asi que dos labs a la vez
-# no pueden convivir. Se baja por PROYECTO, nunca por patron de nombre.
-OTROS=$(docker ps --format '{{.Label "com.docker.compose.project"}}' 2>/dev/null \
-        | sort -u | grep '^novatech-lab' | grep -v "^${PROYECTO}$" || true)
-for p in $OTROS; do
-    echo -e "${YELLOW}[start-lab] bajando el proyecto ${p} (otro lab del curso esta arriba)${NC}"
-    docker compose -p "$p" down -v --remove-orphans >/dev/null 2>&1 || true
-done
 
 # ── 2. Conflictos de nombre, por etiqueta y en pantalla ─────
 # El contrato vive en bin/common.sh: solo se bota lo etiquetado
 # novatech-lab*, cada remocion se imprime, y un nombre tomado por algo
 # ajeno al curso no se toca (tests/CONVENCIONES-TEST.md).
-botar_contenedores_del_curso "start-lab" $CONTENEDORES || exit 1
+botar_contenedores_del_curso "start-lab" "$PROYECTO" || exit 1
 
 # ── 3. Levantar la solucion de referencia ───────────────────
 echo -e "${YELLOW}[start-lab] levantando ${PROYECTO} desde soluciones/docker-compose-3-brokers.SOLUCION.yml${NC}"

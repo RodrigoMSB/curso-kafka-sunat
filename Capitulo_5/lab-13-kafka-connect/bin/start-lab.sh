@@ -68,7 +68,7 @@ echo -e "${YELLOW}[1/6] Levantando contenedores del clúster NovaTech Lab 13...$
 #     cambia de lab sin haber corrido stop-lab.sh del anterior, los nombres
 #     colisionan ("Conflict: container name already in use").
 # (2) docker compose down -v --remove-orphans del proyecto actual.
-botar_contenedores_del_curso "start-lab" kafka-broker-1 kafka-broker-2 kafka-broker-3 kafbat-ui gps-producer || exit 1
+botar_contenedores_del_curso "start-lab" "$PROYECTO" || exit 1
 compose down -v --remove-orphans 2>/dev/null || true
 
 compose up -d

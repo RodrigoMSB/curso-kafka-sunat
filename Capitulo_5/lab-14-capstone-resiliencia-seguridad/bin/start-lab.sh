@@ -53,13 +53,18 @@ fi
 ficha_op "INICIAR EL LAB 14" \
     'Genera los certificados TLS, levanta el clúster seguro y carga tópicos y ACLs' \
     'los certificados que ya existan: solo genera los que falten' \
-    "nada de otros labs: este arranque no bota contenedores ajenos" \
+    "contenedores de OTROS labs del curso que esten levantados o parados; sus volumenes no" \
     'al empezar el lab, y para reanudarlo después de un stop'
 
 echo -e "${YELLOW}[1/6] Generando certificados TLS (si no existen)...${NC}"
 bash "$(dirname "$0")/generate-certs.sh"
 
 echo ""
+# Hasta la SPEC-80 este arranque no limpiaba nada, y encadenar 12 -> 14 fallaba
+# con "Conflict. The container name /kafka-broker-3 is already in use": el
+# stop-lab del 12 solo detiene, no elimina, asi que los nombres seguian tomados.
+botar_contenedores_del_curso "start-lab" "$PROYECTO" || exit 1
+
 echo -e "${YELLOW}[2/6] Levantando contenedores del clúster NovaTech Lab 14...${NC}"
 compose up -d
 

@@ -67,7 +67,7 @@ ficha_op "INICIAR EL LAB 10" \
 
 echo -e "${YELLOW}[1/5] Levantando contenedores (3 brokers + REST Proxy + Kafbat)...${NC}"
 # Cleanup defensivo de contenedores por nombre canónico (cross-lab).
-botar_contenedores_del_curso "start-lab" kafka-broker-1 kafka-broker-2 kafka-broker-3 kafka-rest kafbat-ui || exit 1
+botar_contenedores_del_curso "start-lab" "$PROYECTO" || exit 1
 compose down -v --remove-orphans 2>/dev/null || true
 
 compose up -d

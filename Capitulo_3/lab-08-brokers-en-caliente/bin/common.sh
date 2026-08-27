@@ -132,26 +132,52 @@ fi
 #   - un nombre tomado por algo ajeno NO se toca: se dice quien lo tiene y se
 #     falla con instruccion. Un conflicto con algo de afuera se resuelve a mano.
 # Devuelve 1 si encontro un duenio ajeno.
-botar_contenedores_del_curso() {  # <etiqueta> <contenedor>...
-    local quien="$1"; shift
-    local c existe duenio ajeno=0
-    for c in "$@"; do
-        existe=$(docker ps -a --filter "name=^${c}$" --format "{{.Names}}" 2>/dev/null | head -1)
-        [ -z "$existe" ] && continue
-        duenio=$(docker inspect "$c" --format "{{index .Config.Labels \"com.docker.compose.project\"}}" 2>/dev/null || true)
+botar_contenedores_del_curso() {  # <etiqueta> <proyecto_propio>
+    # Encuentra por ETIQUETA de proyecto compose, no por lista de nombres.
+    #
+    # Por que (SPEC-80): una lista cableada solo cubre los contenedores que
+    # ESE lab conoce, y se le escapan los que dejo cualquier otro. Eso rompia
+    # cinco cadenas de labs encadenados -- 01->05, 07->08, 08->05, 11->12 y
+    # 12->14 --. La etiqueta las cierra todas de una vez.
+    #
+    # Solo toca contenedores cuyo proyecto empieza por 'novatech-lab' y que NO
+    # sean el del lab que esta arrancando: lo propio lo maneja el 'compose
+    # down' del propio script. Nada ajeno al curso se toca ni se nombra.
+    # Los volumenes NO se tocan: se botan contenedores y nada mas.
+    local quien="$1" propio="$2"
+    local id duenio nombre n=0 lista
+
+    if [ -z "$propio" ]; then
+        echo -e "${RED}[${quien}] no recibi el proyecto propio.${NC}" >&2
+        echo -e "${RED}          Sin el no puedo excluirme a mi mismo, asi que no toco nada.${NC}" >&2
+        return 1
+    fi
+
+    # El --filter de docker compara por igualdad exacta, asi que solo puede
+    # pedir "que tenga la etiqueta". El prefijo se comprueba abajo, en el case.
+    lista=$(docker ps -a --filter "label=com.docker.compose.project" \
+            --format "{{.ID}} {{.Label \"com.docker.compose.project\"}} {{.Names}}" 2>/dev/null)
+
+    # while + here-doc, y no 'for x in $(...)': bajo zsh el for NO divide
+    # palabras y barreria un solo elemento. Sin tuberia, ademas, para que el
+    # contador sobreviva (bash 3.2 no tiene lastpipe).
+    while read -r id duenio nombre; do
+        [ -z "$id" ] && continue
         case "$duenio" in
-            novatech-lab*)
-                echo -e "${YELLOW}[${quien}] botando ${c} (proyecto ${duenio})${NC}"
-                docker rm -f "$c" >/dev/null 2>&1 || true
-                ;;
-            *)
-                echo -e "${RED}[${quien}] el nombre '${c}' lo tiene un contenedor que NO es del curso.${NC}" >&2
-                echo -e "${RED}          proyecto compose: ${duenio:-<sin etiqueta>}${NC}" >&2
-                echo -e "${RED}          No se toca nada ajeno. Resolvelo a mano y volve a ejecutar:${NC}" >&2
-                echo -e "${RED}            docker rm -f ${c}    # solo si ese contenedor es descartable${NC}" >&2
-                ajeno=1
-                ;;
+            novatech-lab*) ;;
+            *) continue ;;
         esac
-    done
-    return "$ajeno"
+        [ "$duenio" = "$propio" ] && continue
+        echo -e "${YELLOW}[${quien}] botando ${nombre} (proyecto ${duenio})${NC}"
+        docker rm -f "$id" >/dev/null 2>&1 || true
+        n=$((n+1))
+    done <<EOF
+$lista
+EOF
+
+    if [ "$n" -gt 0 ]; then
+        echo -e "${YELLOW}[${quien}] ${n} contenedor(es) de otros labs del curso eliminados.${NC}"
+        echo -e "${YELLOW}          Sus volumenes NO se tocaron.${NC}"
+    fi
+    return 0
 }

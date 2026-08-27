@@ -51,7 +51,7 @@ ficha_op "INICIAR EL LAB 11" \
     'al empezar el lab, o para volver a un arranque limpio'
 
 echo -e "${YELLOW}[1/5] Levantando contenedores del clúster NovaTech Lab 11...${NC}"
-botar_contenedores_del_curso "start-lab" kafka-broker-1 kafka-broker-2 kafka-broker-3 kafbat-ui gps-producer || exit 1
+botar_contenedores_del_curso "start-lab" "$PROYECTO" || exit 1
 compose down -v --remove-orphans 2>/dev/null || true
 
 compose up -d
