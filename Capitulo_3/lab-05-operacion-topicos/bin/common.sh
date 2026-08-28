@@ -172,7 +172,14 @@ EOF
     while read -r red; do
         [ -z "$red" ] && continue
         case "$red" in novatech-lab*) ;; *) continue ;; esac
-        case "$red" in ${propio}*) continue ;; esac
+        # Ojo con el separador. Si el propio fuera novatech-lab08, un patron
+        # ${propio}* se tragaria tambien la red de novatech-lab08b, que es OTRO
+        # lab del curso y si debe limpiarse: quedaba acumulando una red por
+        # detras. Medido. Se ancla el _ que compose pone entre el proyecto y la
+        # clave de red; ninguno de los quince composes fija name:, asi que ese
+        # separador siempre esta. La colision solo va en un sentido: con propio
+        # novatech-lab08b la red de novatech-lab08 ya se limpiaba bien.
+        case "$red" in "$propio"|"${propio}_"*) continue ;; esac
         [ "$(docker network inspect "$red" --format '{{len .Containers}}' 2>/dev/null)" = "0" ] || continue
         if docker network rm "$red" >/dev/null 2>&1; then
             echo -e "${YELLOW}[${quien}] red huerfana ${red} eliminada${NC}"
