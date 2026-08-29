@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><link rel="stylesheet" href="estilo-alumno.css"></head>
+<body>
+
+<div class="portada">
+  <div class="kicker">C U R S O &nbsp; D E &nbsp; A D M I N I S T R A C I Ó N &nbsp; D E &nbsp; K A F K A</div>
+  <div class="labnum">LABORATORIO 09</div>
+  <h1>Dónde<br>quedaron<br>tus flags</h1>
+  <div class="sub">Un cliente Java por dentro, y por qué el broker no lo distingue de tu consola.<br>Guía para hacerlo por tu cuenta, paso a paso</div>
+  <div class="meta">
+    Confluent Platform 8.2.0 · 3 brokers KRaft · Maven y Java 21<br>
+    Duración estimada · 45 minutos<br>
+    NovaTech Logistics · caso de estudio
+  </div>
+</div>
+
+<h2>Antes de empezar</h2>
+
+<h3>Qué vas a lograr</h3>
+
+<p>Este laboratorio no es para que escribas código. Es para que el día que un desarrollador te mande un programa que «no conecta con Kafka», puedas abrir el archivo, encontrar las cuatro líneas que importan, y decirle cuál está mal.</p>
+
+<p>Eso es trabajo de administración. Y no se puede hacer sin haber visto nunca un cliente por dentro.</p>
+
+<p>Al final vas a haber producido mensajes con un programa Java, y los vas a haber leído con <b>exactamente el mismo comando de consola del laboratorio 06</b>, sin adaptar nada.</p>
+
+<div class="afirmacion">
+  <span class="rot">Lo que este laboratorio demuestra</span>
+  <div class="txt">Lo que hiciste con dos comandos de consola son veinte líneas de código, y hace exactamente lo mismo.</div>
+</div>
+
+<p><b>Si al final dices «es mi comando de siempre, escrito de otra forma», el laboratorio cumplió.</b></p>
+
+<h3>Qué necesitas tener listo</h3>
+
+<table>
+<tr><th>Requisito</th><th>Cómo lo compruebas</th></tr>
+<tr><td>Docker Desktop corriendo, con 6 GB de RAM</td><td>Ajustes de Docker Desktop, pestaña <i>Resources</i></td></tr>
+<tr><td>Git Bash abierto en la carpeta del lab</td><td><code>cd Capitulo_4/lab-09-clientes-java-spring</code></td></tr>
+<tr><td><b>Maven instalado</b></td><td><code>mvn -v</code> tiene que contestar con un número de versión. <b>Es la única pieza de este laboratorio que no vive en Docker</b></td></tr>
+<tr><td>Los puertos 9092, 9093, 9094 y 8090 libres</td><td>El paso 1 te avisa si no lo están</td></tr>
+<tr><td>Haber hecho el laboratorio 06</td><td>Hoy se compara el código Java contra los comandos de aquel día</td></tr>
+</table>
+
+<div class="caja ojo">
+  <span class="rot">Comprueba Maven antes de empezar, no en el paso 4</span>
+  <p>Escribe esto ahora:</p>
+  <pre>mvn -v</pre>
+  <p style="margin-bottom:0">Si contesta <code>bash: mvn: command not found</code>, los pasos 4 en adelante no corren. <b>Los pasos 1 al 3 sí</b>, y son la mitad del laboratorio. Lee el rescate del paso 4 antes de decidir qué haces.</p>
+</div>
+
+<h3>El caso</h3>
+
+<div class="caja">
+  <p>Un martes te llega un correo del equipo de desarrollo de <b>NovaTech Logistics</b>. Dice que el servicio de comprobantes no está publicando en Kafka, y pregunta si pueden revisar el clúster.</p>
+  <p>Revisas el clúster. Los tres brokers están arriba. El tópico existe, con sus particiones y sus réplicas al día. No hay nada que revisar, porque <b>el clúster está perfecto</b>.</p>
+  <p>Y aquí la conversación se puede ir por dos caminos.</p>
+  <p>En el primero contestas «por aquí está todo bien» y devuelves el correo. Dos días después el problema sigue, ahora con más gente copiada, y nadie ha mirado el único lugar donde puede estar.</p>
+  <p>En el segundo pides el archivo. Lo abres. Son treinta líneas y veinticinco no te importan. Las que importan son cuatro, y las reconoces porque son las mismas cosas que tú escribiste con guiones en el laboratorio 06. Encuentras que el <code>bootstrap.servers</code> apunta a un puerto interno que desde la máquina del desarrollador no existe, y contestas eso.</p>
+  <p style="margin-bottom:0"><b>La diferencia entre los dos caminos no es saber Java.</b> Es haber visto una vez que el código de un cliente Kafka no tiene nada nuevo adentro.</p>
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">Y la segunda mitad, que es la que duele</span>
+  <p style="margin-bottom:0"><b>El broker no puede ayudarte a distinguir.</b> Para él, un cliente Java y una consola son el mismo cliente. No hay un log que diga «este mensaje vino de una aplicación». Si el mensaje no llegó, el broker no tiene nada que contarte.</p>
+</div>
+
+<div class="caja abuelita">
+  <span class="rot">La metáfora · hoy entra la caja registradora</span>
+  <p>Kafka sigue siendo <b>el restaurante</b>. El <b>mozo</b> es el broker, el <b>tipo de comanda</b> es el tópico, los <b>sectores del salón</b> son las particiones, el <b>cocinero</b> es el consumidor y la <b>brigada</b> es su grupo.</p>
+  <p>Hoy <b>no se suma ninguna pieza nueva</b>, y ésa es justamente la lección.</p>
+  <p>Hasta ahora, cuando querías meter una comanda, la escribías tú, a mano, en el talonario. Eso era <code>kafka-console-producer</code>. Un cliente Java es <b>la misma comanda escrita por una caja registradora</b> en vez de por una mano.</p>
+  <p>La caja tiene que saber lo mismo que sabía la mano. A qué mozo entregarle la comanda, de qué tipo es, y si lleva número de mesa. Ni más ni menos.</p>
+  <p style="margin-bottom:0"><b>Y el mozo no sabe si la comanda la escribió una mano o una máquina.</b> Le llega, la clava en el pincho, y sigue. No tiene forma de saberlo, y por eso no te lo puede decir.</p>
+</div>
+
+<div class="caja sunat">
+  <span class="rot">La regla que sale de ahí</span>
+  <p style="margin-bottom:0">Un cliente no es una capa sobre Kafka. <b>Es un cliente de Kafka, igual que la consola.</b> Lo que cambia es quién teclea.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 1 de 7</span>Levantar el clúster</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Encender los tres brokers y crear el tópico de trabajo. Es el mismo arranque de los laboratorios anteriores y no trae nada nuevo.</p>
+
+<h3>El comando</h3>
+
+<pre>cd Capitulo_4/lab-09-clientes-java-spring
+chmod +x bin/*.sh
+bin/start-lab.sh</pre>
+
+<div class="desglose">
+<div><span class="flag">chmod +x bin/*.sh</span> — le da permiso de ejecución a los scripts. En Windows los archivos llegan sin ese permiso, así que esta línea hace falta <b>una sola vez</b></div>
+<div><span class="flag">bin/start-lab.sh</span> — levanta los tres brokers, espera a que los tres queden <i>healthy</i>, levanta Kafbat UI y crea el tópico <code>novatech.lab09.pedidos</code> con 3 particiones y factor de réplica 3</div>
+</div>
+
+<div class="salida-rot">El final de lo que vas a ver · recortado</div>
+<div class="salida">[2/4] Esperando a que los 3 brokers estén operativos...
+  ✓ 3/3 brokers operativos
+
+[3/4] Esperando a que Kafbat UI esté disponible...
+  ✓ Kafbat UI disponible
+
+[4/4] Inicializando tópico de trabajo...
+[OK] Clúster disponible
+Created topic novatech.lab09.pedidos.
+✓ Tópico 'novatech.lab09.pedidos' creado (3 particiones, RF 3)
+
+════════════════════════════════════════════════════════════
+  CLÚSTER NOVATECH LAB 09 OPERATIVO
+════════════════════════════════════════════════════════════
+
+  Componentes:
+    Broker 1:        localhost:9092
+    Broker 2:        localhost:9093
+    Broker 3:        localhost:9094
+    Kafbat UI:       http://localhost:8090</div>
+
+<div class="caja ojo">
+  <span class="rot">Un aviso que sale antes del «Created topic»</span>
+  <p style="margin-bottom:0">Aparece una línea larga que empieza con <code>WARNING: Due to limitations in metric names…</code> y habla de puntos y guiones bajos. <b>Sale siempre y no es un problema.</b> Kafka avisa de que un nombre de tópico con puntos podría chocar con otro en los nombres de sus métricas. El del curso no choca con nada.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>Hay cuatro contenedores arriba y los tres brokers dicen <code>healthy</code>. Compruébalo:</p>
+  <pre>docker ps --filter "label=com.docker.compose.project=novatech-lab09" \
+    --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'</pre>
+  <div class="salida">NAMES            STATUS                   PORTS
+kafbat-ui        Up 2 minutes             0.0.0.0:8090-&gt;8080/tcp, [::]:8090-&gt;8080/tcp
+kafka-broker-3   Up 2 minutes (healthy)   0.0.0.0:9094-&gt;9094/tcp, [::]:9094-&gt;9094/tcp
+kafka-broker-1   Up 2 minutes (healthy)   0.0.0.0:9092-&gt;9092/tcp, [::]:9092-&gt;9092/tcp
+kafka-broker-2   Up 2 minutes (healthy)   0.0.0.0:9093-&gt;9093/tcp, [::]:9093-&gt;9093/tcp</div>
+  <p>Y el tópico tiene 3 particiones, factor 3, y las tres réplicas de cada partición en ISR:</p>
+  <pre>docker exec kafka-broker-1 kafka-topics \
+    --bootstrap-server kafka-broker-1:29092 \
+    --describe --topic novatech.lab09.pedidos</pre>
+  <div class="salida" style="margin-bottom:0">Topic: novatech.lab09.pedidos	TopicId: _Lm85W0eRrafKN2uVvW61A	PartitionCount: 3	ReplicationFactor: 3	Configs: min.insync.replicas=2
+	Topic: novatech.lab09.pedidos	Partition: 0	Leader: 2	Replicas: 2,3,1	Isr: 2,3,1	Elr: 	LastKnownElr:
+	Topic: novatech.lab09.pedidos	Partition: 1	Leader: 3	Replicas: 3,1,2	Isr: 3,1,2	Elr: 	LastKnownElr:
+	Topic: novatech.lab09.pedidos	Partition: 2	Leader: 1	Replicas: 1,2,3	Isr: 1,2,3	Elr: 	LastKnownElr:</div>
+  <p style="margin:3mm 0 0 0"><b>El <code>TopicId</code> tuyo va a ser otro.</b> Se genera al crear el tópico. Lo que tiene que calzar es el <code>PartitionCount: 3</code>, el <code>ReplicationFactor: 3</code> y las tres réplicas en cada <code>Isr</code>.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si dice que el puerto ya está en uso</span>
+  <p>El síntoma es una línea de Docker que nombra <code>Bind for 0.0.0.0:9092 failed: port is already allocated</code>. Casi siempre es otro laboratorio del curso que quedó arriba.</p>
+  <p style="margin-bottom:0">Mira quién lo tiene y bájalo:</p>
+  <pre style="margin-bottom:0">docker ps --filter "label=com.docker.compose.project" \
+    --format '{{.Names}}\t{{.Label "com.docker.compose.project"}}'</pre>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si dice <code>Docker no está corriendo</code></span>
+  <p style="margin-bottom:0">Abre Docker Desktop y espera a que el icono deje de moverse. El script comprueba esto antes que nada y sale sin tocar nada.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si se queda en <code>2/3 brokers listos</code> y se acaba el tiempo</span>
+  <p>Es memoria. Tres brokers en 4 GB arrancan justos y a veces uno no llega.</p>
+  <p style="margin-bottom:0">Sube Docker Desktop a 6 GB en <i>Settings → Resources</i>, y vuelve a correr <code>bin/start-lab.sh</code>.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 2 de 7</span>Los flags que ya sabes</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Antes de abrir un archivo Java hay que tener fresco con qué se lo va a comparar. Éste es el comando con el que produjiste en el laboratorio 06, tal cual.</p>
+
+<div class="caja ojo">
+  <span class="rot">Este comando se mira, no se ejecuta</span>
+  <p style="margin-bottom:0">El tópico <code>novatech.validacion</code> es de otro laboratorio y aquí no existe. <b>Está escrito para que lo leas.</b> Si lo ejecutas por error, el comando se queda esperando y no pasa nada malo. Sal con <code>Ctrl+C</code>.</p>
+</div>
+
+<h3>El comando del laboratorio 06</h3>
+
+<pre>echo "RUC-20100066601:comprobante_1" | \
+docker exec -i kafka-broker-1 kafka-console-producer \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.validacion \
+    --property parse.key=true --property key.separator=:</pre>
+
+<div class="desglose">
+<div><span class="flag">docker exec -i</span> — ejecuta un comando dentro de un contenedor que ya corre. La <code>-i</code> mantiene la entrada abierta, que es lo que deja que el <code>echo</code> de la izquierda le llegue al productor. <b>Aquí no va <code>-t</code></b>, porque no hay una persona tecleando</div>
+<div><span class="flag">--bootstrap-server</span> — a qué clúster hablarle. Cualquier broker sirve, porque el primero al que le preguntas te presenta a los demás</div>
+<div><span class="flag">--topic</span> — a qué tópico escribir</div>
+<div><span class="flag">--property parse.key=true</span> — que la línea que escribes trae clave y valor pegados</div>
+<div><span class="flag">--property key.separator=:</span> — con qué carácter se parten</div>
+</div>
+
+<p>Quédate con las cuatro decisiones que tomaste al escribirlo, porque son las que vas a buscar en el archivo Java.</p>
+
+<table>
+<tr><th>Lo que decidiste</th><th>Con qué flag</th></tr>
+<tr><td>A qué clúster hablarle</td><td><code>--bootstrap-server</code></td></tr>
+<tr><td>A qué tópico escribir</td><td><code>--topic</code></td></tr>
+<tr><td>Si el mensaje lleva clave</td><td><code>--property parse.key=true</code></td></tr>
+<tr><td>Cómo separar la clave del valor</td><td><code>--property key.separator=:</code></td></tr>
+</table>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p style="margin-bottom:0">Puedes decir en voz alta, sin mirar la tabla, qué decidiste con cada uno de los cuatro flags. <b>Son cuatro decisiones, no cuatro palabras que se copian.</b> El paso 3 no funciona si no las tienes.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 3 de 7</span>El mismo comando, escrito en Java</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Abrir el archivo del productor y buscar en él tus cuatro flags. <b>No hay que entender Java para esto.</b> Hay que reconocer nombres.</p>
+
+<div class="concepto">
+  <span class="rot">Concepto · <i>properties</i></span>
+  Una lista de pares <b>clave igual valor</b> que se le entrega al cliente antes de arrancarlo. <b>Son tus flags.</b> Cada <code>--algo</code> que escribiste en el laboratorio 06 es una línea de esta lista, con otro nombre.
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · <code>KafkaProducer</code></span>
+  El objeto que abre la conexión y habla el protocolo de Kafka. Es lo que en la consola era el comando entero, o sea <code>kafka-console-producer</code>.
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · <code>ProducerRecord</code></span>
+  Un mensaje. A qué tópico va, con qué clave, y con qué valor. En la consola esto era <b>una línea de texto</b> que tú escribías y que partía el separador.
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · serializador</span>
+  Kafka <b>solo mueve bytes</b>. No sabe qué es un pedido, ni un número, ni una fecha. El <b>serializador</b> es la función que convierte tu objeto en bytes al escribir, y el <b>deserializador</b> la que los vuelve a convertir al leer. En la consola nunca lo viste porque el texto ya era bytes.
+</div>
+
+<h3>El comando</h3>
+
+<pre>cat cliente-java/src/main/java/com/novatech/kafka/ProductorApp.java</pre>
+
+<div class="desglose">
+<div><span class="flag">cat</span> — imprime un archivo completo en la terminal. <b>Aquí no hay ningún <code>docker</code> adelante</b>, porque el archivo está en tu disco, no dentro de un contenedor</div>
+</div>
+
+<p>Salen <b>53 líneas</b>. Puedes contarlas:</p>
+
+<pre>wc -l cliente-java/src/main/java/com/novatech/kafka/ProductorApp.java</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">      53 cliente-java/src/main/java/com/novatech/kafka/ProductorApp.java</div>
+
+<p>De esas 53, estas son las que importan. Son las únicas que vamos a leer.</p>
+
+<pre>Properties props = new Properties();
+props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP);
+props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
+props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, PedidoSerializer.class.getName());
+props.put(ProducerConfig.ACKS_CONFIG, "all");
+
+try (Producer&lt;String, Pedido&gt; producer = new KafkaProducer&lt;&gt;(props)) {
+    ProducerRecord&lt;String, Pedido&gt; record =
+            new ProducerRecord&lt;&gt;(TOPIC, pedido.pedidoId(), pedido);
+    producer.send(record, (metadata, exception) -&gt; { ... });
+    producer.flush();
+}</pre>
+
+<h3>La tabla que es el laboratorio entero</h3>
+
+<p>Cada flag que escribiste en el paso 2 está aquí, con otro nombre.</p>
+
+<table>
+<tr><th>Lo que escribiste en el lab 06</th><th>Dónde está en el Java</th></tr>
+<tr><td><code>--bootstrap-server kafka-broker-1:29092</code></td><td><code>props.put(BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP)</code></td></tr>
+<tr><td><code>--topic novatech.validacion</code></td><td>El <b>primer argumento</b> de <code>new ProducerRecord&lt;&gt;(TOPIC, ...)</code></td></tr>
+<tr><td><code>--property parse.key=true</code></td><td>El <b>segundo argumento</b>, o sea <code>new ProducerRecord&lt;&gt;(TOPIC, pedido.pedidoId(), pedido)</code></td></tr>
+<tr><td><code>--property key.separator=:</code></td><td><b>No existe, y no puede existir.</b> En la consola clave y valor viajaban pegados en una línea de texto y había que partirla. En Java son dos parámetros distintos, así que no hay nada que separar</td></tr>
+<tr><td><i>no tenía flag</i></td><td><code>props.put(ACKS_CONFIG, "all")</code>, que es el <code>acks</code> del laboratorio 07, aquí escrito a mano</td></tr>
+<tr><td><i>no tenía flag</i></td><td>Los dos <code>SERIALIZER_CLASS_CONFIG</code>. En la consola nunca aparecieron porque lo que escribías ya era texto. Aquí hay que decir cómo se convierte un <code>Pedido</code> en bytes</td></tr>
+</table>
+
+<p><b>Ese es el archivo entero.</b> Lo demás son el bucle, el <code>System.out.printf</code> y los <code>import</code>. Si mañana te llega un programa que no conecta, <b>estas cinco líneas son las que abres</b>, y la primera de la lista es la que falla nueve de cada diez veces.</p>
+
+<div class="caja tecnico">
+  <span class="rot">La pregunta que vale · contéstala antes de seguir</span>
+  <p>La línea 19 del archivo dice esto:</p>
+  <pre>private static final String BOOTSTRAP = "localhost:9092,localhost:9093,localhost:9094";</pre>
+  <p style="margin-bottom:0"><b>¿Por qué no dice <code>kafka-broker-1:29092</code>, que es lo que usa la consola?</b></p>
+</div>
+
+<div class="caja sunat">
+  <span class="rot">La respuesta, y es la que vas a usar en SUNAT</span>
+  <p>Porque <b>la consola corre dentro de la red de Docker y este programa corre fuera</b>, en tu máquina.</p>
+  <p style="margin-bottom:0">Un nombre de contenedor como <code>kafka-broker-1</code> no se resuelve fuera de esa red. Y una dirección <code>localhost</code> no sirve dentro de ella, porque ahí <code>localhost</code> es el propio contenedor. <b>Es exactamente la clase de error que vas a diagnosticar.</b></p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p style="margin-bottom:0">Encontraste tus cuatro flags en el archivo sin copiar de la tabla, y puedes explicar por qué el cuarto no está. <b>Anota una respuesta.</b> ¿Cuántas de las 53 líneas son configuración de Kafka?</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si <code>cat</code> dice <code>No such file or directory</code></span>
+  <p style="margin-bottom:0">Estás en la carpeta equivocada. Comprueba con <code>pwd</code> que la terminal termina en <code>lab-09-clientes-java-spring</code>. La ruta del comando es relativa a esa carpeta, no a <code>cliente-java/</code>.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 4 de 7</span>Correrlo</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Compilar el programa y ejecutarlo. No hay nada que escribir, porque el proyecto ya está hecho.</p>
+
+<h3>El comando</h3>
+
+<pre>cd cliente-java
+mvn -q compile exec:java \
+    -Dexec.mainClass="com.novatech.kafka.ProductorApp" \
+    -Dexec.args="5"</pre>
+
+<div class="desglose">
+<div><span class="flag">mvn</span> — Maven, la herramienta con la que se construyen los proyectos Java. <b>Es la única dependencia de este laboratorio que no está en Docker</b></div>
+<div><span class="flag">-q</span> — modo silencioso. Sin esto Maven imprime treinta líneas de su propio proceso antes de llegar a lo tuyo</div>
+<div><span class="flag">compile</span> — convierte el <code>.java</code> en <code>.class</code>. <b>La primera vez descarga las bibliotecas</b>, que son 16 MB en 25 archivos</div>
+<div><span class="flag">exec:java</span> — ejecuta una clase del proyecto</div>
+<div><span class="flag">-Dexec.mainClass=…</span> — cuál de las clases. El proyecto tiene un productor y un consumidor, y aquí se pide el productor</div>
+<div><span class="flag">-Dexec.args="5"</span> — los argumentos del programa. Aquí, cuántos pedidos enviar</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+Enviado a novatech.lab09.pedidos [particion 1, offset 0]
+Enviado a novatech.lab09.pedidos [particion 1, offset 1]
+Enviado a novatech.lab09.pedidos [particion 2, offset 0]
+Enviado a novatech.lab09.pedidos [particion 2, offset 1]
+Enviado a novatech.lab09.pedidos [particion 0, offset 0]
+Total de pedidos enviados: 5</div>
+
+<div class="caja ojo">
+  <span class="rot">Las tres primeras líneas son ruido y salen siempre</span>
+  <p style="margin-bottom:0">SLF4J es la biblioteca de registro de Java diciendo que no encontró con qué escribir logs, y que se conforma con no escribir ninguno. <b>No es un error del laboratorio</b> y no afecta a nada. Está escrito aquí para que no te distraiga.</p>
+</div>
+
+<h3>Cómo se lee</h3>
+
+<table>
+<tr><th>Lo que dice</th><th>Qué significa</th></tr>
+<tr><td><code>Enviado a novatech.lab09.pedidos</code></td><td>El tópico al que fue. El mismo tipo de nombre que vienes usando desde el laboratorio 05</td></tr>
+<tr><td><code>[particion 1, offset 0]</code></td><td><b>Kafka le contestó al programa.</b> No es el programa adivinando. Es el broker confirmando dónde quedó el mensaje. Eso pasa porque el <code>acks=all</code> de la quinta línea lo obligó a esperar la confirmación</td></tr>
+<tr><td>Los cinco repartidos entre las tres particiones</td><td>El reparto por <b>clave</b>. Cada pedido lleva un UUID como clave, y su hash decide la partición</td></tr>
+</table>
+
+<div class="caja ojo">
+  <span class="rot">A ti te van a salir otros números de partición</span>
+  <p style="margin-bottom:0">La clave es un UUID que el programa genera en cada corrida, así que el reparto cambia. En tres corridas medidas salieron <code>2,2,1,1,1</code>, <code>2,2,2,2,0</code> y <code>1,1,2,2,0</code>. <b>Lo que no cambia nunca es que el broker le dijo al programa dónde quedó cada uno.</b> Eso es lo que hay que mirar.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>Salieron cinco líneas <code>Enviado a…</code> y la última dice <code>Total de pedidos enviados: 5</code>. Cada línea trae su partición y su offset.</p>
+  <p style="margin-bottom:0"><b>Anota una respuesta.</b> ¿Quién le dijo al programa en qué partición quedó cada mensaje, el programa o el broker? ¿Y qué línea del archivo obliga a esperar esa respuesta?</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si dice <code>bash: mvn: command not found</code></span>
+  <p>Maven no está instalado, y es la única cosa de este laboratorio que no vive en Docker.</p>
+  <p><b>Este paso y el 4 no corren, pero el laboratorio no se acaba aquí.</b> Los pasos 2, 3 y 7 se hacen igual, y son los que de verdad te van a servir en SUNAT, porque son leer un archivo y diagnosticar un grupo.</p>
+  <p style="margin-bottom:0">Si quieres instalarlo, Maven necesita además un Java 17 o superior. En una VM Windows sin permisos de administrador puede que no puedas, y no pasa nada. <b>Salta al paso 7</b> y usa los mensajes que otro compañero haya producido, o produce cinco a mano con el <code>kafka-console-producer</code> del laboratorio 06.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si se queda colgado y termina con <code>TimeoutException</code></span>
+  <p>El programa no encontró el clúster. Las dos causas, en orden de frecuencia:</p>
+  <p><b>Una.</b> El clúster no está arriba. Vuelve al paso 1 y comprueba los cuatro contenedores.</p>
+  <p style="margin-bottom:0"><b>Dos.</b> Los puertos 9092, 9093 y 9094 no están publicados hacia tu máquina. El programa corre fuera de Docker y entra por ahí. Compruébalo en la columna PORTS del <code>docker ps</code> del paso 1.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si Maven falla descargando dependencias</span>
+  <p style="margin-bottom:0">Es la red. La primera compilación baja 16 MB del repositorio central de Maven, y detrás de un proxy corporativo puede no salir. Vuelve a intentarlo, porque Maven guarda lo que ya bajó y el segundo intento arranca donde se quedó el primero.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 5 de 7</span>Leerlo con la consola del laboratorio 06</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Éste es el paso que cierra la afirmación. Si un cliente Java fuera «otra cosa», haría falta un consumidor Java para leerlo.</p>
+
+<p>Vamos a usar <b>el mismo comando de consola del laboratorio 06</b>, sin adaptar nada.</p>
+
+<div class="concepto">
+  <span class="rot">Concepto · <i>offset</i></span>
+  El número de orden de un mensaje dentro de su partición. <b>Empieza en 0 y solo sube.</b> Nunca se reutiliza, ni siquiera cuando el mensaje se borra por retención.
+</div>
+
+<h3>El comando</h3>
+
+<pre>cd ..
+docker exec kafka-broker-1 kafka-console-consumer \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.lab09.pedidos \
+    --from-beginning --max-messages 5 \
+    --formatter-property print.key=true</pre>
+
+<div class="desglose">
+<div><span class="flag">cd ..</span> — vuelve a la carpeta del laboratorio. El paso anterior te dejó dentro de <code>cliente-java/</code></div>
+<div><span class="flag">docker exec</span> — sin <code>-i</code> ni <code>-t</code> esta vez, porque no le vas a escribir nada al comando. <b>Solo lee y escupe</b></div>
+<div><span class="flag">--from-beginning</span> — empieza por el mensaje más viejo que el tópico conserva</div>
+<div><span class="flag">--max-messages 5</span> — <b>sin esto el comando no termina nunca.</b> Lee cinco y sale solo</div>
+<div><span class="flag">--formatter-property print.key=true</span> — imprime la clave además del valor. Es el reemplazo moderno de <code>--property</code>, que en Kafka 8 avisa de que está en desuso</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">97486ebe-9a8d-48b5-b617-0d0822767e2e	{"pedidoId":"97486ebe-9a8d-48b5-b617-0d0822767e2e","cliente":"cliente-3","producto":"producto-3","cantidad":3,"monto":300.0}
+8254b5be-f506-4e06-8cd4-f7102969426e	{"pedidoId":"8254b5be-f506-4e06-8cd4-f7102969426e","cliente":"cliente-1","producto":"producto-1","cantidad":1,"monto":100.0}
+bb334d9a-e3a5-481b-8cd5-3c9a5f37225d	{"pedidoId":"bb334d9a-e3a5-481b-8cd5-3c9a5f37225d","cliente":"cliente-5","producto":"producto-0","cantidad":5,"monto":500.0}
+f418e007-db7f-4eba-a368-ad3b9c8b9695	{"pedidoId":"f418e007-db7f-4eba-a368-ad3b9c8b9695","cliente":"cliente-2","producto":"producto-2","cantidad":2,"monto":200.0}
+28e00754-6b87-4367-b08d-1438cf028733	{"pedidoId":"28e00754-6b87-4367-b08d-1438cf028733","cliente":"cliente-4","producto":"producto-4","cantidad":4,"monto":400.0}
+Processed a total of 5 messages</div>
+
+<p><b>Los UUID son distintos en cada corrida</b>, porque los genera el programa. Los <code>cliente-N</code> y los montos no cambian.</p>
+
+<h3>Cómo se lee</h3>
+
+<table>
+<tr><th>Lo que se ve</th><th>Qué demuestra</th></tr>
+<tr><td>A la izquierda del tabulador, el UUID</td><td>Es la <b>clave</b> que puso el <code>new ProducerRecord&lt;&gt;(TOPIC, pedido.pedidoId(), pedido)</code>. La consola la lee sin saber quién la escribió</td></tr>
+<tr><td>A la derecha, el JSON</td><td>Es lo que produjo el <code>PedidoSerializer</code>. Para Kafka son bytes. <b>Que se vean como JSON legible es una decisión del programa</b>, no de Kafka</td></tr>
+<tr><td>El comando es el del lab 06</td><td>No existe un <code>kafka-console-consumer --java</code>. <b>No hace falta, y ahí está la afirmación</b></td></tr>
+</table>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>Salieron cinco líneas con un UUID, un tabulador y un JSON, y la última dice <code>Processed a total of 5 messages</code>.</p>
+  <p style="margin-bottom:0"><b>Y no tuviste que cambiar una sola letra del comando del laboratorio 06.</b> Eso es lo que había que ver.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el comando se queda colgado y no vuelve</span>
+  <p style="margin-bottom:0">Se te olvidó el <code>--max-messages 5</code>. El consumidor de consola se queda esperando mensajes nuevos para siempre. Sal con <code>Ctrl+C</code> y vuelve a escribirlo completo.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si sale un aviso sobre <code>--property</code> en desuso</span>
+  <p style="margin-bottom:0">Escribiste <code>--property print.key=true</code> en vez de <code>--formatter-property print.key=true</code>. <b>Funciona igual</b>, pero Kafka 8 avisa de que la forma vieja va a desaparecer. Usa la nueva.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 6 de 7</span>Por qué la segunda vez no trae nada</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Aquí llega el matiz que muerde, y que es la causa número uno de «el consumidor dejó de leer» en producción.</p>
+
+<p>Alguien va a decir que la consola tiene <code>--from-beginning</code> y el Java tiene <code>auto.offset.reset=earliest</code>, y que no son lo mismo. <b>Sí lo son.</b> Lo que engaña es otra cosa.</p>
+
+<div class="concepto">
+  <span class="rot">Concepto · grupo de consumidores</span>
+  Varios consumidores que comparten un nombre de grupo y se reparten las particiones de un tópico. <b>Kafka guarda por dónde va el grupo</b>, no cada consumidor. Ese avance guardado se llama <i>offset comprometido</i>, y sobrevive a que el consumidor se apague.
+</div>
+
+<h3>Los cuatro comandos</h3>
+
+<p>Córrelos en este orden y anota cuántos mensajes trae cada uno.</p>
+
+<pre># A · sin grupo, dos veces
+docker exec kafka-broker-1 kafka-console-consumer \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.lab09.pedidos \
+    --from-beginning --timeout-ms 10000</pre>
+
+<pre># B · con grupo, dos veces, el MISMO grupo
+docker exec kafka-broker-1 kafka-console-consumer \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.lab09.pedidos \
+    --group mi-grupo-de-prueba \
+    --from-beginning --timeout-ms 10000</pre>
+
+<div class="desglose">
+<div><span class="flag">--timeout-ms 10000</span> — espera diez segundos sin recibir nada y se va. <b>Aquí reemplaza al <code>--max-messages</code></b>, porque hay corridas en las que no va a llegar ningún mensaje y hay que poder verlo</div>
+<div><span class="flag">--group mi-grupo-de-prueba</span> — le pone nombre al grupo. <b>Ésta es la única diferencia entre A y B</b>, y es la que cambia el resultado</div>
+</div>
+
+<div class="salida-rot">Lo que sale · las cuatro corridas medidas</div>
+<div class="salida">A · sin grupo, 1ª vez  ->  Processed a total of 5 messages
+A · sin grupo, 2ª vez  ->  Processed a total of 5 messages
+B · con grupo, 1ª vez  ->  Processed a total of 5 messages
+B · con grupo, 2ª vez  ->  Processed a total of 0 messages</div>
+
+<div class="caja ojo">
+  <span class="rot">Las cuatro corridas terminan con un <code>ERROR</code>, y ninguna falló</span>
+  <p>Con <code>--timeout-ms</code>, el comando siempre termina así:</p>
+  <div class="salida">[2026-08-29 03:19:58,671] ERROR Error processing message, terminating consumer process:  (org.apache.kafka.tools.consumer.ConsoleConsumer)
+org.apache.kafka.common.errors.TimeoutException
+Processed a total of 0 messages</div>
+  <p style="margin-bottom:0"><b>Eso no es un fallo.</b> Es el <code>--timeout-ms</code> cumpliéndose. El consumidor esperó diez segundos, no llegó nada más, y se fue. <b>La línea que importa es la última</b>, la del <code>Processed a total of</code>. Medido, la corrida que devuelve 0 tarda 11 segundos.</p>
+</div>
+
+<h3>Cómo se lee</h3>
+
+<p>El consumidor de consola, cuando no le das <code>--group</code>, <b>se inventa un grupo nuevo en cada arranque</b>. Como ese grupo nunca leyó nada, no tiene offsets guardados, y <code>earliest</code> lo manda al principio. Por eso parece que <code>--from-beginning</code> siempre lee todo.</p>
+
+<p>En cuanto le pones un grupo de verdad, que es lo que hace cualquier programa, <b>se comporta igual que el Java. La segunda vez no trae nada.</b></p>
+
+<div class="caja sunat">
+  <span class="rot">Por qué esto importa en SUNAT</span>
+  <p style="margin-bottom:0">Es la causa número uno de «el consumidor dejó de leer» en producción. <b>El grupo ya tenía offsets guardados y nadie los miró.</b> El tópico se llena, el consumidor está vivo, y no trae nada porque ya leyó hasta ahí.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p style="margin-bottom:0">Tu tabla dice <b>5, 5, 5, 0</b>. Y puedes explicar por qué las dos primeras dieron lo mismo y las dos últimas no. <b>Anota una respuesta.</b> Las cuatro llevan <code>--from-beginning</code>. ¿Por qué solo una devolvió cero?</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si la segunda corrida de B te trae 5 otra vez</span>
+  <p style="margin-bottom:0">Cambiaste el nombre del grupo entre una y otra, o se te olvidó el <code>--group</code>. <b>Tiene que ser el mismo nombre exacto en las dos.</b> Cópialo, no lo escribas de nuevo.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si quieres volver a leerlo todo desde el principio</span>
+  <p style="margin-bottom:0">Usa un nombre de grupo que no hayas usado nunca. Un grupo nuevo no tiene offsets guardados, así que <code>--from-beginning</code> vuelve a funcionar. <b>Ésa es la prueba de que el problema eran los offsets y no el tópico.</b></p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 7 de 7</span>Diagnosticarlo, que es lo que harás en SUNAT</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>El paso anterior fabricó el problema. Éste lo diagnostica, con un comando que ya conoces del laboratorio 06.</p>
+
+<div class="concepto">
+  <span class="rot">Concepto · <i>lag</i></span>
+  Cuántos mensajes hay escritos que el grupo todavía no leyó. Es la resta entre el offset final del tópico y el offset por donde va el grupo. <b>Es el número que se vigila en producción</b>, más que ningún otro.
+</div>
+
+<h3>El comando</h3>
+
+<pre>docker exec kafka-broker-1 kafka-consumer-groups \
+    --bootstrap-server kafka-broker-1:29092 \
+    --describe --group mi-grupo-de-prueba</pre>
+
+<div class="desglose">
+<div><span class="flag">kafka-consumer-groups</span> — el comando que administra grupos. Sin él, un grupo es una caja negra</div>
+<div><span class="flag">--describe</span> — muestra dónde va el grupo, partición por partición</div>
+<div><span class="flag">--group</span> — cuál grupo. <b>Tiene que ser el mismo nombre exacto del paso 6</b></div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">Consumer group 'mi-grupo-de-prueba' has no active members.
+
+GROUP              TOPIC                  PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID     HOST            CLIENT-ID
+mi-grupo-de-prueba novatech.lab09.pedidos 0          1               1               0               -               -               -
+mi-grupo-de-prueba novatech.lab09.pedidos 1          2               2               0               -               -               -
+mi-grupo-de-prueba novatech.lab09.pedidos 2          2               2               0               -               -               -</div>
+
+<h3>Cómo se lee</h3>
+
+<table>
+<tr><th>Lo que dice</th><th>Qué significa</th></tr>
+<tr><td><code>has no active members</code></td><td>Nadie está consumiendo ahora mismo. <b>El grupo existe igual</b>, porque dejó su marca guardada</td></tr>
+<tr><td><code>CURRENT-OFFSET</code></td><td>Por dónde va el grupo en esa partición. <b>Esto es lo que sobrevivió</b> entre la primera y la segunda corrida del paso 6</td></tr>
+<tr><td><code>LOG-END-OFFSET</code></td><td>Hasta dónde llegó el tópico en esa partición</td></tr>
+<tr><td><code>LAG 0</code> en las tres</td><td><b>El grupo ya leyó todo.</b> Ahí está, en números, la razón de que la segunda corrida devolviera cero</td></tr>
+</table>
+
+<p>Los repartos de tu corrida van a ser otros, porque las claves son UUID distintos. Lo que tiene que calzar es que <b>los tres <code>CURRENT-OFFSET</code> suman 5</b> y que los tres <code>LAG</code> están en cero.</p>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p>La suma de los tres <code>CURRENT-OFFSET</code> te da 5, los tres <code>LAG</code> están en cero, y puedes contar la historia completa. El programa Java produjo cinco. La consola sin grupo los leyó dos veces. El grupo los leyó una vez y guardó por dónde iba. La segunda vez no había nada nuevo.</p>
+  <p style="margin-bottom:0"><b>Anota una respuesta.</b> Un consumidor de producción dejó de recibir mensajes y el tópico sigue llenándose. Antes de tocar el clúster, ¿qué miras y con qué comando?</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si dice que el grupo no existe</span>
+  <p style="margin-bottom:0">El síntoma es <code>Consumer group 'x' does not exist</code>. Escribiste otro nombre, o nunca corriste el bloque B del paso 6. <b>Un grupo se crea al usarlo, no antes.</b> Lista los que hay con <code>--list</code> en vez de <code>--describe --group</code>.</p>
+</div>
+
+<div class="np"></div>
+<h2>Lo que aprendiste</h2>
+
+<div class="regla"><span class="num">1</span>
+<b>Un cliente Kafka no es una capa sobre Kafka. Es Kafka.</b><br>
+El broker no distingue una consola de una aplicación, y no hay log que te lo diga. Lo comprobaste leyendo con el comando del laboratorio 06 lo que escribió un programa Java, sin adaptar una letra.
+</div>
+
+<div class="regla"><span class="num">2</span>
+<b>Cuando un programa «no conecta», el primer archivo que se abre es el de las propiedades.</b><br>
+Y la primera línea que se mira es <code>bootstrap.servers</code>. Nueve de cada diez veces está ahí. Además esa dirección depende de dónde corre el programa, porque un nombre de contenedor no se resuelve fuera de la red de Docker y un <code>localhost</code> no sirve dentro de ella.
+</div>
+
+<div class="regla"><span class="num">3</span>
+<b>El serializador y el deserializador son dos piezas que nadie obliga a coincidir.</b><br>
+Viven en dos programas distintos. Si el que escribe cambia y el que lee no se entera, el que se cae es el que lee, dos días después. Eso es lo que el laboratorio 11 viene a cerrar con Schema Registry.
+</div>
+
+<div class="regla"><span class="num">4</span>
+<b>Un consumidor con grupo no vuelve a leer lo que ya leyó.</b><br>
+Por más <code>earliest</code> o <code>--from-beginning</code> que tenga. Si un consumidor «dejó de recibir», mira sus offsets antes que el clúster, con <code>kafka-consumer-groups --describe --group</code>.
+</div>
+
+<div class="np"></div>
+<h2>Para profundizar</h2>
+
+<p>Todo esto estaba en el recorrido de clase y salió por tiempo. Aquí va desarrollado, con su comando.</p>
+
+<h3>A · El consumidor Java, y su grupo</h3>
+
+<p>El paso 5 leyó con la consola a propósito. El proyecto también trae su consumidor.</p>
+
+<pre>cd cliente-java
+mvn -q compile exec:java \
+    -Dexec.mainClass="com.novatech.kafka.ConsumidorApp" \
+    -Dexec.args="grupo-java-nativo"</pre>
+
+<div class="desglose">
+<div><span class="flag">-Dexec.args="grupo-java-nativo"</span> — el nombre del grupo. <b>Aquí el argumento es el grupo</b>, no la cantidad de mensajes como en el productor</div>
+</div>
+
+<div class="salida-rot">Lo que sale · las primeras líneas</div>
+<div class="salida">SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+Consumidor en grupo 'grupo-java-nativo' escuchando novatech.lab09.pedidos (Ctrl+C para salir)...
+[particion 2 offset 0] cliente-2 -&gt; producto-2 x2 ($200.00)
+[particion 2 offset 1] cliente-4 -&gt; producto-4 x4 ($400.00)
+[particion 1 offset 0] cliente-1 -&gt; producto-1 x1 ($100.00)
+[particion 1 offset 1] cliente-5 -&gt; producto-0 x5 ($500.00)
+[particion 0 offset 0] cliente-3 -&gt; producto-3 x3 ($300.00)</div>
+
+<p><b>No termina solo.</b> Sal con <code>Ctrl+C</code>.</p>
+
+<p><b>Lo que hay que mirar.</b> Sus propiedades son cinco y son las mismas de siempre, más <code>GROUP_ID_CONFIG</code>, que es el <code>--group</code> del laboratorio 06, y <code>AUTO_OFFSET_RESET</code>. Córrelo dos veces con el mismo grupo y verás el 5 y el 0 del paso 6, con un programa en vez de una consola.</p>
+
+<h3>B · La serialización, de verdad</h3>
+
+<pre>cat cliente-java/src/main/java/com/novatech/kafka/PedidoSerializer.java
+cat cliente-java/src/main/java/com/novatech/kafka/PedidoDeserializer.java
+cat cliente-java/src/main/java/com/novatech/kafka/Pedido.java</pre>
+
+<p><b>Lo que hay que mirar.</b> El serializador es, en esencia, objeto a bytes. El deserializador es bytes a objeto. <b>Son dos archivos separados que nadie obliga a coincidir.</b> Si el productor agrega un campo y el consumidor no se entera, el que revienta es el consumidor.</p>
+
+<p><b>La pregunta que vale.</b> ¿Qué pasaría si el productor mandara <code>monto</code> como texto y el consumidor lo esperara como número? Guarda la respuesta, porque el laboratorio 11 hace exactamente esa pregunta.</p>
+
+<h3>C · Spring for Apache Kafka</h3>
+
+<p>La misma cosa, con el código escondido detrás de anotaciones.</p>
+
+<pre>cd cliente-spring
+mvn spring-boot:run</pre>
+
+<p>Y en otra terminal, produciendo por HTTP:</p>
+
+<pre>curl -X POST -H "Content-Type: application/json" \
+  -d '{"pedidoId":"p-1001","cliente":"ACME","producto":"caja","cantidad":3,"monto":1500.0}' \
+  http://localhost:8081/api/pedidos</pre>
+
+<p><b>Lo que hay que mirar.</b> <code>KafkaTemplate</code> hace lo que hacía el <code>KafkaProducer</code> a mano, y <code>@KafkaListener</code> reemplaza el bucle de <code>poll()</code>. Las propiedades no desaparecieron. Se mudaron a <code>src/main/resources/application.yml</code> y a la clase <code>KafkaConfig</code>.</p>
+
+<div class="caja sunat">
+  <span class="rot">Y ahí está el punto para un administrador</span>
+  <p style="margin-bottom:0">Cuando el programa es Spring, <b>las propiedades están en un <code>.yml</code>, no en el <code>.java</code></b>. Ése es el archivo que hay que pedir.</p>
+</div>
+
+<h3>D · Grupos y rebalanceo, con procesos de verdad</h3>
+
+<p>Abre tres terminales en <code>cliente-java/</code>, las tres con el mismo grupo:</p>
+
+<pre>mvn -q compile exec:java \
+    -Dexec.mainClass="com.novatech.kafka.ConsumidorApp" \
+    -Dexec.args="grupo-escalado"</pre>
+
+<p>Y en una cuarta, produciendo:</p>
+
+<pre>mvn -q compile exec:java \
+    -Dexec.mainClass="com.novatech.kafka.ProductorApp" \
+    -Dexec.args="30"</pre>
+
+<p><b>Lo que hay que mirar.</b> El tópico tiene 3 particiones, así que las tres instancias reciben una cada una. Mata una con <code>Ctrl+C</code> y vuelve a producir. Sus particiones se reparten entre las dos que quedan. <b>Es el rebalanceo del laboratorio 06, con procesos en vez de terminales.</b></p>
+
+<p><b>La pregunta que vale.</b> ¿Qué pasa si levantas una cuarta instancia sobre 3 particiones?</p>
+
+<h3>E · El desafío de interoperabilidad</h3>
+
+<p>Produce con <code>cliente-java</code> y consume con la aplicación de Spring corriendo. Documenta si el consumidor de Spring recibió lo que produjo la API nativa, y qué dice eso sobre el formato del mensaje en el tópico.</p>
+
+<h3>F · El reporte del laboratorio</h3>
+
+<p><code>plantillas/reporte-entregable.md</code> recorre las actividades con sus preguntas. Las respuestas de referencia están en <code>soluciones/reporte-resuelto.md</code>.</p>
+
+<h2>Antes de cerrar</h2>
+
+<div class="caja ojo">
+  <span class="rot">Deja el terreno limpio</span>
+  <pre>bin/90-test-lab.sh   # ver el estado del laboratorio
+bin/stop-lab.sh      # apagar los contenedores</pre>
+  <p><code>bin/stop-lab.sh</code> solo detiene los contenedores. No borra nada, y los volúmenes siguen ahí mientras el lab esté detenido.</p>
+  <p style="margin-bottom:0"><b>Ojo al reanudar.</b> <code>bin/start-lab.sh</code> reconstruye el laboratorio desde cero, así que los tópicos y mensajes que creaste no sobreviven. El lab vuelve a sembrar los suyos. <b>Si creaste algo propio, anótalo antes.</b> Para borrarlo todo ahora mismo, <code>bin/reset-lab.sh</code>, que no pide confirmación.</p>
+</div>
+
+<div class="salida-rot">Lo que dice el validador si todo está en orden</div>
+<div class="salida">Validador del Lab 09 — estado actual
+  ✓ los 3 brokers están healthy
+  ✓ el tópico novatech.lab09.pedidos existe
+  ✓ cliente-java ya compilado (target/ presente)
+  ✓ cliente-spring ya compilado (target/ presente)
+
+✓ LAB EN BUEN ESTADO (4 verificaciones OK)</div>
+
+<div class="caja sunat">
+  <span class="rot">Lo que te llevas</span>
+  <p>De los incidentes de Kafka que tu equipo atendió el último año, ¿cuántos terminaron siendo del clúster y cuántos de la configuración de un cliente?</p>
+  <p style="margin-bottom:0">Hoy viste por qué la segunda cifra suele ser la grande, y por qué el clúster no te va a ayudar a encontrarlos. <b>El broker no distingue quién le escribe.</b> Esa respuesta está en el archivo del cliente, y ahora sabes qué cinco líneas mirar.</p>
+</div>
+
+</body></html>

@@ -27,6 +27,12 @@ LABS=(
 "07|Capitulo_3/lab-07-pruebas-rendimiento|Lab 07 · Pruebas de rendimiento"
 "08|Capitulo_3/lab-08-brokers-en-caliente|Lab 08 · Brokers en caliente"
 "08b|Capitulo_3/lab-08b-instalacion-rhel|Lab 08b · Instalación en RHEL"
+"09|Capitulo_4/lab-09-clientes-java-spring|Lab 09 · Dónde quedaron tus flags"
+"10|Capitulo_4/lab-10-rest-proxy-kafbat-ui|Lab 10 · Kafbat UI y REST Proxy"
+"11|Capitulo_4/lab-11-schema-registry|Lab 11 · Schema Registry"
+"12|Capitulo_5/lab-12-ksqldb|Lab 12 · ksqlDB"
+"13|Capitulo_5/lab-13-kafka-connect|Lab 13 · Kafka Connect"
+"14|Capitulo_5/lab-14-capstone-resiliencia-seguridad|Lab 14 · Capstone de seguridad"
 )
 
 PEDIDOS=("$@")

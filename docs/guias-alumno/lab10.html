@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><link rel="stylesheet" href="estilo-alumno.css"></head>
+<body>
+
+<div class="portada">
+  <div class="kicker">C U R S O &nbsp; D E &nbsp; A D M I N I S T R A C I Ó N &nbsp; D E &nbsp; K A F K A</div>
+  <div class="labnum">LABORATORIO 10</div>
+  <h1>¿Y a las<br>tres de la<br>mañana?</h1>
+  <div class="sub">Kafbat UI y REST Proxy, y por qué el tablero no es el clúster.<br>Guía para hacerlo por tu cuenta, paso a paso</div>
+  <div class="meta">
+    Confluent Platform 8.2.0 · 3 brokers KRaft · REST Proxy · Kafbat UI<br>
+    Duración estimada · 40 minutos<br>
+    NovaTech Logistics · caso de estudio
+  </div>
+</div>
+
+<h2>Antes de empezar</h2>
+
+<h3>Qué vas a lograr</h3>
+
+<p>Éste es el único laboratorio del curso que se hace mirando, no tecleando. Vas a poner lado a lado la salida de un comando y la pantalla que dibuja ese mismo dato, y vas a comprobar que son los mismos números.</p>
+
+<p>Y termina con una advertencia, porque <b>una interfaz bonita es la forma más rápida de perder la costumbre de la línea de comandos</b>, que es lo único que siempre va a estar.</p>
+
+<div class="afirmacion">
+  <span class="rot">Lo que este laboratorio demuestra</span>
+  <div class="txt">Todo lo que viste por consola está aquí dibujado, y aun así la consola es lo que vas a tener a las tres de la mañana.</div>
+</div>
+
+<p>Tres partes, y las tres se ven en pantalla.</p>
+
+<table>
+<tr><th>La parte</th><th>Dónde se comprueba</th></tr>
+<tr><td><b>Está aquí dibujado</b></td><td>Paso 2. Cada campo del tablero tiene su comando al lado</td></tr>
+<tr><td><b>Dibujado mejor</b></td><td>Paso 3. Hay una cosa que el tablero hace de verdad mejor, y es honesto reconocerla</td></tr>
+<tr><td><b>Y aun así</b></td><td>Paso 4. Apagas el tablero y el clúster no se entera</td></tr>
+</table>
+
+<h3>Qué necesitas tener listo</h3>
+
+<table>
+<tr><th>Requisito</th><th>Cómo lo compruebas</th></tr>
+<tr><td>Docker Desktop corriendo, con 6 GB de RAM</td><td>Ajustes de Docker Desktop, pestaña <i>Resources</i></td></tr>
+<tr><td>Git Bash abierto en la carpeta del lab</td><td><code>cd Capitulo_4/lab-10-rest-proxy-kafbat-ui</code></td></tr>
+<tr><td><b>Un navegador</b></td><td>Cualquiera. Hoy se usa de verdad, no de adorno</td></tr>
+<tr><td>Los puertos 9092, 9093, 9094, <b>8082</b> y <b>8090</b> libres</td><td>El paso 1 te avisa si no lo están. <b>Este lab levanta cinco contenedores</b>, dos más que los anteriores</td></tr>
+<tr><td>Haber hecho los laboratorios 05 y 06</td><td>Hoy se comparan sus salidas contra las pantallas</td></tr>
+</table>
+
+<div class="caja ojo">
+  <span class="rot">Un aviso sobre los números de partición de esta guía</span>
+  <p>Los tres mensajes que siembra el arranque van <b>sin clave</b>, así que el productor elige una partición y mete los tres ahí. <b>Cuál elige cambia en cada arranque.</b></p>
+  <p style="margin-bottom:0">Las salidas de esta guía son de una corrida real en la que tocó la <b>partición 0</b>. En otras corridas medidas tocó la 2. <b>Si a ti te toca otra, no está roto.</b> Lo único que importa es que dos particiones queden en cero y una con todo. De ahí en adelante, todos los números de partición de esta guía se te corren a la tuya.</p>
+</div>
+
+<h3>El caso</h3>
+
+<div class="caja">
+  <p>Llevas cinco laboratorios leyendo tablas de texto separadas por tabuladores. Es lento, es incómodo, y hay algo que no has podido hacer ni una vez. <b>Mirar el clúster entero a la vez.</b></p>
+  <p>Cuando alguien en <b>NovaTech Logistics</b> pregunta cómo va todo, no hay un comando que conteste eso. Hay que preguntar tópico por tópico, grupo por grupo, y armar el cuadro en la cabeza. Para un clúster con cuatro tópicos se puede. Para uno con doscientos, no.</p>
+  <p>Y ahí aparece la solución obvia con la trampa que trae puesta.</p>
+  <p><b>La solución obvia.</b> Una interfaz web que lo dibuje. Existe, está en este laboratorio, y es buenísima.</p>
+  <p><b>La trampa.</b> Que el equipo se acostumbre a que el clúster es lo que se ve en esa pantalla. Y entonces llega el día en que hay un incidente a las tres de la mañana, y alguien entra por SSH a un servidor donde no hay navegador, ni túnel, ni la interfaz levantada. Y no sabe qué escribir.</p>
+  <p style="margin-bottom:0">Hay una segunda mitad, más incómoda. <b>La interfaz es una cosa más que se puede caer.</b> Es un contenedor con su propia memoria, su propia versión y su propia forma de romperse. Un tablero caído se parece muchísimo a un clúster caído, si no sabes distinguirlos. <b>El paso 4 los distingue en vivo.</b></p>
+</div>
+
+<div class="caja abuelita">
+  <span class="rot">La metáfora · hoy entran el pizarrón y la ventanilla</span>
+  <p>Kafka sigue siendo <b>el restaurante</b>. El <b>mozo</b> es el broker, el <b>tipo de comanda</b> es el tópico, los <b>sectores del salón</b> son las particiones, las <b>libretas de respaldo</b> son las réplicas y la <b>brigada</b> es el grupo de consumidores.</p>
+  <p>Hoy entran dos piezas nuevas, y hacen cosas opuestas.</p>
+  <p><b>El pizarrón del salón.</b> El tablero donde el jefe de turno ve de un vistazo qué sectores están cubiertos y cuál se está atrasando. Es <b>Kafbat UI</b>.</p>
+  <p><b>La ventanilla de la calle.</b> Por donde un repartidor de afuera deja un pedido sin entrar al local ni conocer a nadie. Es el <b>REST Proxy</b>.</p>
+  <p>Lo que importa del pizarrón, y es el corazón de este laboratorio. <b>El pizarrón no atiende mesas.</b> No cocina, no lleva platos, no cobra. Lo único que hace es decirte a qué mesa correr.</p>
+  <p>Un jefe de turno que mira el pizarrón y entiende que la mesa 12 lleva veinte minutos esperando es un buen jefe de turno. Uno que se queda mirando el pizarrón, no.</p>
+  <p style="margin-bottom:0"><b>Y si se borra el pizarrón, el restaurante sigue funcionando exactamente igual.</b> Lo único que se perdió es tu forma cómoda de mirarlo.</p>
+</div>
+
+<div class="caja sunat">
+  <span class="rot">La regla que sale de ahí</span>
+  <p style="margin-bottom:0">El tablero no es el clúster. <b>Es una vista del clúster.</b> Todo lo que muestra se lo preguntó a los brokers en el momento de dibujarlo.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 1 de 5</span>Qué hay que mirar, antes de mirarlo</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Levantar el laboratorio y saber exactamente qué hay en el tópico <b>antes</b> de abrir el navegador. Si no, el tablero solo va a ser bonito.</p>
+
+<h3>Levantar el laboratorio</h3>
+
+<pre>cd Capitulo_4/lab-10-rest-proxy-kafbat-ui
+chmod +x bin/*.sh rest-cli/*.sh
+bin/start-lab.sh</pre>
+
+<div class="desglose">
+<div><span class="flag">chmod +x bin/*.sh rest-cli/*.sh</span> — permiso de ejecución para los dos grupos de scripts. <b>Este lab tiene una carpeta más que los anteriores</b>, que es <code>rest-cli/</code></div>
+<div><span class="flag">bin/start-lab.sh</span> — levanta <b>cinco contenedores</b>, o sea tres brokers, el REST Proxy y Kafbat UI. Crea el tópico y le mete tres pedidos de muestra <b>por HTTP</b></div>
+</div>
+
+<div class="salida-rot">El final de lo que vas a ver · recortado</div>
+<div class="salida">[5/5] Inicializando tópico y produciendo muestra vía HTTP...
+[OK] Clúster disponible
+Created topic novatech.lab10.pedidos.
+✓ Tópico 'novatech.lab10.pedidos' creado (3 particiones, RF 3)
+  ✓ 3 mensajes de muestra enviados por el REST Proxy
+
+════════════════════════════════════════════════════════════
+  CLÚSTER NOVATECH LAB 10 OPERATIVO
+════════════════════════════════════════════════════════════
+
+  Componentes:
+    Broker 1:        localhost:9092
+    Broker 2:        localhost:9093
+    Broker 3:        localhost:9094
+    REST Proxy:      http://localhost:8082
+    Kafbat UI:       http://localhost:8090</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · partición</span>
+  Cada uno de los pedazos en que se corta un tópico. Éste tiene <b>tres</b>. Son los sectores del salón, y por eso el trabajo se puede repartir entre varios cocineros.
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · <i>offset</i></span>
+  El número de orden de un mensaje dentro de su partición. Empieza en 0 y solo sube. <b>El offset más nuevo es, en la práctica, la cuenta de mensajes de esa partición.</b>
+</div>
+
+<h3>Qué forma tiene el tópico</h3>
+
+<pre>docker exec kafka-broker-1 kafka-topics \
+    --bootstrap-server kafka-broker-1:29092 \
+    --describe --topic novatech.lab10.pedidos</pre>
+
+<div class="desglose">
+<div><span class="flag">docker exec</span> — sin <code>-i</code> ni <code>-t</code>, porque no le vas a escribir nada al comando. <b>Solo pregunta y escupe</b></div>
+<div><span class="flag">--describe</span> — la ficha del tópico. Particiones, factor de réplica, quién es líder de cada una y qué réplicas están al día</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">Topic: novatech.lab10.pedidos	TopicId: yzdXUP9zTqeO7Z-sVv3NYA	PartitionCount: 3	ReplicationFactor: 3	Configs: min.insync.replicas=2
+	Topic: novatech.lab10.pedidos	Partition: 0	Leader: 2	Replicas: 2,3,1	Isr: 2,3,1	Elr: 	LastKnownElr:
+	Topic: novatech.lab10.pedidos	Partition: 1	Leader: 3	Replicas: 3,1,2	Isr: 3,1,2	Elr: 	LastKnownElr:
+	Topic: novatech.lab10.pedidos	Partition: 2	Leader: 1	Replicas: 1,2,3	Isr: 1,2,3	Elr: 	LastKnownElr:</div>
+
+<p>Es la misma salida del laboratorio 05, y hoy se usa de otra manera. <b>Como la respuesta correcta contra la que vamos a comparar el tablero.</b> Quédate con tres cosas. Tres particiones, factor de réplica 3, y las tres con sus tres réplicas en ISR.</p>
+
+<h3>Y dónde están los mensajes</h3>
+
+<pre>docker exec kafka-broker-1 kafka-get-offsets \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.lab10.pedidos --time -1</pre>
+
+<div class="desglose">
+<div><span class="flag">kafka-get-offsets</span> — pregunta por los offsets de cada partición. <b>Es el comando más barato que hay para saber si un clúster está vivo</b>, y lo vas a volver a usar en el paso 4</div>
+<div><span class="flag">--time -1</span> — el offset <b>más nuevo</b>, o sea el final del tópico. Con <code>-2</code> pedirías el más viejo</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">novatech.lab10.pedidos:0:3
+novatech.lab10.pedidos:1:0
+novatech.lab10.pedidos:2:0</div>
+
+<div class="caja ojo">
+  <span class="rot">Detente aquí, porque esto es más interesante de lo que parece</span>
+  <p>Hay tres mensajes, y <b>los tres están en la misma partición</b>. Las otras dos están vacías.</p>
+  <p style="margin-bottom:0">No es un error. Los tres se escribieron <b>sin clave</b>, y un productor sin clave se pega a una partición durante su tanda. <b>En tu corrida la partición llena puede ser otra.</b></p>
+</div>
+
+<p><b>La pregunta que vale, y que el tablero va a contestar de un vistazo.</b> En un tópico de doscientas particiones, ¿cómo te enterarías tú de que ciento noventa están vacías?</p>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>Hay <b>cinco</b> contenedores arriba, no cuatro. Compruébalo:</p>
+  <pre>docker ps --filter "label=com.docker.compose.project=novatech-lab10" \
+    --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'</pre>
+  <div class="salida">NAMES            STATUS                    PORTS
+kafka-rest       Up 17 seconds (healthy)   0.0.0.0:8082-&gt;8082/tcp, [::]:8082-&gt;8082/tcp
+kafbat-ui        Up 17 seconds             0.0.0.0:8090-&gt;8080/tcp, [::]:8090-&gt;8080/tcp
+kafka-broker-1   Up 24 seconds (healthy)   0.0.0.0:9092-&gt;9092/tcp, [::]:9092-&gt;9092/tcp
+kafka-broker-2   Up 24 seconds (healthy)   0.0.0.0:9093-&gt;9093/tcp, [::]:9093-&gt;9093/tcp
+kafka-broker-3   Up 24 seconds (healthy)   0.0.0.0:9094-&gt;9094/tcp, [::]:9094-&gt;9094/tcp</div>
+  <p style="margin-bottom:0">Y en el <code>kafka-get-offsets</code> <b>dos particiones están en 0 y una tiene 3</b>. Anota cuál es la tuya, porque la vas a usar en los tres pasos que siguen.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si dice que el puerto 8082 o el 8090 ya está en uso</span>
+  <p>El síntoma nombra <code>port is already allocated</code>. Casi siempre es otro laboratorio del curso que quedó arriba.</p>
+  <pre style="margin-bottom:0">docker ps --filter "label=com.docker.compose.project" \
+    --format '{{.Names}}\t{{.Label "com.docker.compose.project"}}'</pre>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si dice <code>REST Proxy aún no responde</code></span>
+  <p style="margin-bottom:0">El REST Proxy arranca después de los brokers y a veces tarda más de los 60 segundos que espera el script. <b>No es fatal.</b> Espera medio minuto y comprueba a mano con <code>curl -s http://localhost:8082/topics</code>. Si contesta una lista, está bien y puedes seguir.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el <code>kafka-get-offsets</code> te da las tres particiones en 0</span>
+  <p style="margin-bottom:0">Los tres mensajes de muestra no se sembraron. Mándalos tú:</p>
+  <pre style="margin-bottom:0">rest-cli/rest-produce.sh novatech.lab10.pedidos '{"pedido":1,"cliente":"ACME","monto":1500}'</pre>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 2 de 5</span>La misma verdad, dos veces</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Ahora se abre el navegador. <b>No es un paso decorativo.</b> Vas a comparar campo por campo con lo que acabas de leer en la consola.</p>
+
+<h3>Abre el tablero</h3>
+
+<pre>http://localhost:8090</pre>
+
+<div class="caja ojo">
+  <span class="rot">El puerto es el 8090, no el 8080</span>
+  <p style="margin-bottom:0">Por dentro el contenedor escucha en el 8080, y el <code>docker-compose.yml</code> lo publica en el 8090 para no chocar con cualquier otra cosa que uses. <b>Si escribes 8080 no hay nadie.</b> Lo ves en la columna PORTS del paso 1, donde dice <code>0.0.0.0:8090-&gt;8080/tcp</code>. El número de la izquierda es el de tu máquina.</p>
+</div>
+
+<h3>Qué se ve, y con qué comando lo comprobaste</h3>
+
+<table>
+<tr><th>Dónde hacer clic</th><th>Qué buscar</th><th>Con qué lo comprobaste</th></tr>
+<tr><td><b>Dashboard</b>, la pantalla de entrada</td><td>Arriba, <b>Online · 1 clusters</b>. Y una fila <code>novatech-cluster</code> con <i>Version</i> <code>4.2-IV1</code> y <i>Brokers count</i> <b>3</b></td><td><code>bin/90-test-lab.sh</code></td></tr>
+<tr><td><b>Brokers</b>, en el menú de la izquierda</td><td>Tres filas, con <i>Broker ID</i> 1, 2 y 3, y sus puertos internos 29092, 29093 y 29094</td><td>Los tres <code>healthy</code> del <code>docker ps</code></td></tr>
+<tr><td>Arriba de esa misma pantalla</td><td><b>URP 0</b> y <i>Controller Type</i> <b>KRaft</b></td><td>Los <code>Isr</code> completos del <code>--describe</code></td></tr>
+<tr><td><b>Topics</b> y luego <code>novatech.lab10.pedidos</code></td><td>En la pestaña <b>Overview</b>, arriba, <b>Partitions 3</b> y <b>Replication Factor 3</b></td><td>La primera línea del <code>--describe</code></td></tr>
+<tr><td>Más abajo, en esa misma pestaña <b>Overview</b></td><td>Tres filas, con <i>Partition ID</i>, <i>Replicas</i> y <i>Message Count</i></td><td>Las tres líneas <code>Partition:</code></td></tr>
+<tr><td>La columna <b>Message Count</b></td><td><b>Dos particiones en 0 y una en 3</b></td><td>El <code>kafka-get-offsets</code></td></tr>
+<tr><td>Pestaña <b>Messages</b></td><td>Los tres pedidos, como JSON legible</td><td>Los verás por consola en el paso 3</td></tr>
+</table>
+
+<div class="caja ojo">
+  <span class="rot">Dos cosas de la pantalla que conviene saber antes de buscarlas</span>
+  <p><b>No hay una pestaña llamada <i>Partitions</i>.</b> Las pestañas del tópico son <i>Overview</i>, <i>Messages</i>, <i>Consumers</i>, <i>Settings</i>, <i>Statistics</i> y <i>ACLs</i>. <b>La tabla de particiones está dentro de <i>Overview</i></b>, debajo de los recuadros de arriba.</p>
+  <p style="margin-bottom:0"><b>Y no hay una columna <i>Leader</i>.</b> En la columna <i>Replicas</i> de cada fila verás algo como <code>2, 3, 1</code>, y <b>el líder es el que está pintado de otro color</b>, que es el primero. La consola te lo dice con todas las letras y la pantalla te lo dice con un color. <b>La consola es más explícita aquí</b>, y conviene notarlo el día que discutas con alguien que solo mira el tablero.</p>
+</div>
+
+<h3>Cómo se lee</h3>
+
+<p>Los números son <b>los mismos</b>. No hay un solo dato en esa pantalla que no hayas podido sacar de la línea de comandos.</p>
+
+<p>Ahí está la primera mitad de la afirmación, y conviene decirla en voz alta. <b>El tablero no sabe nada que tú no puedas averiguar.</b> Es un cliente de Kafka, igual que la consola, igual que el programa Java del laboratorio 09. Le pregunta a los brokers y dibuja lo que le contestan.</p>
+
+<div class="caja tecnico">
+  <span class="rot">Lo que sí hace mejor, y es honesto reconocerlo</span>
+  <p style="margin-bottom:0">El desbalance de particiones, o sea dos en cero y una en tres, en la consola son tres líneas que hay que sumar a ojo. En la pantalla es <b>una barra que está torcida</b>. Con tres particiones da igual. <b>En un tópico de doscientas, esa diferencia deja de ser una comodidad y pasa a ser la única forma práctica.</b></p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p style="margin-bottom:0">Para cada fila de la tabla de arriba puedes señalar el número en la pantalla <b>y</b> el número en la salida del paso 1, y son el mismo. <b>Anota una respuesta.</b> ¿Encontraste algún dato en el tablero que no supieras sacar por consola?</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el navegador dice que no puede conectar</span>
+  <p>Comprueba dos cosas, en este orden.</p>
+  <p><b>Una.</b> Que escribiste 8090 y no 8080.</p>
+  <p style="margin-bottom:0"><b>Dos.</b> Que el contenedor está arriba, con <code>docker ps --filter name=kafbat-ui</code>. Si no aparece, levántalo con <code>docker start kafbat-ui</code>.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el Dashboard dice <code>Offline · 1 clusters</code> o la lista sale vacía</span>
+  <p style="margin-bottom:0">Kafbat arrancó antes que los brokers y se quedó con la primera respuesta. <b>Recarga la página.</b> Si sigue, reinícialo con <code>docker restart kafbat-ui</code> y dale medio minuto. <b>Esto ya es el laboratorio empezando</b>, porque acabas de ver que el tablero puede estar equivocado mientras el clúster está bien.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 3 de 5</span>Lo que el tablero suma por ti</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Fabricar el problema más común de operación, que es un consumidor que se quedó atrás, y mirarlo por los dos lados.</p>
+
+<div class="concepto">
+  <span class="rot">Concepto · grupo de consumidores</span>
+  Varios consumidores que comparten un nombre de grupo y se reparten las particiones de un tópico. <b>Kafka guarda por dónde va el grupo</b>, no cada consumidor.
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · <i>lag</i>, o retraso</span>
+  Cuántos mensajes hay escritos que el grupo todavía no leyó. Es la resta entre el offset final del tópico y el offset por donde va el grupo. <b>Es el número que se vigila en producción</b>, más que ningún otro.
+</div>
+
+<h3>Primero, un grupo que lee lo que hay y se va</h3>
+
+<pre>docker exec kafka-broker-1 kafka-console-consumer \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.lab10.pedidos \
+    --group fiscalizacion --from-beginning --max-messages 3</pre>
+
+<div class="desglose">
+<div><span class="flag">--group fiscalizacion</span> — <b>sin grupo no hay lag que medir.</b> Kafka solo guarda el avance de un grupo con nombre</div>
+<div><span class="flag">--from-beginning</span> — empieza por el mensaje más viejo que el tópico conserva</div>
+<div><span class="flag">--max-messages 3</span> — lee los tres que hay y sale solo. <b>Sin esto se queda esperando para siempre</b></div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">{"pedido":1,"cliente":"ACME","monto":1500}
+{"pedido":2,"cliente":"ACME","monto":2500}
+{"pedido":3,"cliente":"ACME","monto":3500}
+Processed a total of 3 messages</div>
+
+<p>Son los mismos tres que viste en la pestaña <b>Messages</b> del tablero. <b>El grupo acaba de guardar por dónde va.</b></p>
+
+<h3>Ahora llegan cinco pedidos por la ventanilla de la calle</h3>
+
+<p>Y de paso esto es todo el REST Proxy que el recorrido necesita.</p>
+
+<pre>curl -s -w "\nHTTP %{http_code}\n" -X POST \
+    -H "Content-Type: application/vnd.kafka.json.v2+json" \
+    --data '{"records":[{"value":{"pedido":2001}},{"value":{"pedido":2002}},{"value":{"pedido":2003}},{"value":{"pedido":2004}},{"value":{"pedido":2005}}]}' \
+    http://localhost:8082/topics/novatech.lab10.pedidos</pre>
+
+<div class="desglose">
+<div><span class="flag">-s</span> — modo silencioso. Sin esto <code>curl</code> dibuja una barra de progreso encima de la respuesta</div>
+<div><span class="flag">-w "\nHTTP %{http_code}\n"</span> — imprime el código HTTP al final. <b>La respuesta sola no te lo dice</b>, y aquí importa</div>
+<div><span class="flag">-X POST</span> a <code>/topics/&lt;tópico&gt;</code> — producir por HTTP es <b>un POST y ya</b>. No hay sesión ni estado</div>
+<div><span class="flag">-H "Content-Type: application/vnd.kafka.json.v2+json"</span> — el tipo de contenido propio del REST Proxy. Dice <b>dos cosas a la vez</b>, que hablas su versión 2 y que los valores van en JSON</div>
+<div><span class="flag">--data '{"records":[…]}'</span> — los mensajes. <b>Un POST puede llevar varios</b>, y por eso van dentro de una lista</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">{"offsets":[{"partition":0,"offset":3,"error_code":null,"error":null},{"partition":0,"offset":4,"error_code":null,"error":null},{"partition":0,"offset":5,"error_code":null,"error":null},{"partition":0,"offset":6,"error_code":null,"error":null},{"partition":0,"offset":7,"error_code":null,"error":null}],"key_schema_id":null,"value_schema_id":null}
+HTTP 200</div>
+
+<p>Una entrada por mensaje, cada una con <b>la partición y el offset donde quedó</b>. Es exactamente lo que el broker le contestó al programa Java del laboratorio 09, el mismo dato, por HTTP.</p>
+
+<div class="caja sunat">
+  <span class="rot">Y aquí una que se paga cara en producción</span>
+  <p style="margin-bottom:0">Mira el <code>error</code> en <code>null</code> de cada entrada. <b>Un POST puede devolver 200 y traer errores adentro</b>, si alguno de los mensajes de la tanda falló. El código HTTP habla del POST. Los <code>error</code> hablan de cada mensaje. <b>Un sistema que solo mira el 200 pierde mensajes sin enterarse.</b></p>
+</div>
+
+<h3>El retraso, por la consola</h3>
+
+<pre>docker exec kafka-broker-1 kafka-consumer-groups \
+    --bootstrap-server kafka-broker-1:29092 \
+    --describe --group fiscalizacion</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">Consumer group 'fiscalizacion' has no active members.
+
+GROUP           TOPIC                  PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID     HOST            CLIENT-ID
+fiscalizacion   novatech.lab10.pedidos 0          3               8               5               -               -               -
+fiscalizacion   novatech.lab10.pedidos 1          0               0               0               -               -               -
+fiscalizacion   novatech.lab10.pedidos 2          0               0               0               -               -               -</div>
+
+<table>
+<tr><th>Lo que dice</th><th>Qué significa</th></tr>
+<tr><td><code>has no active members</code></td><td>Nadie está consumiendo ahora mismo. <b>El grupo existe porque dejó su marca</b>, pero está parado</td></tr>
+<tr><td><code>CURRENT-OFFSET 3</code></td><td>Por dónde va el grupo en la partición llena</td></tr>
+<tr><td><code>LOG-END-OFFSET 8</code></td><td>Hasta dónde llegó el tópico</td></tr>
+<tr><td><code>LAG 5</code></td><td><b>Los cinco que entraron por HTTP y nadie leyó</b></td></tr>
+</table>
+
+<h3>Y la misma verdad en el tablero</h3>
+
+<p>En Kafbat, entra a <b>Consumers</b> y luego a <code>fiscalizacion</code>.</p>
+
+<table>
+<tr><th>Lo que muestra el tablero</th><th>Lo que dijo la consola</th></tr>
+<tr><td><i>State</i> en <b>EMPTY</b></td><td><code>has no active members</code></td></tr>
+<tr><td><i>Members</i> en <b>0</b></td><td>Los guiones de las columnas <code>CONSUMER-ID</code>, <code>HOST</code> y <code>CLIENT-ID</code></td></tr>
+<tr><td><i>Assigned Partitions</i> en <b>3</b></td><td>Que la tabla trae tres filas, una por partición</td></tr>
+<tr><td>Un solo número grande, <b>Total lag 5</b></td><td><b>La consola no lo da sumado.</b> Da tres filas, y el 5 hay que encontrarlo entre ceros</td></tr>
+</table>
+
+<div class="caja ojo">
+  <span class="rot">El número grande se llama <i>Total lag</i></span>
+  <p style="margin-bottom:0">Está arriba, en la fila de recuadros, junto a <i>State</i> y <i>Members</i>. Más abajo hay una tabla con una fila por tópico y una columna <b><i>Consumer lag</i></b>, que aquí dice 5 también. <b>Son el mismo número por un solo tópico.</b> Con varios tópicos, el de arriba es la suma de los de abajo.</p>
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">La segunda mitad de la afirmación, y es la parte honesta</span>
+  <p style="margin-bottom:0"><b>El tablero sí hace algo mejor.</b> No sabe nada distinto, porque los números son los mismos. Pero te los suma y te los pone en la cara. Con tres particiones da igual. <b>Con doscientas es la diferencia entre ver el problema y no verlo.</b></p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>La consola dice <code>LAG 5</code> en una partición y 0 en las otras dos, y el tablero dice <b>Total lag 5</b> en un solo número.</p>
+  <p style="margin-bottom:0"><b>Anota una respuesta.</b> ¿De dónde sacó el tablero ese 5, si la consola no lo da sumado?</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el POST devuelve <code>HTTP 415</code></span>
+  <p>Es el error más común de este paso, y está medido. Pasa cuando escribes <code>Content-Type: application/json</code> a secas.</p>
+  <p style="margin-bottom:0">El REST Proxy exige <b>su propio tipo de contenido</b>, que es <code>application/vnd.kafka.json.v2+json</code>. Cópialo entero, con el <code>vnd.kafka</code> y el <code>v2</code>. <b>El 415 quiere decir «no hablo ese formato»</b>, y es del proxy, no de Kafka.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el <code>--describe</code> dice que el grupo no existe</span>
+  <p style="margin-bottom:0">No corriste el consumidor con <code>--group fiscalizacion</code>, o escribiste otro nombre. <b>Un grupo se crea al usarlo</b>, no antes. Lista los que hay con <code>--list</code> en vez de <code>--describe --group</code>.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el <code>LAG</code> te sale 0 en todo</span>
+  <p style="margin-bottom:0">Corriste el <code>--describe</code> antes del POST, o el consumidor volvió a leer después. Vuelve a mandar el POST de cinco y consulta de nuevo, <b>sin consumir en medio</b>.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 4 de 5</span>Y ahora se cae el tablero</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Éste es el paso que cierra el laboratorio, y es la razón de que exista. Vamos a apagar la interfaz <b>a propósito</b> y a ver qué se rompe.</p>
+
+<div class="caja ojo">
+  <span class="rot">Predice antes de ejecutar, y escríbelo</span>
+  <p style="margin-bottom:0">Con Kafbat apagado, ¿el clúster sigue funcionando? ¿Y el REST Proxy? ¿Y el grupo <code>fiscalizacion</code> pierde su avance? <b>Contesta las tres antes de teclear.</b> El paso vale la mitad si lees la respuesta antes de haber apostado.</p>
+</div>
+
+<h3>El comando</h3>
+
+<pre>docker stop kafbat-ui</pre>
+
+<div class="desglose">
+<div><span class="flag">docker stop</span> — apaga el contenedor de forma ordenada. <b>No borra nada</b>, porque los datos de Kafbat viven en el clúster y no en él</div>
+<div><span class="flag">kafbat-ui</span> — el nombre del contenedor de la interfaz. Es uno de los cinco de este laboratorio</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">kafbat-ui</div>
+
+<p>Una sola línea. Docker imprime el nombre de lo que apagó, y nada más. <b>No hay confirmación ni advertencia.</b></p>
+
+<p>Recarga <code>http://localhost:8090</code> en el navegador y no responde. Y por si queda duda de que está caído y no lento:</p>
+
+<pre>curl -sS --max-time 5 http://localhost:8090/</pre>
+
+<div class="desglose">
+<div><span class="flag">-sS</span> — silencioso <b>pero mostrando los errores</b>. La <code>S</code> mayúscula es la que deja pasar el mensaje de fallo</div>
+<div><span class="flag">--max-time 5</span> — se rinde a los cinco segundos. <b>Aquí no hace falta</b>, porque el fallo es inmediato, pero es la costumbre correcta</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">curl: (7) Failed to connect to localhost port 8090 after 0 ms: Couldn't connect to server</div>
+
+<p>Dice <i>Failed to connect</i>, y no <i>404</i> ni <i>500</i>. <b>No hay nadie escuchando en ese puerto.</b> El <code>(7)</code> es el código de <code>curl</code> para «no pude conectar».</p>
+
+<div class="caja tecnico">
+  <span class="rot">La distinción que hay que llevarse</span>
+  <p style="margin-bottom:0">Un <b>404</b> o un <b>500</b> quieren decir que alguien contestó. Un <b>(7)</b> quiere decir que no hay nadie. <b>Son diagnósticos distintos y llevan a sitios distintos</b>, y confundirlos a las tres de la mañana cuesta media hora.</p>
+</div>
+
+<h3>Las tres preguntas de la predicción, contestadas con comandos</h3>
+
+<pre>docker exec kafka-broker-1 kafka-get-offsets \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.lab10.pedidos --time -1</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">novatech.lab10.pedidos:0:8
+novatech.lab10.pedidos:1:0
+novatech.lab10.pedidos:2:0</div>
+
+<pre>docker exec kafka-broker-1 kafka-consumer-groups \
+    --bootstrap-server kafka-broker-1:29092 \
+    --describe --group fiscalizacion</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">GROUP           TOPIC                  PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG             CONSUMER-ID     HOST            CLIENT-ID
+fiscalizacion   novatech.lab10.pedidos 0          3               8               5               -               -               -
+fiscalizacion   novatech.lab10.pedidos 1          0               0               0               -               -               -
+fiscalizacion   novatech.lab10.pedidos 2          0               0               0               -               -               -</div>
+
+<pre>curl -s -o /dev/null -w "REST Proxy: HTTP %{http_code}\n" http://localhost:8082/topics</pre>
+
+<div class="desglose">
+<div><span class="flag">-o /dev/null</span> — tira el cuerpo de la respuesta. <b>Aquí solo interesa el código</b>, no la lista de tópicos</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">REST Proxy: HTTP 200</div>
+
+<h3>Cómo se lee</h3>
+
+<p><b>No se movió nada.</b> Los ocho mensajes siguen ahí, el lag sigue siendo 5, y la ventanilla de la calle sigue atendiendo.</p>
+
+<p><b>El clúster no se enteró de que el tablero se cayó</b>, porque el tablero nunca fue parte del clúster. Era un cliente que preguntaba y dibujaba.</p>
+
+<h3>Y para volver</h3>
+
+<pre>docker start kafbat-ui</pre>
+
+<p>Imprime otra vez <code>kafbat-ui</code>, y ya está. <b>Medido, vuelve a responder en 5 segundos.</b> Recarga el navegador y está todo igual, porque no había nada que recuperar.</p>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p>Con el tablero apagado, los tres comandos te dieron ocho mensajes, lag 5 y <code>HTTP 200</code>. Y al volver a encenderlo, la pantalla mostró lo mismo que antes sin que tú hicieras nada.</p>
+  <p style="margin-bottom:0"><b>Compara con tu predicción.</b> ¿Acertaste las tres?</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si <code>docker start kafbat-ui</code> dice <code>No such container</code></span>
+  <p style="margin-bottom:0">Corriste <code>docker rm</code> en vez de <code>docker stop</code>, o algo lo borró. Levántalo con el compose del lab:</p>
+  <pre style="margin-bottom:0">cd infra &amp;&amp; docker compose up -d kafbat-ui &amp;&amp; cd ..</pre>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si al volver el tablero se queda cargando</span>
+  <p style="margin-bottom:0">Dale medio minuto. Kafbat vuelve a preguntarle todo al clúster desde cero al arrancar, y eso tarda unos segundos. <b>Si a los dos minutos sigue igual</b>, compruébalo por su propia API, que es más barata que la pantalla:</p>
+  <pre style="margin-bottom:0">curl -s http://localhost:8090/api/clusters</pre>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 5 de 5</span>Los tres comandos de las tres de la mañana</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Cerrar el laboratorio con lo único que de verdad se lleva. <b>Escribir, sin mirar, los tres comandos con los que se responde un incidente cuando no hay tablero.</b></p>
+
+<p>No hay nada nuevo que ejecutar. Son tres que ya usaste hoy.</p>
+
+<table>
+<tr><th>La pregunta</th><th>El comando</th></tr>
+<tr><td>¿El clúster está vivo?</td><td><code>kafka-get-offsets --bootstrap-server … --topic … --time -1</code></td></tr>
+<tr><td>¿El tópico está sano?</td><td><code>kafka-topics --bootstrap-server … --describe --topic …</code></td></tr>
+<tr><td>¿Quién se está atrasando?</td><td><code>kafka-consumer-groups --bootstrap-server … --describe --group …</code></td></tr>
+</table>
+
+<div class="caja sunat">
+  <span class="rot">Por qué éstos y no otros</span>
+  <p>El primero es el más barato que existe para saber si hay alguien al otro lado. Si contesta, el clúster está vivo.</p>
+  <p>El segundo dice si las réplicas están al día. Una partición con menos réplicas en ISR que en <code>Replicas</code> es un problema que todavía no se ve.</p>
+  <p style="margin-bottom:0">El tercero es el que encuentra el problema real nueve de cada diez veces. <b>El clúster suele estar bien y el que se quedó atrás es un consumidor.</b></p>
+</div>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p style="margin-bottom:0">Puedes escribir los tres de memoria, con su <code>--bootstrap-server</code>, sin abrir esta guía. <b>Ése es el laboratorio.</b> Todo lo demás de hoy fue para que entiendas por qué estos tres y no la pantalla.</p>
+</div>
+
+<div class="np"></div>
+<h2>Lo que aprendiste</h2>
+
+<div class="regla"><span class="num">1</span>
+<b>El tablero es un cliente, no el clúster.</b><br>
+Todo lo que muestra se lo preguntó a los brokers, igual que la consola y que el programa Java del laboratorio 09. Si muestra algo raro, la primera pregunta es si el raro es el clúster o es el tablero.
+</div>
+
+<div class="regla"><span class="num">2</span>
+<b>Un tablero caído no es un clúster caído, y confundirlos cuesta una madrugada.</b><br>
+La forma de distinguirlos es un <code>kafka-get-offsets</code> desde cualquier broker. Y en la respuesta de <code>curl</code>, un 404 o un 500 quieren decir que alguien contestó. Un <code>(7)</code> quiere decir que no hay nadie.
+</div>
+
+<div class="regla"><span class="num">3</span>
+<b>Lo que se mira en el tablero se arregla en la consola.</b><br>
+Mirar y actuar son dos cosas distintas. A las tres de la mañana solo vas a tener la segunda. Por eso el tablero suma mejor, y aun así no reemplaza a los tres comandos del paso 5.
+</div>
+
+<div class="regla"><span class="num">4</span>
+<b>REST Proxy es para el sistema que no puede tener un cliente nativo.</b><br>
+Si puede, debe. Cada mensaje que pasa por el proxy pasa por un intermediario más, que hay que dimensionar, vigilar y mantener arriba. Y su respuesta puede traer un 200 con errores adentro, así que se revisan los dos niveles.
+</div>
+
+<div class="np"></div>
+<h2>Para profundizar</h2>
+
+<p>Todo esto estaba en el recorrido de clase y salió por tiempo. Aquí va desarrollado, con su comando.</p>
+
+<h3>A · REST Proxy, endpoint por endpoint</h3>
+
+<p>El recorrido usó un solo POST. La API tiene más.</p>
+
+<pre>curl -s http://localhost:8082/topics
+curl -s http://localhost:8082/topics/novatech.lab10.pedidos</pre>
+
+<div class="salida-rot">Lo que sale del primero</div>
+<div class="salida">["novatech.lab10.pedidos"]</div>
+
+<div class="salida-rot">Lo que sale del segundo · recortado a las particiones</div>
+<div class="salida">{"name":"novatech.lab10.pedidos","configs":{ … },
+ "partitions":[
+   {"partition":0,"leader":2,"replicas":[{"broker":2,"leader":true,"in_sync":true},
+                                         {"broker":3,"leader":false,"in_sync":true},
+                                         {"broker":1,"leader":false,"in_sync":true}]},
+   {"partition":1,"leader":3, … },
+   {"partition":2,"leader":1, … }]}</div>
+
+<p><b>Lo que hay que mirar.</b> El bloque <code>configs</code> viene entero y son treinta y tantas propiedades, así que arriba está recortado. Lo importante es <code>partitions</code>. Ahí están las particiones, sus líderes y sus réplicas, con un <code>in_sync</code> por réplica. <b>Son los mismos datos del <code>--describe</code> del paso 1, por HTTP.</b> Tres formas de preguntar lo mismo, o sea la consola, el tablero y el proxy.</p>
+
+<p>Y los envoltorios del curso, que son <code>curl</code> por dentro y no dependen de nada instalado:</p>
+
+<pre>rest-cli/rest-list-topics.sh
+rest-cli/rest-produce.sh novatech.lab10.pedidos '{"pedido":3001,"cliente":"Courier-Y"}'</pre>
+
+<h3>B · Consumir por HTTP, que es lo que de verdad cuesta</h3>
+
+<p>Producir por HTTP era un POST. <b>Consumir es un ciclo de vida de cuatro pasos</b>, y esa asimetría es el bloque más instructivo del laboratorio.</p>
+
+<pre>crear instancia → suscribir → poll (dos veces) → borrar instancia</pre>
+
+<pre>rest-cli/rest-consume.sh novatech.lab10.pedidos</pre>
+
+<div class="salida-rot">Lo que sale · recortado</div>
+<div class="salida">[REST Consume] Ciclo completo del consumer HTTP
+1. Crear instancia (ci-75005) en grupo novatech-rest-group...
+{"instance_id":"ci-75005","base_uri":"http://kafka-rest:8082/consumers/novatech-rest-group/instances/ci-75005"}
+2. Suscribir al tópico novatech.lab10.pedidos...
+3. Primer poll (inicializa la suscripción, suele venir vacío)...
+4. Segundo poll (trae los mensajes)...
+[{"topic":"novatech.lab10.pedidos","key":null,"value":{"pedido":1,"cliente":"ACME","monto":1500},"partition":0,"offset":0},
+ {"topic":"novatech.lab10.pedidos","key":null,"value":{"pedido":2001},"partition":0,"offset":3}, … ]
+5. Borrar la instancia...
+
+✓ Ciclo de consumo HTTP completado</div>
+
+<p><b>Lo que hay que mirar.</b> Dos cosas.</p>
+
+<p><b>El primer poll viene vacío.</b> No es un fallo. La primera llamada es la que activa la suscripción, y recién la segunda trae datos.</p>
+
+<p><b>Hay que borrar la instancia al terminar.</b> Si no, queda ocupando su asignación de particiones en el servidor hasta que expire.</p>
+
+<div class="caja tecnico">
+  <span class="rot">Y ahí está el porqué de toda la asimetría</span>
+  <p style="margin-bottom:0">Producir no necesita memoria, porque el mensaje se va y listo. <b>Consumir sí, porque Kafka tiene que recordar por dónde vas.</b> HTTP no tiene memoria entre llamadas, así que el proxy la guarda por ti. Por eso hay que crear y borrar algo.</p>
+</div>
+
+<p><b>La pregunta que vale.</b> ¿Qué pasa con las instancias de consumer que un sistema mal escrito crea y nunca borra?</p>
+
+<h3>C · El desafío del socio que solo hace <code>curl</code></h3>
+
+<p>Diséñale a un socio externo una secuencia de tres o cuatro <code>curl</code> que liste los tópicos, produzca dos pedidos, cree un consumer, lea y limpie la instancia. Documéntala en el reporte.</p>
+
+<p><b>Es el ejercicio que convierte este laboratorio en algo que puedes entregarle a alguien.</b></p>
+
+<h3>D · Interoperabilidad, HTTP y nativo sobre el mismo tópico</h3>
+
+<pre>rest-cli/rest-produce.sh novatech.lab10.pedidos '{"pedido":9999,"origen":"http"}'
+docker exec kafka-broker-1 kafka-console-consumer \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.lab10.pedidos --from-beginning --max-messages 10</pre>
+
+<p><b>Lo que hay que mirar.</b> El cliente nativo lee el mensaje que entró por HTTP, sin saber ni poder saber por dónde entró. <b>Es la misma lección del laboratorio 09.</b> El broker no distingue clientes.</p>
+
+<h3>E · La API del propio tablero</h3>
+
+<p>Kafbat tiene su propia API REST, y es la que usa su pantalla.</p>
+
+<pre>curl -s http://localhost:8090/api/clusters</pre>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">[{"name":"novatech-cluster","defaultCluster":null,"status":"ONLINE","lastError":null,
+  "brokerCount":3,"onlinePartitionCount":53,"topicCount":2,
+  "bytesInPerSec":null,"bytesOutPerSec":null,"readOnly":false,
+  "version":"4.2-IV1","features":["TOPIC_DELETION","CLIENT_QUOTA_MANAGEMENT","FTS_ENABLED"],
+  "controller":"KRAFT"}]</div>
+
+<p><b>Lo que hay que mirar.</b> El <code>"controller":"KRAFT"</code> y el <code>"version":"4.2-IV1"</code> son los mismos datos del laboratorio 01.</p>
+
+<div class="caja ojo">
+  <span class="rot">Y dos números que sorprenden, con su explicación</span>
+  <p>Dice <code>topicCount: 2</code> y <code>onlinePartitionCount: 53</code>, cuando tú solo creaste un tópico de tres particiones.</p>
+  <p style="margin-bottom:0">El segundo tópico es <code>__consumer_offsets</code>, el interno donde Kafka guarda por dónde va cada grupo. <b>Tiene 50 particiones, y 50 más 3 son 53.</b> Apareció cuando el grupo <code>fiscalizacion</code> guardó su avance en el paso 3. <b>Si corres esto antes del paso 3, te va a dar 1 y 3.</b> Ése es el tópico que hace que los offsets sobrevivan a que apagues el consumidor.</p>
+</div>
+
+<div class="caja sunat">
+  <span class="rot">Una idea que vale para producción</span>
+  <p style="margin-bottom:0">Si quieres vigilar el clúster desde un tablero propio o un monitor, <b>no hace falta que una persona mire esta pantalla</b>. Se le puede preguntar a esta API.</p>
+</div>
+
+<h3>F · El reporte del laboratorio</h3>
+
+<p><code>plantillas/reporte-entregable.md</code> recorre las actividades con sus preguntas. Las respuestas de referencia están en <code>soluciones/reporte-resuelto.md</code>.</p>
+
+<h2>Antes de cerrar</h2>
+
+<div class="caja ojo">
+  <span class="rot">Deja el terreno limpio</span>
+  <pre>bin/90-test-lab.sh   # ver el estado del laboratorio
+bin/stop-lab.sh      # apagar los contenedores</pre>
+  <p><code>bin/stop-lab.sh</code> solo detiene los contenedores. No borra nada, y los volúmenes siguen ahí mientras el lab esté detenido.</p>
+  <p style="margin-bottom:0"><b>Ojo al reanudar.</b> <code>bin/start-lab.sh</code> reconstruye el laboratorio desde cero, así que los tópicos y mensajes que creaste no sobreviven. El lab vuelve a sembrar los suyos. <b>Si creaste algo propio, anótalo antes.</b> Para borrarlo todo ahora mismo, <code>bin/reset-lab.sh</code>, que no pide confirmación.</p>
+</div>
+
+<div class="salida-rot">Lo que dice el validador si todo está en orden</div>
+<div class="salida">Validador del Lab 10 — estado actual
+  ✓ los 3 brokers están healthy
+  ✓ REST Proxy responde en :8082/topics
+  ✓ el tópico novatech.lab10.pedidos es visible vía REST
+  ✓ kafbat UI responde UP en :8090
+
+✓ LAB EN BUEN ESTADO (4 verificaciones OK)</div>
+
+<div class="caja sunat">
+  <span class="rot">Lo que te llevas</span>
+  <p>Si mañana a las tres de la mañana te llaman por Kafka y solo tienes un SSH a un servidor sin navegador, <b>¿qué tres comandos escribes primero?</b></p>
+  <p style="margin-bottom:0">Hoy los escribiste todos, y además viste por qué el tablero no va a estar. <b>El pizarrón se puede borrar y el restaurante sigue atendiendo.</b> Lo que no se puede borrar es lo que tú sabes escribir.</p>
+</div>
+
+</body></html>
