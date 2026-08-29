@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><link rel="stylesheet" href="estilo-alumno.css"></head>
+<body>
+
+<div class="portada">
+  <div class="kicker">C U R S O &nbsp; D E &nbsp; A D M I N I S T R A C I Ó N &nbsp; D E &nbsp; K A F K A</div>
+  <div class="labnum">LABORATORIO 14 · CAPSTONE</div>
+  <h1>¿Cómo se<br>demuestra que<br>está cerrada?</h1>
+  <div class="sub">TLS, SASL y ACL. El único laboratorio del curso que se aprueba fallando.<br>Guía para hacerlo por tu cuenta, paso a paso</div>
+  <div class="meta">
+    Confluent Platform 8.2.0 · 3 brokers KRaft con SASL_SSL · PKI propia<br>
+    Duración estimada · 50 minutos<br>
+    NovaTech Logistics · caso de estudio
+  </div>
+</div>
+
+<h2>Antes de empezar</h2>
+
+<h3>Qué vas a lograr</h3>
+
+<p>Éste es el último laboratorio del curso, y <b>el único que se aprueba fallando</b>. De los comandos del recorrido, dos <b>tienen que dar error</b>. Si alguno de los dos funcionara, el clúster estaría roto.</p>
+
+<p>Y los dos errores <b>no se parecen en nada</b>. Esa diferencia es lo único que este laboratorio tiene que dejarte.</p>
+
+<div class="afirmacion">
+  <span class="rot">Lo que este laboratorio demuestra</span>
+  <div class="txt">La seguridad se demuestra con lo que rechaza, no con lo que permite.</div>
+</div>
+
+<div class="caja sunat">
+  <span class="rot">Y ésta es la distinción, dicha de frente antes de empezar</span>
+  <p>No la deduzcas del contraste. <b>Léela ahora, y vuelve a leerla al terminar.</b></p>
+  <table>
+  <tr><th>Lo que le pasa al cliente</th><th>Qué falló</th></tr>
+  <tr><td>Un cliente <b>sin credenciales</b> que <b>ni siquiera se conecta</b>. No hay conversación, no hay respuesta, no hay mensaje de error del clúster</td><td><b>Autenticación</b></td></tr>
+  <tr><td>Un cliente <b>con credenciales válidas</b> que <b>entra al clúster</b> y aun así <b>no puede leer el tópico</b>. El clúster le contesta, y le dice por qué, nombrando el recurso</td><td><b>Autorización</b></td></tr>
+  </table>
+  <p style="margin-bottom:0"><b>Autenticar es saber quién eres. Autorizar es saber qué puedes tocar.</b> Son dos compuertas distintas, en ese orden, y hacen falta las dos. Si te vas sin entender esa diferencia, el laboratorio no sirvió.</p>
+</div>
+
+<h3>Qué necesitas tener listo</h3>
+
+<table>
+<tr><th>Requisito</th><th>Cómo lo compruebas</th></tr>
+<tr><td>Docker Desktop corriendo, con 6 GB de RAM</td><td>Ajustes de Docker Desktop, pestaña <i>Resources</i></td></tr>
+<tr><td>Git Bash abierto en la carpeta del lab</td><td><code>cd Capitulo_5/lab-14-capstone-resiliencia-seguridad</code></td></tr>
+<tr><td>Los puertos 9092, 9093, 9094 y 8090 libres</td><td>El paso 1 te avisa si no lo están</td></tr>
+<tr><td><b>Paciencia en el arranque</b></td><td>El paso 1 tarda más que los demás labs porque genera criptografía. <b>Medido, 33 segundos</b></td></tr>
+</table>
+
+<div class="caja ojo">
+  <span class="rot">Toda la criptografía ya está hecha cuando llegas</span>
+  <p style="margin-bottom:0">No vas a generar un certificado, ni armar un almacén de claves, ni editar un <i>listener</i>. <b>Eso ocupaba la mitad del recorrido viejo y está en el <i>para profundizar</i> A</b>, porque no es lo que hay que aprender aquí. Lo que hay que aprender es a leer dos errores.</p>
+</div>
+
+<h3>El caso</h3>
+
+<div class="caja">
+  <p>La conversación sobre seguridad en un clúster suele terminar en una demostración que no demuestra nada.</p>
+  <p>Alguien conecta un cliente, produce un mensaje, lo consume, y dice <i>listo, está seguro</i>. Y todos asienten, porque funcionó.</p>
+  <p><b>Pero que funcione no prueba nada sobre la seguridad.</b> Un clúster completamente abierto también deja producir y consumir. La demostración es idéntica en los dos casos. <b>Lo único que distingue a un clúster seguro de uno abierto es lo que el seguro no deja hacer</b>, y eso no se ve haciendo las cosas que sí funcionan.</p>
+  <p>Y hay una segunda mitad, que es donde de verdad se pierde la gente. Cuando por fin alguien hace la prueba negativa, la hace <b>una sola vez</b>. Intenta conectar sin credenciales, ve que falla, y da el tema por cerrado.</p>
+  <p>Eso deja fuera la mitad del problema, y es la mitad cara. Porque una cosa es <b>quién eres</b> y otra muy distinta es <b>qué puedes tocar</b>. En SUNAT esa diferencia tiene nombre y apellido. El sistema de un área tiene credenciales perfectamente válidas, porque es un sistema de la casa y tiene que poder entrar, <b>y aun así no debe poder leer los datos de otra área</b>.</p>
+  <p style="margin-bottom:0">Un clúster que confunde esas dos cosas deja entrar a todos los que tienen llave. Y una vez dentro, <b>todos pueden todo</b>.</p>
+</div>
+
+<div class="caja abuelita">
+  <span class="rot">La metáfora · el último día, y son dos piezas</span>
+  <p>Kafka sigue siendo <b>el restaurante</b>. El <b>mozo</b> es el broker, el <b>tipo de comanda</b> es el tópico, los <b>sectores del salón</b> son las particiones, las <b>libretas de respaldo</b> son las réplicas y la <b>brigada</b> es el grupo de consumidores.</p>
+  <p>Las piezas de hoy son dos, y la gracia está en no confundirlas.</p>
+  <table>
+  <tr><th>En el restaurante</th><th>En Kafka</th></tr>
+  <tr><td><b>La puerta de servicio con cerradura.</b> Si no tienes llave no entras, y desde fuera ni siquiera oyes lo que pasa dentro</td><td>La <b>autenticación</b>, o sea SASL sobre TLS</td></tr>
+  <tr><td><b>La lista pegada en la cocina</b> que dice qué puede tocar cada uno de los que ya entraron</td><td>La <b>autorización</b>, o sea las ACL</td></tr>
+  </table>
+  <p>Y ahora el ejemplo que hay que tener en la cabeza todo el laboratorio.</p>
+  <p>Hay un proveedor que <b>tiene llave</b> de la puerta de servicio. Entra todos los días, deja la mercadería en el depósito, y se va. Es de la casa, la llave es suya y está bien que la tenga.</p>
+  <p><b>Y no puede entrar a la caja.</b> No porque le falte la llave de la puerta, que ésa la tiene. Es porque la lista de la cocina no lo nombra para eso.</p>
+  <p style="margin-bottom:0"><b>Tener llave y tener permiso son dos cosas distintas, y hacen falta las dos.</b></p>
+</div>
+
+<h3>Las tres piezas, con sus nombres</h3>
+
+<div class="concepto">
+  <span class="rot">Concepto · TLS</span>
+  Cifra la conversación entre el cliente y el broker, y le permite al cliente comprobar que el broker es quien dice ser. <b>Es el sobre cerrado.</b> Sin él, un usuario y una contraseña viajarían a la vista de cualquiera.
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · SASL</span>
+  El mecanismo con el que el cliente se presenta. Aquí es <code>PLAIN</code>, o sea usuario y contraseña. <b>Se llama <code>PLAIN</code> y no significa que vaya en claro</b>, porque va dentro del TLS. El nombre confunde a todo el mundo la primera vez.
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · ACL</span>
+  <i>Access Control List</i>. Las reglas de qué <b>principal</b> puede hacer qué <b>operación</b> sobre qué <b>recurso</b>. Se guardan <b>en el propio clúster</b>, no en un archivo de configuración, y se consultan en cada petición.
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · <i>principal</i></span>
+  El nombre con el que el clúster conoce a quien se conecta. Aquí son <code>User:app1</code> y <code>User:app2</code>, y salen del usuario con el que se autenticaron.
+</div>
+
+<h3>Los tres personajes</h3>
+
+<table>
+<tr><th>Quién</th><th>Qué puede</th><th>Su papel en el laboratorio</th></tr>
+<tr><td><code>admin</code></td><td><b><i>Super user.</i></b> Todo permitido, sin ACL de por medio</td><td>El que prueba que el tópico confidencial sí se puede leer</td></tr>
+<tr><td><code>app1</code></td><td>Escribe y lee <b>los dos</b> tópicos</td><td>El que siembra los mensajes</td></tr>
+<tr><td><code>app2</code></td><td><b>Solo lee el público</b></td><td><b>El protagonista.</b> Tiene llave buena y le van a decir que no</td></tr>
+</table>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 1 de 6</span>Levantar el clúster seguro</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Encender el laboratorio. <b>Este arranque hace mucho más que los anteriores</b>, y por eso tarda.</p>
+
+<h3>El comando</h3>
+
+<pre>cd Capitulo_5/lab-14-capstone-resiliencia-seguridad
+chmod +x bin/*.sh kafka-cli/*.sh
+bin/start-lab.sh</pre>
+
+<div class="desglose">
+<div><span class="flag">bin/start-lab.sh</span> — genera <b>la PKI completa</b>, o sea la autoridad certificadora y los certificados firmados de los tres brokers. Arma los almacenes de claves y de confianza, levanta los tres brokers con TLS y SASL, crea los dos tópicos y escribe las ACL. <b>Medido, 33 segundos</b></div>
+</div>
+
+<div class="salida-rot">El final de lo que vas a ver · recortado</div>
+<div class="salida">════════════════════════════════════════════════════════════
+  CLÚSTER NOVATECH LAB 12 OPERATIVO (con seguridad)
+════════════════════════════════════════════════════════════
+
+  Componentes:
+    Broker 1 SASL_SSL:  localhost:9092
+    Broker 2 SASL_SSL:  localhost:9093
+    Broker 3 SASL_SSL:  localhost:9094
+    Kafbat UI:          http://localhost:8090
+
+  Tópicos del Lab 14:
+    novatech.lab12.publico       - 3 part, RF=3 (autenticados con ACL)
+    novatech.lab12.confidencial  - 3 part, RF=3 (solo admin + app1)
+
+  Usuarios:
+    admin       → super user, todo permitido
+    app1        → producer+consumer publico Y confidencial
+    app2        → SOLO consumer del público</div>
+
+<div class="caja ojo">
+  <span class="rot">Dice «LAB 12» y estás en el 14</span>
+  <p style="margin-bottom:0">No es un error. Los tópicos se llaman <code>novatech.lab12.*</code> y el banner conserva ese número porque el material viene de una numeración anterior. <b>Es el laboratorio 14</b>, y todo lo demás calza.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>Los tres brokers dicen <b><code>SASL_SSL</code></b> y no <code>PLAINTEXT</code>. Ésa es la diferencia con los trece laboratorios anteriores, y es toda la diferencia.</p>
+  <p style="margin-bottom:0">Compruébalo también en Docker:</p>
+  <pre style="margin-bottom:0">docker ps --filter "label=com.docker.compose.project=novatech-lab14" \
+    --format 'table {{.Names}}\t{{.Status}}'</pre>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el arranque se queda mucho tiempo generando certificados</span>
+  <p style="margin-bottom:0"><b>Es normal que sea el arranque más lento del curso.</b> Medido, 33 segundos en total. Si pasa de dos minutos, córtalo con <code>Ctrl+C</code> y vuelve a lanzarlo. Los certificados se regeneran desde cero y no queda nada a medias.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si algún broker no llega a <i>healthy</i></span>
+  <p>Con TLS los brokers arrancan más lento que en los otros labs, porque tienen que cargar los almacenes de claves. Dale otro minuto.</p>
+  <p style="margin-bottom:0">Si sigue, mira si el problema son los certificados:</p>
+  <pre style="margin-bottom:0">docker logs --tail 40 kafka-broker-1 | grep -i -E "ssl|keystore|truststore"</pre>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 2 de 6</span>Sembrar los mensajes</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Escribir un mensaje en cada tópico, como <code>app1</code>, que es el que tiene permiso para los dos.</p>
+
+<div class="caja ojo">
+  <span class="rot">Este paso no es opcional, y es fácil saltárselo</span>
+  <p>El <code>bin/start-lab.sh</code> crea los dos tópicos <b>vacíos</b> y no escribe nada en ellos. Compruébalo si quieres, antes de sembrar.</p>
+  <p style="margin-bottom:0"><b>Sin este paso, el laboratorio no se puede demostrar.</b> El paso 5 daría cero mensajes por falta de permiso y el paso 6 daría cero mensajes porque el tópico está vacío, <b>y las dos cosas se ven exactamente igual</b>. No podrías distinguir «me lo denegaron» de «no había nada», que es justo lo que este laboratorio existe para distinguir.</p>
+</div>
+
+<h3>Los comandos</h3>
+
+<pre>kafka-cli/produce-publico.sh "Comprobante publico de la clase"
+kafka-cli/produce-confidencial.sh "Comprobante confidencial de la clase"</pre>
+
+<div class="desglose">
+<div><span class="flag">produce-publico.sh</span> — escribe un mensaje en <code>novatech.lab12.publico</code>, autenticándose como <b><code>app1</code></b></div>
+<div><span class="flag">produce-confidencial.sh</span> — lo mismo en <code>novatech.lab12.confidencial</code>. <b>Funciona porque <code>app1</code> tiene <code>WRITE</code> sobre los dos tópicos</b>, y lo vas a ver escrito en el paso 3</div>
+<div><span class="flag">el texto entre comillas</span> — el mensaje. <b>Elige algo reconocible</b>, porque lo vas a buscar en la salida de los pasos 5 y 6</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver, en cada uno</div>
+<div class="salida">  Mensaje: Comprobante publico de la clase
+Warning: --producer.config is deprecated and will be removed in a future version. Use --command-config instead.
+  ✓ Mensaje publicado</div>
+
+<div class="caja ojo">
+  <span class="rot">El aviso de <code>deprecated</code> sale siempre</span>
+  <p style="margin-bottom:0">Aparece en <b>todos</b> los comandos de este laboratorio, en los que funcionan y en los que no. Es el envoltorio usando un flag viejo que Kafka 8 todavía acepta. <b>No es tuyo y no afecta a nada.</b></p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>Los dos dijeron <code>✓ Mensaje publicado</code>. Y hay un mensaje en cada tópico:</p>
+  <pre>docker exec cli-client bash -c 'kafka-get-offsets \
+    --bootstrap-server kafka-broker-1:9092 \
+    --command-config /etc/kafka/client-properties/admin.properties \
+    --topic novatech.lab12.publico --time -1'</pre>
+  <div class="salida" style="margin-bottom:0">novatech.lab12.publico:0:0
+novatech.lab12.publico:1:0
+novatech.lab12.publico:2:1</div>
+  <p style="margin:3mm 0 0 0"><b>Una de las tres particiones tiene 1 y las otras 0.</b> Cuál te toque a ti depende del reparto, y da igual. Lo que importa es que la suma sea 1.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el productor falla con algo sobre SSL o <i>handshake</i></span>
+  <p style="margin-bottom:0">El clúster todavía no terminó de arrancar. <b>Vuelve al paso 1</b> y espera a que los tres brokers estén <i>healthy</i>. Con TLS eso tarda más que en los labs anteriores.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si dice <code>TopicAuthorizationException</code> al producir</span>
+  <p style="margin-bottom:0">Las ACL no se escribieron al arrancar. Míralas con el comando del paso 3. <b>Si la lista sale vacía</b>, vuelve a levantar el laboratorio con <code>bin/start-lab.sh</code>.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 3 de 6</span>Las reglas, escritas</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Leer las reglas antes de probar nada. Están en el clúster y se consultan.</p>
+
+<h3>El comando</h3>
+
+<pre>kafka-cli/list-acls.sh</pre>
+
+<div class="desglose">
+<div><span class="flag">kafka-cli/list-acls.sh</span> — envoltorio del curso. Por dentro llama a <code>kafka-acls --list</code> <b>con las credenciales de <code>admin</code></b>, porque consultar las reglas también requiere permiso</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">Current ACLs for resource `ResourcePattern(resourceType=TOPIC, name=novatech.lab12.publico, patternType=LITERAL)`:
+	(principal=User:app1, host=*, operation=CREATE, permissionType=ALLOW)
+	(principal=User:app2, host=*, operation=READ, permissionType=ALLOW)
+	(principal=User:app1, host=*, operation=READ, permissionType=ALLOW)
+	(principal=User:app2, host=*, operation=DESCRIBE, permissionType=ALLOW)
+	(principal=User:app1, host=*, operation=DESCRIBE, permissionType=ALLOW)
+	(principal=User:app1, host=*, operation=WRITE, permissionType=ALLOW)
+
+Current ACLs for resource `ResourcePattern(resourceType=TOPIC, name=novatech.lab12.confidencial, patternType=LITERAL)`:
+	(principal=User:app1, host=*, operation=CREATE, permissionType=ALLOW)
+	(principal=User:app1, host=*, operation=READ, permissionType=ALLOW)
+	(principal=User:app1, host=*, operation=DESCRIBE, permissionType=ALLOW)
+	(principal=User:app1, host=*, operation=WRITE, permissionType=ALLOW)
+
+Current ACLs for resource `ResourcePattern(resourceType=GROUP, name=*, patternType=LITERAL)`:
+	(principal=User:app2, host=*, operation=READ, permissionType=ALLOW)
+	(principal=User:app1, host=*, operation=READ, permissionType=ALLOW)</div>
+
+<p><b>El orden de los tres bloques cambia entre corridas.</b> Si a ti sale el de <code>GROUP</code> en el medio, es lo mismo.</p>
+
+<h3>Cómo se lee</h3>
+
+<p>Cada línea es una regla. <b>Quién</b>, desde <b>dónde</b>, <b>qué operación</b>, y si se permite o se niega.</p>
+
+<p>Y ahora la parte importante, <b>que es lo que no está</b>. Mira el bloque de <code>novatech.lab12.confidencial</code> y cuenta los principales.</p>
+
+<table>
+<tr><th>Recurso</th><th>Aparece <code>app1</code></th><th>Aparece <code>app2</code></th></tr>
+<tr><td><code>novatech.lab12.publico</code></td><td>Sí, con 4 operaciones</td><td><b>Sí</b>, con <code>READ</code> y <code>DESCRIBE</code></td></tr>
+<tr><td><code>novatech.lab12.confidencial</code></td><td>Sí, con 4 operaciones</td><td><b>No aparece. Ni una línea.</b></td></tr>
+</table>
+
+<div class="caja tecnico">
+  <span class="rot">Esa ausencia es toda la autorización de este laboratorio</span>
+  <p style="margin-bottom:0"><b>No hay una regla que diga «a <code>app2</code> se le niega el confidencial».</b> Hay algo más fuerte. No hay ninguna regla sobre <code>app2</code> en ese tópico, y <b>en Kafka lo que no está explícitamente permitido está denegado</b>.</p>
+</div>
+
+<p>Fíjate también en el bloque de <code>resourceType=GROUP</code>. <b>Leer un tópico no basta.</b> Hay que tener permiso sobre el grupo de consumidores también, y es el permiso que más se olvida al configurar un cliente nuevo.</p>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p style="margin-bottom:0">Puedes señalar con el dedo <b>dónde no está <code>app2</code></b>. <b>Anota una respuesta.</b> ¿Cuántas reglas hay que nieguen algo explícitamente?</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si la lista sale vacía o da error de autorización</span>
+  <p style="margin-bottom:0">Consultar las ACL también requiere permiso, y el envoltorio usa <code>admin</code> para eso. Si falla, el clúster no terminó de arrancar o las ACL no se escribieron. <b>Vuelve a levantar el laboratorio.</b></p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 4 de 6</span>El que no tiene llave</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p><b>Primera prueba negativa.</b> Vamos a pedirle al clúster la cosa más inocente que existe, que es la lista de tópicos, <b>sin presentar ninguna credencial</b>.</p>
+
+<div class="caja ojo">
+  <span class="rot">Predice antes de ejecutar, y escríbelo</span>
+  <p style="margin-bottom:0">¿Qué va a contestar el clúster? ¿<i>No autorizado</i>? ¿<i>Usuario o contraseña incorrectos</i>? ¿Otra cosa? <b>Contesta antes de teclear.</b></p>
+</div>
+
+<h3>El comando</h3>
+
+<pre>kafka-cli/attempt-no-auth.sh</pre>
+
+<div class="desglose">
+<div><span class="flag">kafka-cli/attempt-no-auth.sh</span> — corre <code>kafka-topics --bootstrap-server kafka-broker-1:9092 --list</code> dentro del contenedor <code>cli-client</code></div>
+<div><span class="flag">el flag que no está</span> — <b>lo que importa de este comando es lo que le falta.</b> No lleva <code>--command-config</code>, así que el cliente se presenta sin usuario, sin contraseña y sin certificado</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver · recortado, la traza sigue</div>
+<div class="salida">Error while executing topic command : The AdminClient thread has exited. Call: listTopics
+[2026-08-29 04:34:20,327] ERROR org.apache.kafka.common.errors.TimeoutException: The AdminClient thread has exited. Call: listTopics
+ (org.apache.kafka.tools.TopicCommand)
+[2026-08-29 04:34:20,329] ERROR Uncaught exception in thread 'kafka-admin-client-thread | adminclient-1': (org.apache.kafka.common.utils.KafkaThread)
+java.lang.OutOfMemoryError: Java heap space
+	at java.base/java.nio.HeapByteBuffer.&lt;init&gt;(Unknown Source)
+	at java.base/java.nio.ByteBuffer.allocate(Unknown Source)
+	at org.apache.kafka.common.memory.MemoryPool$1.tryAllocate(MemoryPool.java:30)
+	at org.apache.kafka.common.network.NetworkReceive.readFrom(NetworkReceive.java:103)
+	at org.apache.kafka.common.network.KafkaChannel.receive(KafkaChannel.java:462)</div>
+
+<h3>Cómo se lee</h3>
+
+<p><b>Esa salida asusta, y es la respuesta correcta.</b> Vale la pena entenderla, porque es la firma exacta de este error y la vas a reconocer en producción.</p>
+
+<table>
+<tr><th>Lo que dice</th><th>Qué significa de verdad</th></tr>
+<tr><td><code>OutOfMemoryError: Java heap space</code></td><td>El cliente habló <b>en claro</b> contra un puerto que solo entiende TLS. Lo que le contestó el broker fue el <b>saludo de TLS</b>, que el cliente interpretó como si fuera un mensaje de Kafka. Leyó los primeros bytes como «longitud del mensaje», le salió un número gigantesco, e intentó reservar esa memoria</td></tr>
+<tr><td><code>TimeoutException: The AdminClient thread has exited</code></td><td>Y como el hilo murió, la petición nunca se contestó</td></tr>
+</table>
+
+<div class="caja sunat">
+  <span class="rot">Y ahora fíjate en lo que el clúster NO dijo</span>
+  <p>No dijo <i>no autorizado</i>. No dijo <i>usuario incorrecto</i>. No dijo <i>el tópico no existe</i>. <b>No dijo nada.</b></p>
+  <p style="margin-bottom:0">Desde fuera de la puerta no se oye nada de lo que pasa dentro. El cliente no sabe si el clúster existe, qué tópicos tiene, ni siquiera si hay alguien al otro lado. <b>Eso es autenticación. No es que te digan que no. Es que no hay conversación.</b></p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>Salió el <code>OutOfMemoryError</code> y el <code>TimeoutException</code>, y el clúster <b>no nombró ningún tópico ni ningún usuario</b>.</p>
+  <p style="margin-bottom:0"><b>Compara con tu predicción.</b> ¿Esperabas un mensaje de «no autorizado»?</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el comando devuelve la lista de tópicos</span>
+  <p style="margin-bottom:0"><b>Eso sí sería un problema grave</b>, y significaría que el <i>listener</i> no está exigiendo SASL_SSL. Comprueba en el banner del paso 1 que los tres brokers dicen <code>SASL_SSL</code>. Si dicen <code>PLAINTEXT</code>, el laboratorio no está montado como debe y hay que volver a levantarlo.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si te sale otro error en vez del <code>OutOfMemoryError</code></span>
+  <p style="margin-bottom:0">Puede pasar, porque depende de cómo caiga la temporización del <i>handshake</i>. <b>Lo que tiene que cumplirse es lo de fondo</b>, o sea que el cliente muere sin que el clúster le conteste nada útil, y que en ningún momento aparece el nombre de un tópico. Si ves un <code>SSLHandshakeException</code> o un <code>timeout</code> a secas, la lección es la misma.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 5 de 6</span>El que tiene llave pero no permiso</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p><b>Segunda prueba negativa, y es la que este laboratorio existe para dejar.</b></p>
+
+<p>Ahora <code>app2</code> va a intentar leer el tópico confidencial. <b><code>app2</code> tiene credenciales válidas</b>, que son las que usa todos los días para su trabajo, y en el paso 6 las vas a ver funcionar.</p>
+
+<div class="caja ojo">
+  <span class="rot">Predice otra vez</span>
+  <p style="margin-bottom:0"><b>¿El error se va a parecer al del paso 4?</b></p>
+</div>
+
+<h3>El comando</h3>
+
+<pre>kafka-cli/consume-confidencial-app2.sh</pre>
+
+<div class="desglose">
+<div><span class="flag">--consumer.config …/app2.properties</span> — <b>aquí sí hay credenciales, y son buenas.</b> El archivo trae <code>security.protocol=SASL_SSL</code>, el usuario <code>app2</code>, su contraseña y el almacén de confianza</div>
+<div><span class="flag">--topic novatech.lab12.confidencial</span> — el tópico sobre el que <code>app2</code> no aparece en ninguna regla</div>
+<div><span class="flag">--timeout-ms 5000</span> — cuánto espera sin recibir antes de rendirse. <b>Sin esto quedaría colgado</b></div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">[2026-08-29 04:34:28,187] WARN [Consumer clientId=console-consumer, groupId=console-consumer-94008] The metadata response from the cluster reported a recoverable issue with correlation id 2 : {novatech.lab12.confidencial=TOPIC_AUTHORIZATION_FAILED} (org.apache.kafka.clients.NetworkClient)
+[2026-08-29 04:34:28,189] ERROR [Consumer clientId=console-consumer, groupId=console-consumer-94008] Topic authorization failed for topics [novatech.lab12.confidencial] (org.apache.kafka.clients.Metadata)
+[2026-08-29 04:34:28,190] ERROR Error processing message, terminating consumer process:  (org.apache.kafka.tools.consumer.ConsoleConsumer)
+org.apache.kafka.common.errors.TopicAuthorizationException: Not authorized to access topics: [novatech.lab12.confidencial]
+Processed a total of 0 messages</div>
+
+<h3>Cómo se lee</h3>
+
+<p><b>Compara esta salida con la del paso 4, línea por línea. No se parecen en nada, y ahí está la lección entera.</b></p>
+
+<table>
+<tr><th></th><th>Paso 4 · sin credenciales</th><th>Paso 5 · <code>app2</code></th></tr>
+<tr><td>¿Hubo conversación?</td><td><b>No.</b> El cliente murió sin respuesta</td><td><b>Sí.</b> El clúster contestó</td></tr>
+<tr><td>¿El clúster dijo por qué?</td><td>No dijo nada</td><td><b>Sí</b>, <code>TOPIC_AUTHORIZATION_FAILED</code></td></tr>
+<tr><td>¿Nombró el recurso?</td><td>No sabía ni que existía</td><td><b>Sí</b>, <code>[novatech.lab12.confidencial]</code></td></tr>
+<tr><td>Qué error salió</td><td><code>OutOfMemoryError</code></td><td><code>TopicAuthorizationException</code></td></tr>
+<tr><td><b>Qué falló</b></td><td><b>La autenticación</b></td><td><b>La autorización</b></td></tr>
+</table>
+
+<div class="caja sunat">
+  <span class="rot">Lo que hay que decir en voz alta</span>
+  <p><b><code>app2</code> entró al clúster.</b> Se autenticó bien, negoció TLS, pidió los metadatos, y el clúster se los negó <b>por nombre</b>.</p>
+  <p>Eso solo puede pasar si el clúster sabe quién es. <b>Para negarle algo a alguien, primero hay que saber quién es alguien.</b></p>
+  <p style="margin-bottom:0"><b>Autenticar es saber quién eres. Autorizar es saber qué puedes tocar. Son dos compuertas distintas, en ese orden, y hacen falta las dos.</b></p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>Salió <code>TOPIC_AUTHORIZATION_FAILED</code>, con el nombre del tópico entre corchetes, y <code>Processed a total of 0 messages</code>.</p>
+  <p style="margin-bottom:0"><b>Anota una respuesta.</b> ¿Cómo sabes, mirando solo este error, que <code>app2</code> sí consiguió conectarse al clúster?</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si sale un <code>OutOfMemoryError</code> como el del paso 4</span>
+  <p style="margin-bottom:0">Entonces las credenciales no se están usando. Comprueba que el archivo existe:</p>
+  <pre style="margin-bottom:0">docker exec cli-client cat /etc/kafka/client-properties/app2.properties</pre>
+  <p style="margin:3mm 0 0 0"><b>Si no lo encuentra, el laboratorio no está bien montado</b> y hay que volver a levantarlo.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si <code>app2</code> SÍ consigue leer el confidencial</span>
+  <p style="margin-bottom:0">Alguien le agregó una ACL, y lo más probable es que hayas hecho el bloque B del <i>para profundizar</i> y no la hayas borrado. <b>Bórrala</b>, con el comando del <code>--remove</code> que está allí, y vuelve a probar.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 6 de 6</span>La misma llave, otra puerta</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Si el laboratorio terminara en el paso 5 quedaría una duda razonable. <i>¿Y cómo sé que las credenciales de <code>app2</code> sirven para algo? A lo mejor están mal.</i></p>
+
+<p>Es una buena objeción, y se contesta con <b>el mismo comando, cambiando solo el tópico</b>.</p>
+
+<h3>El comando</h3>
+
+<pre>kafka-cli/consume-publico.sh</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">Comprobante publico de la clase
+[2026-08-29 04:35:49,473] ERROR Error processing message, terminating consumer process:  (org.apache.kafka.tools.consumer.ConsoleConsumer)
+org.apache.kafka.common.errors.TimeoutException
+Processed a total of 1 messages</div>
+
+<div class="caja ojo">
+  <span class="rot">Una trampa de lectura que hay que atajar</span>
+  <p><b>Esta salida también trae la palabra <code>ERROR</code>, y sin embargo funcionó.</b></p>
+  <p>Ese <code>TimeoutException</code> del final no es un fallo. Es el <code>--timeout-ms 5000</code> cumpliéndose porque, después de leer el mensaje, no llegó nada más. <b>Sale en todos los comandos de este laboratorio, en los que funcionan y en los que no.</b></p>
+  <p style="margin-bottom:0"><b>La regla de lectura de este laboratorio.</b> No mires la palabra <code>ERROR</code>. Mira <b>cuál</b> es el error, y mira <b>la última línea</b>.</p>
+</div>
+
+<table>
+<tr><th>Última línea</th><th>Qué pasó</th></tr>
+<tr><td><code>Processed a total of 0 messages</code></td><td>No leyó nada</td></tr>
+<tr><td><code>Processed a total of 1 messages</code></td><td><b>Leyó</b></td></tr>
+</table>
+
+<h3>La comparación que cierra el argumento</h3>
+
+<table>
+<tr><th>Comando</th><th>Usuario</th><th>Tópico</th><th>Última línea</th></tr>
+<tr><td>Paso 5</td><td><code>app2</code></td><td>confidencial</td><td><code>Processed a total of 0 messages</code></td></tr>
+<tr><td>Paso 6</td><td><code>app2</code></td><td><b>publico</b></td><td><code>Processed a total of 1 messages</code></td></tr>
+</table>
+
+<div class="caja sunat">
+  <span class="rot">Mismas credenciales, mismo comando, distinto tópico, distinto resultado</span>
+  <p style="margin-bottom:0"><b>Eso prueba que lo que falló en el paso 5 no era la llave. Era el permiso.</b></p>
+</div>
+
+<h3>Y para cerrar del todo, el que sí puede leerlo</h3>
+
+<pre>kafka-cli/consume-confidencial-admin.sh</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">Comprobante confidencial de la clase
+[2026-08-29 04:35:59,071] ERROR Error processing message, terminating consumer process:  (org.apache.kafka.tools.consumer.ConsoleConsumer)
+org.apache.kafka.common.errors.TimeoutException
+Processed a total of 1 messages</div>
+
+<p>El mismo tópico que le negaron a <code>app2</code>, leído sin problema por <code>admin</code>.</p>
+
+<div class="caja tecnico">
+  <span class="rot">Y <code>admin</code> no aparece en ninguna ACL</span>
+  <p style="margin-bottom:0">Vuelve a mirar la salida del paso 3 si no me crees. <b><code>admin</code> es <i>super user</i></b>, una llave maestra configurada en el broker, <b>a la que las reglas ni se le consultan</b>. Ése es el motivo de que en producción el <i>super user</i> deba ser de muy pocas manos, y de que nadie deba usarlo para el día a día. <b>Es el único principal del clúster para el que la lista de la cocina no existe.</b></p>
+</div>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p>Tienes las tres últimas líneas anotadas y son <b>0, 1 y 1</b>. Y puedes explicar por qué el primer cero no significa lo mismo que un tópico vacío.</p>
+  <p style="margin-bottom:0"><b>Y la pregunta que de verdad importa.</b> Cuéntale a alguien, en dos frases, la diferencia entre lo que pasó en el paso 4 y lo que pasó en el paso 5. Si puedes hacerlo sin mirar la guía, el curso cumplió.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el paso 6 también te da <code>0 messages</code></span>
+  <p style="margin-bottom:0"><b>El tópico está vacío, y te saltaste el paso 2.</b> Es el error más importante de este laboratorio, porque hace que los pasos 5 y 6 se vean idénticos y la demostración se cae. Vuelve al paso 2 y siembra los mensajes.</p>
+</div>
+
+<div class="np"></div>
+<h2>Lo que aprendiste</h2>
+
+<div class="regla"><span class="num">1</span>
+<b>Una demostración que solo muestra lo que funciona no demuestra nada.</b><br>
+Un clúster abierto da exactamente la misma demostración que uno seguro. Pide siempre la prueba negativa. <b>Y pide las dos</b>, o sea sin credenciales, y con credenciales válidas sobre algo que no le toca. La segunda casi nunca se hace, y es la que protege los datos entre áreas.
+</div>
+
+<div class="regla"><span class="num">2</span>
+<b>Los dos fallos se distinguen mirando el error, y son cosas distintas.</b><br>
+Un cliente que <b>muere sin respuesta</b> es autenticación, y quiere decir que ni siquiera entró. Un <code>TopicAuthorizationException</code> que <b>nombra el recurso</b> es autorización, y quiere decir que el cliente <b>sí entró</b> y el clúster sabe quién es. Para negarle algo a alguien, primero hay que saber quién es.
+</div>
+
+<div class="regla"><span class="num">3</span>
+<b>En Kafka, lo que no está explícitamente permitido está denegado.</b><br>
+La protección del tópico confidencial no es una regla que niega. Es <b>la ausencia</b> de una regla que permita. Cuando revises la seguridad de un clúster, no busques las prohibiciones. Cuenta los permisos y pregunta por los que sobran.
+</div>
+
+<div class="regla"><span class="num">4</span>
+<b>El super user no tiene ACL, y por eso es el mayor riesgo del clúster.</b><br>
+Debe ser de pocas manos, no debe usarse para operación diaria, y su contraseña merece el mismo cuidado que la de un administrador de base de datos. De los sistemas que hoy se conectan a tus clústeres, ¿cuántos usan credenciales de super user porque era más fácil?
+</div>
+
+<div class="np"></div>
+<h2>Para profundizar</h2>
+
+<h3>A · La PKI, que el arranque hizo por ti</h3>
+
+<p>Generar la autoridad certificadora, firmar los certificados de los tres brokers, armar los almacenes y configurar los <i>listeners</i>. Todo eso ocupaba la mitad del recorrido viejo y lo hace un script.</p>
+
+<pre>cat bin/generate-certs.sh
+cat infra/client-properties/app2.properties</pre>
+
+<p><b>Lo que hay que mirar</b> en <code>app2.properties</code>, que son cinco líneas y explican todo el paso 5.</p>
+
+<div class="salida">security.protocol=SASL_SSL
+sasl.mechanism=PLAIN
+sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule required username="app2" password="app2-secret";
+ssl.truststore.location=/etc/kafka/secrets/kafka.truststore.jks
+ssl.truststore.password=changeit</div>
+
+<div class="caja ojo">
+  <span class="rot"><code>PLAIN</code> no significa que la contraseña viaje en claro</span>
+  <p style="margin-bottom:0">Significa que el <b>mecanismo de presentación</b> es usuario y contraseña, y va <b>dentro del túnel TLS</b> que establece <code>security.protocol=SASL_SSL</code>. Si dijera <code>SASL_PLAINTEXT</code>, entonces sí iría a la vista.</p>
+</div>
+
+<p><b>La pregunta que vale.</b> ¿Dónde está guardada la contraseña de <code>app2</code> en este laboratorio, y por qué eso no sería aceptable en producción?</p>
+
+<h3>B · Escribir una ACL nueva, y verla surtir efecto</h3>
+
+<p>La forma de comprobar que entendiste el paso 5 es arreglarlo, y después volver a romperlo.</p>
+
+<pre>MSYS_NO_PATHCONV=1 docker exec cli-client kafka-acls \
+    --bootstrap-server kafka-broker-1:9092 \
+    --command-config /etc/kafka/client-properties/admin.properties \
+    --add --allow-principal User:app2 \
+    --operation READ --operation DESCRIBE \
+    --topic novatech.lab12.confidencial
+
+kafka-cli/consume-confidencial-app2.sh</pre>
+
+<div class="desglose">
+<div><span class="flag">MSYS_NO_PATHCONV=1</span> — <b>solo para Git Bash en Windows.</b> Sin esto, Git Bash ve el <code>/etc/kafka/…</code> de la línea siguiente y lo traduce a una ruta de Windows antes de que Docker la vea. Fuera de Windows nadie lee esta variable</div>
+</div>
+
+<div class="salida-rot">Lo que sale del <code>--add</code></div>
+<div class="salida">Adding ACLs for resource `ResourcePattern(resourceType=TOPIC, name=novatech.lab12.confidencial, patternType=LITERAL)`:
+ 	(principal=User:app2, host=*, operation=DESCRIBE, permissionType=ALLOW)
+	(principal=User:app2, host=*, operation=READ, permissionType=ALLOW)</div>
+
+<div class="salida-rot">Y del consumidor, que en el paso 5 daba cero</div>
+<div class="salida">Comprobante confidencial de la clase
+Processed a total of 1 messages</div>
+
+<p><b>Lo que hay que mirar.</b> El comando que fallaba en el paso 5 ahora funciona, <b>sin reiniciar nada y sin tocar un archivo</b>. Las ACL viven en el clúster y se consultan en cada petición.</p>
+
+<div class="caja ojo">
+  <span class="rot">Y aquí el envoltorio te va a mentir</span>
+  <p style="margin-bottom:0">Va a seguir imprimiendo <code>[Resultado esperado] error tipo 'Not authorized'</code> y <code>Eso PRUEBA que las ACLs funcionan: app2 NO puede leer confidencial</code>. <b>Es un texto fijo del script, escrito para el caso del paso 5, y ahora está diciendo lo contrario de lo que pasó.</b> Mira la última línea, que es la que cuenta.</p>
+</div>
+
+<p><b>Y después bórrala</b>, o el laboratorio deja de demostrar lo que dice.</p>
+
+<pre>MSYS_NO_PATHCONV=1 docker exec cli-client kafka-acls \
+    --bootstrap-server kafka-broker-1:9092 \
+    --command-config /etc/kafka/client-properties/admin.properties \
+    --remove --allow-principal User:app2 \
+    --operation READ --operation DESCRIBE \
+    --topic novatech.lab12.confidencial --force</pre>
+
+<p><b>El <code>--remove</code> con <code>--force</code> no imprime nada</b>, y eso es lo correcto, porque el <code>--force</code> es justamente lo que salta la pregunta de confirmación. Compruébalo volviendo a correr el consumidor, que tiene que dar cero otra vez.</p>
+
+<div class="caja sunat">
+  <span class="rot">Ese ida y vuelta es lo que convierte esto en una demostración</span>
+  <p style="margin-bottom:0">Medido, <b>cero, uno, cero</b>. <b>Una compuerta que solo sabe decir que no es una pared. Una que solo sabe decir que sí no es una compuerta.</b></p>
+</div>
+
+<h3>C · El drill de <i>failover</i></h3>
+
+<p>La otra mitad del capstone. Qué pasa con los datos cuando se cae un broker.</p>
+
+<pre>kafka-cli/describe-confidencial.sh
+kafka-cli/produce-confidencial.sh "pedido-pre-fallo-1"
+kafka-cli/simulate-failure.sh 3
+kafka-cli/describe-confidencial.sh
+kafka-cli/produce-confidencial.sh "pedido-durante-fallo-1"
+kafka-cli/recover-broker.sh 3
+kafka-cli/describe-confidencial.sh
+kafka-cli/verify-no-loss.sh</pre>
+
+<p><b>Lo que hay que mirar.</b> El <code>describe</code> antes, durante y después. Con factor de réplica 3 y <code>min.insync.replicas=2</code>, el clúster <b>sigue aceptando escrituras con un broker caído</b>, y al volver, el broker se pone al día solo. El <code>verify-no-loss.sh</code> comprueba que no se perdió ningún mensaje.</p>
+
+<p><b>La pregunta que vale.</b> ¿Qué pasaría con <code>min.insync.replicas=3</code> sobre factor de réplica 3 cuando se cae un broker? <i>Y compárala con lo que viste en el laboratorio 05.</i></p>
+
+<h3>D · El capstone automatizado</h3>
+
+<pre>bin/run-capstone.sh</pre>
+
+<p>Corre el laboratorio entero de punta a punta y deja un informe. <b>Es la forma de comprobar el clúster después de tocarlo</b>, y lo que usarías tú si mañana cambias una ACL en producción.</p>
+
+<h3>E · Los recorridos viejos, completos</h3>
+
+<p>Las seis guías originales quedaron en <code>_fuente-extra/guia/</code>. TLS y certificados, SASL, ACL, <code>min.insync.replicas</code>, la simulación de fallo y el capstone. <b>Ahí está todo lo que este recorrido comprimió</b>, con sus actividades y sus preguntas.</p>
+
+<h3>F · El reporte del laboratorio</h3>
+
+<p><code>plantillas/reporte-entregable.md</code>, con las respuestas de referencia en <code>soluciones/reporte-resuelto.md</code>.</p>
+
+<h2>Antes de cerrar</h2>
+
+<div class="caja ojo">
+  <span class="rot">Deja el terreno limpio</span>
+  <pre>bin/90-test-lab.sh   # ver el estado del laboratorio
+bin/stop-lab.sh      # apagar los contenedores</pre>
+  <p style="margin-bottom:0"><b>Si hiciste el bloque B del <i>para profundizar</i>, comprueba antes que borraste la ACL.</b> Si no, el laboratorio queda sin demostrar lo que dice, y la próxima vez que lo levantes el paso 5 te va a salir mal.</p>
+</div>
+
+<div class="caja sunat">
+  <span class="rot">Lo que te llevas de los catorce</span>
+  <p>Si hay que resumirlo en una línea, <b>Kafka no te avisa</b>.</p>
+  <p>No te avisa cuando borra por retención. No te avisa cuando un contrato cambia. No te avisa cuando un consumidor se queda atrás. No te avisa cuando alguien lee lo que no le toca, ni cuando alguien lo intenta.</p>
+  <p style="margin-bottom:0"><b>Todo lo que aprendiste en catorce laboratorios es a preguntar.</b> Y hoy aprendiste la pregunta más difícil de todas, que es la que se hace sobre lo que no pasó. <b>Tener llave y tener permiso son dos cosas distintas, y hacen falta las dos.</b></p>
+</div>
+
+</body></html>

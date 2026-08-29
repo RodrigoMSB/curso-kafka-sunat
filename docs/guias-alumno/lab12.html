@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><link rel="stylesheet" href="estilo-alumno.css"></head>
+<body>
+
+<div class="portada">
+  <div class="kicker">C U R S O &nbsp; D E &nbsp; A D M I N I S T R A C I Ó N &nbsp; D E &nbsp; K A F K A</div>
+  <div class="labnum">LABORATORIO 12</div>
+  <h1>¿Se puede<br>preguntar por<br>lo que no pasó?</h1>
+  <div class="sub">ksqlDB, y una consulta que se escribe antes de que exista el dato que la contesta.<br>Guía para hacerlo por tu cuenta, paso a paso</div>
+  <div class="meta">
+    Confluent Platform 8.2.0 · 3 brokers KRaft · Schema Registry · ksqlDB<br>
+    Duración estimada · 40 minutos<br>
+    NovaTech Logistics · caso de estudio
+  </div>
+</div>
+
+<h2>Antes de empezar</h2>
+
+<h3>Qué vas a lograr</h3>
+
+<p>Éste es el laboratorio más corto del curso y tiene <b>una sola idea adentro</b>. Si te llevas esa idea, sobra todo lo demás.</p>
+
+<p>Vas a escribir un <code>SELECT</code> sobre datos que todavía no existen, y vas a verlo contestar cuando esos datos nazcan. <b>Sin volver a preguntar.</b></p>
+
+<div class="afirmacion">
+  <span class="rot">Lo que este laboratorio demuestra</span>
+  <div class="txt">La pregunta se hace una vez y sigue contestando.</div>
+</div>
+
+<h3>Qué necesitas tener listo</h3>
+
+<table>
+<tr><th>Requisito</th><th>Cómo lo compruebas</th></tr>
+<tr><td>Docker Desktop corriendo, con 6 GB de RAM</td><td>Ajustes de Docker Desktop, pestaña <i>Resources</i></td></tr>
+<tr><td>Git Bash abierto en la carpeta del lab</td><td><code>cd Capitulo_5/lab-12-ksqldb</code></td></tr>
+<tr><td><b>Dos terminales</b>, no una</td><td>El paso 4 las necesita a la vez. Ábrelas ahora, las dos en la carpeta del lab</td></tr>
+<tr><td>Los puertos 9092, 9093, 9094, <b>8088</b>, 8081 y 8090 libres</td><td>El paso 1 te avisa si no lo están</td></tr>
+<tr><td>Haber hecho el laboratorio 11</td><td>Hoy se usan sus contratos de Avro, y el paso 1 los registra otra vez</td></tr>
+</table>
+
+<div class="caja ojo">
+  <span class="rot">Lo más importante de esta guía está en el paso 1, y no es opcional</span>
+  <p style="margin-bottom:0">El <code>bin/start-lab.sh</code> levanta el clúster <b>pero no siembra los datos</b>. Sin ellos, el paso 2 no tiene nada sobre lo que montarse y el paso 3 devuelve una lista vacía. <b>El paso 1 los siembra, y tarda alrededor de un minuto.</b> No te lo saltes.</p>
+</div>
+
+<h3>El caso</h3>
+
+<div class="caja">
+  <p>El equipo de analítica de <b>NovaTech Logistics</b> pide algo que suena razonable. <i>Queremos saber cuántos comprobantes por minuto están entrando, y cuáles superan cierto monto.</i></p>
+  <p>Y la respuesta que reciben hoy tiene siempre la misma forma. <b>Mañana.</b> Porque el camino es que los datos se copien a algún sitio durante la noche, que un proceso los agregue, y que a la mañana siguiente haya un informe.</p>
+  <p>Ese informe <b>siempre habla del pasado</b>. Es correcto, es útil, y llega tarde para todo lo que importa en el momento. Una carga anómala, un pico de rechazos, un contribuyente que empezó a hacer algo raro hace veinte minutos.</p>
+  <p>Y la alternativa que se propone siempre es peor de lo que parece. <i>Que escriban una aplicación que consuma el tópico y vaya calculando.</i> Ya viste en el laboratorio 09 lo que es un consumidor. Veinte líneas para conectarse, y todo lo demás hay que escribirlo. <b>El estado, las ventanas de tiempo, los reinicios, el paralelismo.</b> Para una pregunta. Y la siguiente pregunta es otra aplicación.</p>
+  <p style="margin-bottom:0">Hay una segunda mitad, más incómoda. <b>La gente que tiene las preguntas no escribe aplicaciones.</b> El analista que sabe qué hay que preguntar sabe SQL, no Java. Cada vez que la respuesta exige un desarrollador, la pregunta se pospone o no se hace.</p>
+</div>
+
+<div class="caja abuelita">
+  <span class="rot">La metáfora · hoy no entra un objeto, entra una forma de preguntar</span>
+  <p>Kafka sigue siendo <b>el restaurante</b>. El <b>mozo</b> es el broker, el <b>tipo de comanda</b> es el tópico, los <b>sectores del salón</b> son las particiones y el <b>pincho</b> del turno es el segmento.</p>
+  <p>Hoy hay dos formas de preguntar, y son personas distintas.</p>
+  <table>
+  <tr><th>En el restaurante</th><th>En Kafka</th></tr>
+  <tr><td><b>El que baja al depósito a contar las comandas del mes</b> y sube con un número</td><td>Una consulta <b>de siempre</b>, sobre una base de datos</td></tr>
+  <tr><td><b>El que se planta en el paso con una libreta</b> y va anotando cada comanda que cruza, mientras cruza</td><td>Una consulta de <b>ksqlDB</b>, con <code>EMIT CHANGES</code></td></tr>
+  </table>
+  <p>El del depósito <b>pregunta una vez y obtiene una respuesta</b>. Cuando termina de contar, su número ya está viejo, porque mientras contaba entraron comandas nuevas. Si quiere saber cómo va ahora, tiene que volver a bajar.</p>
+  <p>El del paso <b>pregunta una vez y no deja de obtener respuestas</b>. No baja a ningún lado. Se queda ahí, y cada comanda que cruza es una respuesta más a la misma pregunta que hizo al principio.</p>
+  <p style="margin-bottom:0">Y de ahí sale lo único que asombra de ksqlDB. <b>El del paso puede plantarse antes de que exista la comanda.</b> Puede hacer la pregunta cuando todavía no hay nada que contestar, y esperar.</p>
+</div>
+
+<h3>Las tres piezas, con sus nombres</h3>
+
+<div class="concepto">
+  <span class="rot">Concepto · ksqlDB</span>
+  Un servicio <b>aparte del clúster</b>, aquí el contenedor <code>ksqldb-server</code>, que responde en <code>http://localhost:8088</code>. Acepta SQL y lo traduce a aplicaciones de Kafka. <b>No es una base de datos.</b> No guarda tus datos, porque los datos siguen viviendo en los tópicos. Es un traductor.
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · <code>STREAM</code></span>
+  La declaración de que un tópico se puede leer como si fuera una tabla, o sea qué columnas tiene y de qué tipo es cada una. <b>Declarar un stream no copia nada ni mueve nada.</b> Es ponerle un nombre y una forma a un tópico que ya existe, para poder escribirle SQL encima.
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · <code>EMIT CHANGES</code></span>
+  Las dos palabras que convierten un <code>SELECT</code> normal en uno que <b>no termina</b>. Sin ellas, ksqlDB contesta con lo que hay y se va. Con ellas, contesta con lo que hay <b>y se queda esperando lo que venga</b>.
+</div>
+
+<p>La diferencia tiene nombres, y conviene tenerlos.</p>
+
+<table>
+<tr><th></th><th>Cómo se llama</th><th>Qué hace</th></tr>
+<tr><td>Sin <code>EMIT CHANGES</code></td><td><b><i>Pull query</i></b></td><td>Pregunta, responde, termina. Como cualquier SQL</td></tr>
+<tr><td>Con <code>EMIT CHANGES</code></td><td><b><i>Push query</i></b></td><td>Pregunta una vez, responde para siempre</td></tr>
+</table>
+
+<div class="caja ojo">
+  <span class="rot">Todo el recorrido va por <code>curl</code>, y hay una razón honesta</span>
+  <p>ksqlDB trae un cliente interactivo mucho más cómodo, que está en el <i>para profundizar</i> A. <b>Para explorar es lo que hay que usar.</b></p>
+  <p style="margin-bottom:0">El recorrido no lo usa porque <b>su salida es una tabla cuyo ancho depende del ancho de tu terminal</b>, así que no se puede prometer línea por línea en una guía. Lo que ves en tu pantalla no sería lo que ve otro. <b>El <code>curl</code> devuelve siempre lo mismo</b>, y por eso es el que lleva las salidas medidas de esta guía.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 1 de 5</span>Levantar el clúster y sembrar los datos</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Encender el laboratorio y, después, <b>sembrar los datos a mano</b>. Son dos cosas distintas y la segunda no la hace el script.</p>
+
+<h3>Primero, levantar</h3>
+
+<pre>cd Capitulo_5/lab-12-ksqldb
+chmod +x bin/*.sh schema-cli/*.sh kafka-cli/*.sh ksql-cli/*.sh
+bin/start-lab.sh</pre>
+
+<div class="salida-rot">El final de lo que vas a ver · recortado</div>
+<div class="salida">    Kafbat UI:          http://localhost:8090
+    Schema Registry:    http://localhost:8081    ← API REST
+    ksqlDB Server:      http://localhost:8088    ← API REST
+    ksqlDB CLI:         ksql-cli/ksql-shell.sh
+
+  Tópicos del Lab 12:
+    novatech.lab10.pedidos    - 12 particiones, datos Avro
+    novatech.lab10.clientes   - 3 particiones, datos Avro</div>
+
+<p><b>Los dos tópicos están creados y vacíos.</b> Fíjate en que el de pedidos tiene <b>12 particiones</b>, porque eso va a explicar algo raro en el paso 3.</p>
+
+<h3>Ahora, sembrar</h3>
+
+<p>Son cuatro comandos. Los dos primeros registran los contratos de Avro, que es el laboratorio 11 exacto. Los dos últimos escriben 30 pedidos y 5 clientes.</p>
+
+<pre>schema-cli/register-schema.sh novatech.lab10.pedidos-value infra/schemas/pedido.avsc
+schema-cli/register-schema.sh novatech.lab10.clientes-value infra/schemas/cliente.avsc
+kafka-cli/produce-flood-pedidos.sh 30
+kafka-cli/produce-clientes-seed.sh</pre>
+
+<div class="desglose">
+<div><span class="flag">register-schema.sh</span> — registra un contrato en el Schema Registry. <b>Sin contrato, ksqlDB no sabe leer los mensajes en Avro</b></div>
+<div><span class="flag">produce-flood-pedidos.sh 30</span> — escribe 30 pedidos con valores al azar. <b>Aquí se van casi todos los segundos</b>, porque cada pedido arranca una máquina virtual de Java dentro del contenedor</div>
+<div><span class="flag">produce-clientes-seed.sh</span> — escribe 5 clientes, que se usan en el paso 5</div>
+</div>
+
+<div class="salida-rot">El final de lo que vas a ver</div>
+<div class="salida">  ✓ 30 pedidos generados
+  ✓ 5 clientes seed publicados
+Estos IDs (1001, 1010, 1017, 1055, 1098) se usarán para los JOINs.</div>
+
+<p><b>Medido, la siembra completa tarda 64 segundos.</b> Es el tramo más lento del laboratorio y no hay forma de acortarlo.</p>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>El tópico tiene <b>30 mensajes</b> repartidos en sus 12 particiones. Compruébalo:</p>
+  <pre>docker exec kafka-broker-1 kafka-get-offsets \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.lab10.pedidos --time -1 \
+  | awk -F: '{s+=$3} END {print s" mensajes en 12 particiones"}'</pre>
+  <div class="salida" style="margin-bottom:0">30 mensajes en 12 particiones</div>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si <code>register-schema.sh</code> dice <code>python3: command not found</code></span>
+  <p>Es la única pieza del laboratorio que necesita Python, y <b>Git Bash para Windows no lo trae</b>. El equivalente en <code>curl</code> hace exactamente lo mismo y no depende de nada instalado. <b>Está medido con y sin Python, y devuelve <code>HTTP 200</code> en los dos casos.</b></p>
+  <pre>curl -s -w "\nHTTP %{http_code}\n" -X POST \
+    -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+    --data "{\"schema\": \"$(tr -d '\n' &lt; infra/schemas/pedido.avsc | sed 's/"/\\"/g')\"}" \
+    http://localhost:8081/subjects/novatech.lab10.pedidos-value/versions</pre>
+  <p style="margin-bottom:0">Y el mismo comando cambiando <code>pedido.avsc</code> por <code>cliente.avsc</code> y <code>pedidos-value</code> por <code>clientes-value</code>. <b>Es el comando del laboratorio 11</b>, tal cual.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el contador te da menos de 30 mensajes</span>
+  <p style="margin-bottom:0">Alguno de los 30 falló, casi siempre por falta de memoria. <b>No hace falta empezar de cero.</b> Vuelve a correr <code>produce-flood-pedidos.sh</code> con la diferencia, o simplemente sigue: el laboratorio funciona igual con 20 pedidos que con 30.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el <code>curl</code> al 8088 no responde todavía</span>
+  <p style="margin-bottom:0">ksqlDB es lo último que arranca y tarda más que los brokers. Compruébalo antes de seguir:</p>
+  <pre style="margin-bottom:0">curl -s http://localhost:8088/info</pre>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 2 de 5</span>Ponerle forma de tabla a un tópico</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>El tópico ya tiene 30 pedidos escritos en Avro. Kafka sabe que son bytes y el Schema Registry sabe qué campos tienen. <b>Lo que falta es decirle a ksqlDB que los mire como filas.</b></p>
+
+<h3>El comando</h3>
+
+<pre>curl -s -X POST http://localhost:8088/ksql \
+    -H "Content-Type: application/vnd.ksql.v1+json" \
+    -d '{"ksql":"CREATE STREAM pedidos_stream (id INT, cliente_id INT, producto VARCHAR, cantidad INT, monto DOUBLE, estado VARCHAR) WITH (KAFKA_TOPIC='"'"'novatech.lab10.pedidos'"'"', VALUE_FORMAT='"'"'AVRO'"'"');"}' \
+  | tr ',' '\n' | grep -E '"status"|"message"'</pre>
+
+<div class="desglose">
+<div><span class="flag">POST /ksql</span> — el punto de entrada para las sentencias que <b>definen</b> cosas, o sea crear, borrar y listar. <b>Las consultas van por otro</b>, que verás en el paso 3</div>
+<div><span class="flag">-H "…vnd.ksql.v1+json"</span> — el tipo de contenido propio de ksqlDB. <b>Sin esta cabecera contesta <code>415</code></b></div>
+<div><span class="flag">-d '{"ksql":"…"}'</span> — <b>el SQL viaja como texto dentro de un JSON</b>, igual que el schema del laboratorio 11</div>
+<div><span class="flag">'"'"'</span> — <b>eso no es un error tipográfico.</b> Es cómo se pone una comilla simple dentro de una cadena que ya va entre comillas simples. Cierra la comilla del shell, pone una literal, y vuelve a abrirla. <b>Cópialo tal cual</b></div>
+<div><span class="flag">CREATE STREAM … (columnas)</span> — los seis campos del pedido, con su tipo. <b>Tienen que coincidir con lo que hay en el tópico</b></div>
+<div><span class="flag">KAFKA_TOPIC=</span> — <b>sobre qué tópico existente.</b> El stream no crea un tópico, se monta sobre uno que ya está</div>
+<div><span class="flag">VALUE_FORMAT='AVRO'</span> — cómo están escritos los mensajes. ksqlDB irá al Schema Registry a buscar el schema</div>
+<div><span class="flag">| tr ',' '\n' | grep -E …</span> — la respuesta es un JSON de 447 caracteres en una sola línea, con la sentencia entera repetida dentro. <b>Esto la parte por comas y deja solo las dos líneas que importan.</b> Es un corte bruto y no un formateador de JSON</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">"commandStatus":{"status":"SUCCESS"
+"message":"Stream created"</div>
+
+<h3>Cómo se lee</h3>
+
+<p><code>SUCCESS</code> y <code>Stream created</code>. <b>Y lo importante es lo que no pasó.</b> No se copió un solo mensaje, no se creó un tópico nuevo, no se movió un byte.</p>
+
+<p>Lo único que hay ahora es <b>una declaración</b>. ksqlDB sabe que ese tópico se puede leer como una tabla de seis columnas.</p>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>Salieron esas dos líneas. Y puedes verlo listado:</p>
+  <pre>curl -s -X POST http://localhost:8088/ksql \
+    -H "Content-Type: application/vnd.ksql.v1+json" \
+    -d '{"ksql":"SHOW STREAMS;"}' | tr ',' '\n' | grep -E '"name"|"topic"'</pre>
+  <div class="salida" style="margin-bottom:0">"name":"PEDIDOS_STREAM"
+"topic":"novatech.lab10.pedidos"
+"name":"KSQL_PROCESSING_LOG"
+"topic":"novatech_ksql_processing_log"</div>
+  <p style="margin:3mm 0 0 0"><b>El nombre salió en mayúsculas</b>, aunque tú lo escribiste en minúsculas. ksqlDB los convierte y eso es normal. El segundo stream lo crea ksqlDB para sí mismo.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si dice <code>A stream with the same name already exists</code></span>
+  <p>La respuesta completa es ésta, y no es un problema:</p>
+  <div class="salida">"error_code":40001
+"message":"Cannot add stream 'PEDIDOS_STREAM': A stream with the same name already exists"</div>
+  <p style="margin-bottom:0">El stream quedó de una corrida anterior. <b>Sigue al paso 3, porque el que necesitas ya está.</b> Si prefieres empezar de cero, bórralo primero por el mismo punto de entrada, cambiando el <code>CREATE STREAM …</code> por <code>DROP STREAM pedidos_stream;</code>.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si contesta <code>HTTP 415</code> o el <code>grep</code> no encuentra nada</span>
+  <p style="margin-bottom:0">Falta la cabecera <code>Content-Type: application/vnd.ksql.v1+json</code>. <b>Para ver la respuesta cruda y entender qué pasó</b>, quita el filtro del final y corre solo el <code>curl</code>.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si dice algo sobre el schema o el <code>VALUE_FORMAT</code></span>
+  <p style="margin-bottom:0">El contrato de Avro no está registrado. <b>Vuelve al paso 1</b> y comprueba:</p>
+  <pre style="margin-bottom:0">curl -s http://localhost:8081/subjects</pre>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 3 de 5</span>Preguntar por lo que ya pasó</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Ahora el <code>SELECT</code>. Éste primero es <b>el aburrido a propósito</b>, porque pregunta por lo que ya está escrito, que es lo que haría cualquier base de datos.</p>
+
+<p>Sirve para comprobar dos cosas antes del paso que importa. Que el SQL funciona, y que los datos se leen bien.</p>
+
+<h3>El comando</h3>
+
+<pre>curl -s -X POST http://localhost:8088/query-stream \
+    -H "Content-Type: application/vnd.ksqlapi.delimited.v1" \
+    -d '{"sql":"SELECT id, producto, monto FROM pedidos_stream EMIT CHANGES LIMIT 3;","properties":{"auto.offset.reset":"earliest"}}'</pre>
+
+<div class="desglose">
+<div><span class="flag">POST /query-stream</span> — <b>otro punto de entrada.</b> Las consultas no van por <code>/ksql</code>. Van por aquí, que es el que sabe devolver una respuesta que llega de a poco</div>
+<div><span class="flag">-H "…ksqlapi.delimited.v1"</span> — pide la respuesta <b>delimitada por líneas</b>, o sea una línea por fila, a medida que salen</div>
+<div><span class="flag">EMIT CHANGES</span> — <i>push query</i>, así que no termina sola</div>
+<div><span class="flag">LIMIT 3</span> — <b>lo único que hace que termine.</b> Sin el <code>LIMIT</code>, este comando se queda corriendo hasta que lo cortes con <code>Ctrl+C</code></div>
+<div><span class="flag">"properties":{"auto.offset.reset":"earliest"}</span> — empieza por el principio del tópico, porque queremos ver lo viejo. <b>Es el mismo parámetro del laboratorio 09</b></div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">{"queryId":"transient_PEDIDOS_STREAM_5830900987375917743","columnNames":["ID","PRODUCTO","MONTO"],"columnTypes":["INTEGER","STRING","DOUBLE"]}
+[24,"Cinta industrial",8829.0]
+[7,"Cartón premium",6695.0]
+[15,"Cuerda nautica",31554.0]</div>
+
+<table>
+<tr><th>Línea</th><th>Qué dice</th></tr>
+<tr><td>La primera</td><td>La <b>cabecera</b>. El identificador de la consulta y, sobre todo, <b>los nombres y tipos de las columnas</b></td></tr>
+<tr><td>Las tres siguientes</td><td>Una fila cada una, como lista JSON, en el orden de las columnas de la cabecera</td></tr>
+</table>
+
+<p><b>Los productos y montos que te salgan van a ser otros</b>, porque los 30 pedidos se generaron con valores al azar.</p>
+
+<h3>Y ahora lo importante de este paso, que hay que medir para creerlo</h3>
+
+<p>Corre <b>el mismo comando cinco veces seguidas</b>, sin tocar nada entremedio, y mira solo los <code>id</code>.</p>
+
+<div class="salida-rot">Lo que salió · medido, cinco corridas</div>
+<div class="salida">corrida 1:  15  10  12
+corrida 2:   5   7  10
+corrida 3:   5  14  19
+corrida 4:   5  12  18
+corrida 5:  15  12  13</div>
+
+<p><b>El mismo <code>SELECT</code>, sobre datos que no cambiaron, devuelve filas distintas cada vez.</b> En una base de datos eso sería un fallo grave. Aquí es el comportamiento correcto.</p>
+
+<div class="concepto">
+  <span class="rot">Concepto · partición, otra vez</span>
+  Cada uno de los pedazos en que se corta un tópico. Éste tiene <b>12</b>. El orden de los mensajes está garantizado <b>dentro de cada partición</b>, y en ninguna parte entre ellas.
+</div>
+
+<p>ksqlDB lee las 12 particiones a la vez, y el <code>LIMIT 3</code> se queda con <b>las tres primeras que lleguen</b>, que dependen de cuál contestó antes.</p>
+
+<div class="caja sunat">
+  <span class="rot">Y esto hay que decirlo antes de que alguien escriba un informe</span>
+  <p style="margin-bottom:0"><b>Un flujo no tiene un orden global, así que no hay <code>SELECT</code> que pueda dártelo.</b> Cualquier informe que dependa del orden entre particiones está mal planteado. Éste es el momento de decirlo, no cuando ya esté escrito.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p style="margin-bottom:0">Corriste el comando cinco veces y <b>al menos dos corridas te dieron listas distintas</b>. Si las cinco te dieron lo mismo, no está mal, pero corre unas cuantas más. <b>Anota una respuesta.</b> ¿Por qué esto no es un fallo?</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el comando se queda corriendo y no vuelve</span>
+  <p style="margin-bottom:0">Se te olvidó el <code>LIMIT 3</code>. <b>Un <code>EMIT CHANGES</code> sin <code>LIMIT</code> no termina nunca</b>, y eso es exactamente lo que el paso 4 va a aprovechar. Sal con <code>Ctrl+C</code>.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si solo sale la cabecera y ninguna fila</span>
+  <p style="margin-bottom:0">O el tópico está vacío, o se te olvidó el <code>"auto.offset.reset":"earliest"</code>. <b>Sin él, ksqlDB empieza por el final</b> y no hay nada nuevo que traer. Comprueba el contador del paso 1.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 4 de 5</span>Preguntar por lo que todavía no pasó</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p><b>Éste es el laboratorio.</b> Todo lo anterior era preparación.</p>
+
+<p>Vamos a lanzar <b>la misma consulta</b>, cambiando una sola cosa. <code>earliest</code> por <code>latest</code>. Con eso la consulta ignora los 30 pedidos que ya están y <b>se queda esperando lo que venga</b>.</p>
+
+<div class="caja ojo">
+  <span class="rot">Predice antes de ejecutar, y escríbelo</span>
+  <p style="margin-bottom:0">Con <code>latest</code> y el tópico quieto, ¿qué va a imprimir la consulta? <b>¿Va a dar error, va a terminar, o se va a quedar ahí?</b> Contesta antes de teclear. El paso vale la mitad si lees la respuesta antes de haber apostado.</p>
+</div>
+
+<h3>En la terminal A</h3>
+
+<pre>curl -s -N -X POST http://localhost:8088/query-stream \
+    -H "Content-Type: application/vnd.ksqlapi.delimited.v1" \
+    -d '{"sql":"SELECT id, producto, monto FROM pedidos_stream EMIT CHANGES LIMIT 1;","properties":{"auto.offset.reset":"latest"}}'</pre>
+
+<div class="desglose">
+<div><span class="flag">-N</span> — <b>sin memoria intermedia.</b> Le dice a <code>curl</code> que imprima cada línea en cuanto llegue, en vez de juntarlas. <b>Sin esto no verías nada hasta el final, y el laboratorio entero se pierde</b></div>
+<div><span class="flag">"auto.offset.reset":"latest"</span> — <b>el cambio.</b> Solo lo que llegue de ahora en adelante</div>
+<div><span class="flag">LIMIT 1</span> — con un solo mensaje ya está demostrado. Sin el <code>LIMIT</code>, se sale con <code>Ctrl+C</code></div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver, al instante</div>
+<div class="salida">{"queryId":"transient_PEDIDOS_STREAM_527849346038229575","columnNames":["ID","PRODUCTO","MONTO"],"columnTypes":["INTEGER","STRING","DOUBLE"]}</div>
+
+<p><b>Y después, nada.</b> La cabecera y el cursor parpadeando.</p>
+
+<div class="caja tecnico">
+  <span class="rot">Esa nada es el resultado</span>
+  <p style="margin-bottom:0">La consulta <b>no falló, no terminó y no está colgada. Está esperando.</b> Ya sabe qué columnas va a devolver, y lo dice la cabecera. Pero todavía no hay ninguna fila que devolver, <b>porque el dato no existe</b>.</p>
+</div>
+
+<p><b>Déjala ahí.</b> No la cortes.</p>
+
+<h3>En la terminal B</h3>
+
+<pre>kafka-cli/produce-pedido-avro.sh 777 1001 "Pedido en vivo" 1 99999.99 pendiente</pre>
+
+<div class="desglose">
+<div><span class="flag">produce-pedido-avro.sh</span> — envoltorio del curso. Escribe <b>un</b> pedido en Avro en el tópico. <b>No sabe nada de ksqlDB</b> ni de que hay una consulta esperando</div>
+<div><span class="flag">777 … pendiente</span> — los seis campos del pedido. <b>Elige un texto reconocible</b> para el producto, porque lo vas a ver aparecer en la otra terminal</div>
+</div>
+
+<div class="caja ojo">
+  <span class="rot">Sale un aviso que no es tuyo</span>
+  <p style="margin-bottom:0">El envoltorio imprime <code>Warning: --property is deprecated and will be removed in a future version</code>. <b>Sale siempre y no afecta a nada.</b> Es del script, no de lo que tú escribiste.</p>
+</div>
+
+<h3>Vuelve a mirar la terminal A</h3>
+
+<div class="salida-rot">Ésta es la corrida medida, con la hora real de cada línea</div>
+<div class="salida">[00:27:49] {"queryId":"transient_PEDIDOS_STREAM_527849346038229575","columnNames":["ID","PRODUCTO","MONTO"],...}
+
+           ... diez segundos sin nada ...
+
+[00:27:59] <- aquí se produjo el pedido en la terminal B
+[00:28:01] [777,"Pedido en vivo",99999.99]</div>
+
+<h3>Cómo se lee</h3>
+
+<p>Aquí está el laboratorio entero, en tres marcas de tiempo.</p>
+
+<table>
+<tr><th>Hora</th><th>Qué pasó</th></tr>
+<tr><td><code>00:27:49</code></td><td><b>La pregunta se hizo.</b> En este momento el dato no existía en ninguna parte</td></tr>
+<tr><td><code>00:27:59</code></td><td>Diez segundos después, la consulta seguía viva y sin nada que decir. <b>Y en ese instante nació el dato</b></td></tr>
+<tr><td><code>00:28:01</code></td><td><b>Dos segundos después de que el dato naciera, la consulta lo contestó</b></td></tr>
+</table>
+
+<div class="caja sunat">
+  <span class="rot">Nadie volvió a preguntar</span>
+  <p style="margin-bottom:0">El <code>SELECT</code> se escribió <b>una sola vez</b>, diez segundos antes de que existiera la fila que lo contestó. <b>Eso es lo que ninguna base de datos puede hacer</b>, y es la única razón por la que ksqlDB existe.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p>En la terminal A apareció tu <code>"Pedido en vivo"</code> sin que tú tocaras esa terminal.</p>
+  <p style="margin-bottom:0"><b>Compara con tu predicción.</b> ¿Dijiste que iba a dar error, que iba a terminar, o que se iba a quedar esperando?</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si en la terminal A no aparece nada aunque produjiste</span>
+  <p>Comprueba tres cosas, en este orden.</p>
+  <p><b>Una.</b> Que pusiste el <code>-N</code>. Sin él, <code>curl</code> junta la salida y no verías la fila hasta el final.</p>
+  <p><b>Dos.</b> Que la terminal B está en la carpeta del laboratorio. Si no, el script no existe y no produjo nada.</p>
+  <p style="margin-bottom:0"><b>Tres.</b> Que el pedido llegó de verdad. En una tercera terminal:</p>
+  <pre style="margin-bottom:0">docker exec kafka-broker-1 kafka-get-offsets \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.lab10.pedidos --time -1 \
+  | awk -F: '{s+=$3} END {print s}'</pre>
+  <p style="margin:3mm 0 0 0">Tiene que decir <b>31</b>, uno más que en el paso 1.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si la consulta imprime filas viejas en cuanto arranca</span>
+  <p style="margin-bottom:0">Dejaste <code>earliest</code> en vez de <code>latest</code>. <b>Es el único cambio entre el paso 3 y el paso 4</b>, y es el que hace la demostración. Córtala y vuelve a lanzarla.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 5 de 5</span><code>STREAM</code> contra <code>TABLE</code>, y la trampa</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Un <code>STREAM</code> son <b>eventos</b>, o sea todo lo que pasó, y nada se pisa. Una <code>TABLE</code> es <b>estado</b>, o sea el último valor de cada clave.</p>
+
+<p>Vamos a declarar una <code>TABLE</code> y a comprobar que <b>no se comporta como uno espera</b>.</p>
+
+<h3>Declarar la tabla</h3>
+
+<pre>curl -s -X POST http://localhost:8088/ksql \
+    -H "Content-Type: application/vnd.ksql.v1+json" \
+    -d '{"ksql":"CREATE TABLE clientes_table (id INT PRIMARY KEY, nombre VARCHAR, tipo VARCHAR, ciudad VARCHAR) WITH (KAFKA_TOPIC='"'"'novatech.lab10.clientes'"'"', VALUE_FORMAT='"'"'AVRO'"'"', KEY_FORMAT='"'"'AVRO'"'"');"}' \
+  | tr ',' '\n' | grep -E '"status"|"message"'</pre>
+
+<div class="desglose">
+<div><span class="flag">id INT PRIMARY KEY</span> — <b>una <code>TABLE</code> exige una clave primaria</b> y un <code>STREAM</code> no. Es la diferencia de fondo, porque «el último valor de cada clave» no significa nada sin clave</div>
+<div><span class="flag">KEY_FORMAT='AVRO'</span> — <b>la clave también tiene su contrato</b>, y es el <code>-key</code> que viste aparecer en el laboratorio 11</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">"commandStatus":{"status":"SUCCESS"
+"message":"Table created"</div>
+
+<h3>Produce dos veces el mismo cliente</h3>
+
+<pre>kafka-cli/produce-cliente-avro.sh 1001 "Acme S.A." VIP Santiago
+kafka-cli/produce-cliente-avro.sh 1001 "Acme S.A. - actualizado" VIP Santiago</pre>
+
+<p><b>El mismo <code>id</code>, 1001, con dos nombres distintos.</b></p>
+
+<div class="caja ojo">
+  <span class="rot">Predice otra vez</span>
+  <p style="margin-bottom:0">Si una <code>TABLE</code> guarda «el último valor de cada clave», y consultas por el <code>id</code> 1001, <b>¿cuántas filas esperas?</b></p>
+</div>
+
+<h3>Consulta la tabla</h3>
+
+<pre>curl -s -X POST http://localhost:8088/query-stream \
+    -H "Content-Type: application/vnd.ksqlapi.delimited.v1" \
+    -d '{"sql":"SELECT id, nombre FROM clientes_table WHERE id = 1001 EMIT CHANGES LIMIT 3;","properties":{"auto.offset.reset":"earliest"}}'</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">{"queryId":"transient_CLIENTES_TABLE_952618109544783955","columnNames":["ID","NOMBRE"],"columnTypes":["INTEGER","STRING"]}
+[1001,"NovaCorp"]
+[1001,"Acme S.A."]
+[1001,"Acme S.A. - actualizado"]</div>
+
+<h3>Cómo se lee</h3>
+
+<p><b>Tres filas, no una.</b> Y el primer nombre, <code>NovaCorp</code>, ni siquiera lo escribiste tú, porque venía del <i>seed</i> del paso 1.</p>
+
+<div class="caja tecnico">
+  <span class="rot">Por qué la tabla emitió tres cambios</span>
+  <p>Porque le pediste una <i>push query</i>, con <code>EMIT CHANGES</code>. <b>Y lo que emite una <i>push query</i> sobre una tabla es cada cambio de esa tabla</b>, no su estado final.</p>
+  <p style="margin-bottom:0">La tabla <b>sí</b> tiene un solo valor para el 1001, que es el último. Lo que pasa es que le preguntaste por la película y no por la foto. <b>Para la foto hay que hacer una <i>pull query</i></b>, o sea el mismo <code>SELECT</code> sin <code>EMIT CHANGES</code>, y para eso la tabla tiene que ser materializada.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p>Te salieron tres filas donde esperabas una, y puedes explicar por qué.</p>
+  <p style="margin-bottom:0"><b>Anota una respuesta.</b> ¿Qué le pedirías a ksqlDB si lo que quieres es «el nombre actual del cliente 1001» y nada más?</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si dice algo sobre la clave o el <code>KEY_FORMAT</code></span>
+  <p style="margin-bottom:0">Falta el contrato de la clave. El <i>seed</i> de clientes escribe con clave, y <b>la clave tiene su propio subject, el <code>-key</code></b>. Compruébalo:</p>
+  <pre style="margin-bottom:0">curl -s http://localhost:8081/subjects</pre>
+  <p style="margin:3mm 0 0 0">Tiene que aparecer <code>novatech.lab10.clientes-key</code>. Si no está, vuelve a correr <code>produce-clientes-seed.sh</code>.</p>
+</div>
+
+<div class="np"></div>
+<h2>Lo que aprendiste</h2>
+
+<div class="regla"><span class="num">1</span>
+<b>La pregunta se hace una vez y sigue contestando.</b><br>
+Un <code>SELECT</code> con <code>EMIT CHANGES</code> no termina. Lo escribiste diez segundos antes de que existiera la fila que lo contestó, y nadie volvió a preguntar. Ésa es la única razón por la que ksqlDB existe.
+</div>
+
+<div class="regla"><span class="num">2</span>
+<b>ksqlDB no es una base de datos y no guarda tus datos.</b><br>
+Declarar un <code>STREAM</code> no copia nada ni mueve un byte. Es ponerle nombre y forma a un tópico que ya existe. Los datos siguen viviendo donde estaban, y si borras el stream, siguen ahí.
+</div>
+
+<div class="regla"><span class="num">3</span>
+<b>Un flujo no tiene orden global, y ningún <code>SELECT</code> te lo puede dar.</b><br>
+El mismo <code>SELECT</code> sobre datos que no cambiaron devolvió filas distintas cinco veces seguidas. El orden está garantizado dentro de cada partición y en ninguna parte entre ellas. Un informe que dependa de ese orden está mal planteado.
+</div>
+
+<div class="regla"><span class="num">4</span>
+<b>Una <code>TABLE</code> con <code>EMIT CHANGES</code> te da la película, no la foto.</b><br>
+Pediste el cliente 1001 y salieron tres filas, que son sus tres versiones. La tabla sí tiene un solo valor vigente. Lo que cambia es qué le preguntaste.
+</div>
+
+<div class="np"></div>
+<h2>Para profundizar</h2>
+
+<h3>A · El cliente interactivo</h3>
+
+<p>ksqlDB trae un cliente de línea de comandos con su propio <i>prompt</i>.</p>
+
+<pre>ksql-cli/ksql-shell.sh</pre>
+
+<p>Y dentro, sin <code>curl</code> ni JSON de por medio:</p>
+
+<pre>SET 'auto.offset.reset'='earliest';
+SHOW STREAMS;
+SELECT id, producto, monto FROM pedidos_stream EMIT CHANGES;</pre>
+
+<p><i>Ctrl+C corta la consulta y devuelve el prompt. <code>exit</code> sale.</i></p>
+
+<p><b>Es mucho más cómodo que el <code>curl</code> del recorrido</b>, y para explorar es lo que hay que usar. Compara las dos formas de hacer lo mismo, porque en producción vas a usar las dos.</p>
+
+<p><b>La pregunta que vale.</b> Si el <i>prompt</i> es más cómodo, ¿por qué existe la API REST? <i>Pista, ¿quién hace las consultas cuando no hay una persona delante?</i></p>
+
+<h3>B · Un <code>SELECT</code> que no termina, de verdad</h3>
+
+<p>Todo el recorrido usó <code>LIMIT</code> para que los comandos volvieran. Quítalo y mira qué es de verdad una <i>push query</i>.</p>
+
+<pre>curl -s -N -X POST http://localhost:8088/query-stream \
+    -H "Content-Type: application/vnd.ksqlapi.delimited.v1" \
+    -d '{"sql":"SELECT id, producto, monto FROM pedidos_stream WHERE monto &gt; 20000 EMIT CHANGES;","properties":{"auto.offset.reset":"latest"}}'</pre>
+
+<p>Y en la otra terminal, produce varios pedidos, unos por encima de 20000 y otros por debajo.</p>
+
+<p><b>Lo que hay que mirar.</b> Solo aparecen los que cumplen el <code>WHERE</code>. <b>El filtro se aplica a medida que los datos pasan</b>, no sobre un conjunto guardado. Sal con <code>Ctrl+C</code>, que es la forma normal de terminar una consulta de éstas.</p>
+
+<h3>C · Las consultas que quedan corriendo</h3>
+
+<p>Las del recorrido son <i>transient</i>, o sea que mueren cuando cierras el <code>curl</code>. Se puede crear una que siga corriendo en el servidor.</p>
+
+<pre>curl -s -X POST http://localhost:8088/ksql \
+    -H "Content-Type: application/vnd.ksql.v1+json" \
+    -d '{"ksql":"CREATE STREAM pedidos_grandes AS SELECT * FROM pedidos_stream WHERE monto &gt; 20000 EMIT CHANGES;"}' \
+  | tr ',' '\n' | grep -E '"status"|"message"'
+
+curl -s -X POST http://localhost:8088/ksql \
+    -H "Content-Type: application/vnd.ksql.v1+json" \
+    -d '{"ksql":"SHOW QUERIES;"}' | tr ',' '\n' | grep -E '"id"|"state"'</pre>
+
+<div class="salida-rot">Lo que sale · medido</div>
+<div class="salida">"commandStatus":{"status":"SUCCESS"
+"message":"Created query with ID CSAS_PEDIDOS_GRANDES_5"
+
+"id":"CSAS_PEDIDOS_GRANDES_5"
+"state":"RUNNING"</div>
+
+<p><b>Lo que hay que mirar.</b> Un <code>CREATE STREAM … AS SELECT</code> <b>sí crea un tópico nuevo</b>, al revés que el <code>CREATE STREAM</code> del paso 2. Antes de este comando el listado solo tenía <code>novatech.lab10.pedidos</code>, y después aparece también <code>PEDIDOS_GRANDES</code>, en mayúsculas. Compruébalo:</p>
+
+<pre>docker exec kafka-broker-1 kafka-topics \
+    --bootstrap-server kafka-broker-1:29092 --list | grep -i grandes</pre>
+
+<p>Y la consulta queda <code>RUNNING</code> en el servidor aunque cierres tu terminal, que es lo que hace falta para un panel o una alerta.</p>
+
+<p><b>La pregunta que vale.</b> ¿Quién consume ese tópico nuevo, y qué pasa si nadie lo hace?</p>
+
+<h3>D · Agregaciones con ventana de tiempo</h3>
+
+<p>Es la pregunta original del caso, o sea cuántos comprobantes por minuto.</p>
+
+<pre>curl -s -N -X POST http://localhost:8088/query-stream \
+    -H "Content-Type: application/vnd.ksqlapi.delimited.v1" \
+    -d '{"sql":"SELECT estado, COUNT(*) FROM pedidos_stream WINDOW TUMBLING (SIZE 1 MINUTE) GROUP BY estado EMIT CHANGES;","properties":{"auto.offset.reset":"earliest"}}'</pre>
+
+<div class="salida-rot">Lo que sale · medido, con <code>LIMIT 4</code> para que termine</div>
+<div class="salida">{"queryId":"transient_PEDIDOS_STREAM_404246666237798640","columnNames":["ESTADO","KSQL_COL_0"],"columnTypes":["STRING","BIGINT"]}
+["enviado",1]
+["enviado",2]
+["enviado",1]
+["enviado",3]</div>
+
+<p><b>Lo que hay que mirar.</b> <code>WINDOW TUMBLING</code> corta el tiempo en tramos que no se solapan, y cuenta dentro de cada uno. <b>Es lo que el informe nocturno del caso hacía a las tres de la mañana</b>, hecho mientras los datos entran.</p>
+
+<p>Y fíjate en que la cuenta <b>sube y vuelve a bajar</b>, o sea 1, 2, 1, 3. No es un error. <b>Cada vez que empieza un tramo nuevo, la cuenta arranca de cero otra vez</b>, y lo que estás viendo son tramos distintos entremezclados. La columna se llama <code>KSQL_COL_0</code> porque no le pusiste nombre al <code>COUNT(*)</code>. Con <code>COUNT(*) AS total</code> se llamaría <code>TOTAL</code>.</p>
+
+<h3>E · El reporte del laboratorio</h3>
+
+<p><code>plantillas/reporte-entregable.md</code> recorre las actividades con sus preguntas. Las respuestas de referencia están en <code>soluciones/reporte-resuelto.md</code> y en <code>soluciones/respuestas-desafio.md</code>.</p>
+
+<h2>Antes de cerrar</h2>
+
+<div class="caja ojo">
+  <span class="rot">Deja el terreno limpio</span>
+  <pre>bin/90-test-lab.sh   # ver el estado del laboratorio
+bin/stop-lab.sh      # apagar los contenedores</pre>
+  <p style="margin-bottom:0"><code>bin/stop-lab.sh</code> solo detiene los contenedores y no borra nada. <b>Ojo al reanudar</b>, porque <code>bin/start-lab.sh</code> reconstruye el laboratorio desde cero. <b>Los streams que declaraste y los 30 pedidos no sobreviven</b>, así que al volver hay que repetir la siembra del paso 1.</p>
+</div>
+
+<div class="salida-rot">Lo que dice el validador si todo está en orden</div>
+<div class="salida">Validador del Lab 12 — estado actual
+  ✓ los 3 brokers están healthy
+  ✓ ksqlDB server responde en :8088
+  ✓ SHOW STREAMS responde
+
+✓ LAB EN BUEN ESTADO (3 verificaciones OK)</div>
+
+<div class="caja sunat">
+  <span class="rot">Lo que te llevas</span>
+  <p>El informe que llega mañana por la mañana no está mal hecho. <b>Está hecho de la única forma que se podía cuando la pregunta había que bajarla al depósito.</b></p>
+  <p style="margin-bottom:0">Hoy viste la otra forma, y cabe en una línea de SQL que un analista puede escribir sin pedirle nada a un desarrollador. <b>Escríbela una vez, y sigue contestando.</b></p>
+</div>
+
+</body></html>
