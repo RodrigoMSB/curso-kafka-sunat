@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><link rel="stylesheet" href="estilo-alumno.css"></head>
+<body>
+
+<div class="portada">
+  <div class="kicker">C U R S O &nbsp; D E &nbsp; A D M I N I S T R A C I Ó N &nbsp; D E &nbsp; K A F K A</div>
+  <div class="labnum">LABORATORIO 13</div>
+  <h1>¿Quién<br>creó ese<br>tópico?</h1>
+  <div class="sub">Kafka Connect, y cómo se llena un tópico sin escribir una línea de código.<br>Guía para hacerlo por tu cuenta, paso a paso</div>
+  <div class="meta">
+    Confluent Platform 8.2.0 · 3 brokers KRaft · Kafka Connect · PostgreSQL<br>
+    Duración estimada · 45 minutos<br>
+    NovaTech Logistics · caso de estudio
+  </div>
+</div>
+
+<h2>Antes de empezar</h2>
+
+<h3>Qué vas a lograr</h3>
+
+<p>Éste es el laboratorio donde Kafka deja de ser algo a lo que hay que escribirle. Hasta ahora, cada mensaje que entró a un tópico lo pusiste tú, con un comando.</p>
+
+<p><b>Hoy no vas a escribir en Kafka ni una sola vez, y el tópico se va a llenar igual.</b> Vas a escribir una fila en una base de datos, y va a aparecer un mensaje en Kafka.</p>
+
+<div class="afirmacion">
+  <span class="rot">Lo que este laboratorio demuestra</span>
+  <div class="txt">Mover datos de un sistema a Kafka no es un programa que hay que escribir. Es una instrucción que hay que entregar.</div>
+</div>
+
+<h3>Qué necesitas tener listo</h3>
+
+<table>
+<tr><th>Requisito</th><th>Cómo lo compruebas</th></tr>
+<tr><td>Docker Desktop corriendo, con 6 GB de RAM</td><td>Ajustes de Docker Desktop, pestaña <i>Resources</i></td></tr>
+<tr><td>Git Bash abierto en la carpeta del lab</td><td><code>cd Capitulo_5/lab-13-kafka-connect</code></td></tr>
+<tr><td>Los puertos 9092, 9093, 9094, <b>8083</b>, <b>15432</b> y 8090 libres</td><td>El paso 1 te avisa si no lo están</td></tr>
+<tr><td><b>Nada más</b></td><td>Todo el recorrido va por <code>curl</code>. <b>No hace falta instalar nada</b></td></tr>
+</table>
+
+<div class="caja ojo">
+  <span class="rot">Por qué esta guía usa <code>curl</code> y no los envoltorios del curso</span>
+  <p>Hay dos razones, y la segunda está medida.</p>
+  <p><b>La primera.</b> Kafka Connect <b>es</b> una API REST y no tiene otra interfaz. No hay archivo que editar ni servicio que reiniciar. Verlo con <code>curl</code> es verlo como es, y en el servidor de SUNAT no va a haber una carpeta <code>connect-cli/</code>.</p>
+  <p style="margin-bottom:0"><b>La segunda.</b> Cuatro de los cinco envoltorios usan <code>python3</code> para dar formato a la salida, y Git Bash para Windows no lo trae. <b>Uno de ellos falla de una forma que te puede costar media hora</b>, y está desarrollado en el <i>para profundizar</i>.</p>
+</div>
+
+<h3>El caso</h3>
+
+<div class="caja">
+  <p>El sistema que le importa a SUNAT no es Kafka. <b>Es la base de datos que ya estaba.</b> La que lleva veinte años funcionando, la que tiene los datos de verdad, la que nadie va a reemplazar este año ni el que viene.</p>
+  <p>Y el encargo siempre llega igual. <i>Necesitamos que lo que entra ahí también llegue a Kafka.</i></p>
+  <p>La respuesta obvia es escribir un programa. Un proceso que se conecte a la base, consulte cada tanto qué hay de nuevo, y publique lo que encuentre. Suena a un par de días de trabajo, y lo es. <b>La primera versión.</b></p>
+  <p>Lo que no suena a un par de días es todo lo que aparece después.</p>
+  <p style="margin-bottom:0">Cómo sabe qué filas ya publicó, si el proceso se reinicia. Qué hace si se cae a la mitad de una tanda. Qué hace si la base no responde. Cómo se reparten el trabajo dos copias sin duplicar. Quién lo monitorea y dónde están sus métricas. <b>Ese programa deja de ser un script y se convierte en un sistema.</b> Y cuando mañana el encargo se repita con otra base, o con un archivo, o con una API, hay que volver a escribirlo entero.</p>
+</div>
+
+<div class="caja tecnico">
+  <span class="rot">Y la segunda mitad, que es la que sale más cara</span>
+  <p style="margin-bottom:0">Ese programa <b>hay que mantenerlo</b>. Tiene dueño, tiene despliegue, tiene versiones. Y tiene un día en que la persona que lo escribió ya no trabaja ahí.</p>
+</div>
+
+<div class="caja abuelita">
+  <span class="rot">La metáfora · hoy entra el libro que había antes</span>
+  <p>Kafka sigue siendo <b>el restaurante</b>. El <b>mozo</b> es el broker, el <b>tipo de comanda</b> es el tópico, los <b>sectores del salón</b> son las particiones y el <b>pincho</b> del turno es el segmento.</p>
+  <p>La pieza de hoy no es del restaurante. <b>Es del local que había antes.</b></p>
+  <table>
+  <tr><th>En el restaurante</th><th>En Kafka</th></tr>
+  <tr><td><b>El libro de reservas de la entrada</b>, escrito a mano, que existe desde antes que las comandas y que nadie va a jubilar</td><td>La <b>base de datos</b> que ya estaba</td></tr>
+  <tr><td><b>La instrucción escrita</b>, que dice «mira ese libro cada cinco segundos y copia lo que sea nuevo»</td><td>El <b>conector</b></td></tr>
+  <tr><td><b>El ayudante</b> que efectivamente lo hace, línea por línea</td><td>La <b>task</b></td></tr>
+  <tr><td><b>El dedo</b> con que marca hasta qué línea ya copió</td><td>El <b>offset del conector</b></td></tr>
+  </table>
+  <p>Lo que importa del ayudante, y es el corazón del laboratorio. <b>El ayudante no piensa.</b> No decide qué copiar, no interpreta, no corrige. Mira el libro, ve que hay líneas más abajo de donde tiene el dedo, y las copia a comandas. Después mueve el dedo. Y vuelve a mirar a los cinco segundos.</p>
+  <p style="margin-bottom:0">Nadie escribió un programa para el ayudante. <b>Alguien le escribió una instrucción en un papel.</b> Qué libro, cada cuánto, y cómo saber cuál línea es nueva.</p>
+</div>
+
+<div class="caja sunat">
+  <span class="rot">La regla que sale de ahí</span>
+  <p style="margin-bottom:0">Al ayudante no se le programa. <b>Se le escribe la instrucción y se le entrega.</b></p>
+</div>
+
+<div class="caja ojo">
+  <span class="rot">Y esto conviene verlo venir, porque el paso 6 te lo deja servido</span>
+  <p style="margin-bottom:0"><b>El dedo solo avanza.</b> Si alguien vuelve atrás y corrige una línea que el ayudante ya copió, el ayudante <b>nunca se entera</b>, porque su dedo ya pasó por ahí. Y si alguien arranca una hoja, tampoco.</p>
+</div>
+
+<h3>Las cuatro piezas, con sus nombres</h3>
+
+<div class="concepto">
+  <span class="rot">Concepto · Kafka Connect</span>
+  Un servicio <b>aparte del clúster</b>, aquí el contenedor <code>kafka-connect</code>, que responde en <code>http://localhost:8083</code>. Su único trabajo es mover datos entre Kafka y sistemas externos. <b>No es parte del broker.</b>
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · conector</span>
+  La declaración, en JSON, de <b>qué</b> conectar. No dice cómo. Dice qué base, qué tabla, con qué credenciales, cada cuánto y a qué tópico. Es la instrucción del papel. <b>Es todo lo que vas a escribir hoy, y no es código.</b>
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · <i>task</i></span>
+  La unidad que ejecuta el trabajo. Un conector puede tener varias, y ahí está su paralelismo. <b>Es el ayudante.</b>
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · <i>worker</i></span>
+  El proceso donde viven las tasks. En este laboratorio hay uno. En producción hay varios, y <b>si uno se cae, los demás se reparten sus tasks solos</b>. Es el puesto de trabajo.
+</div>
+
+<p>Y las dos direcciones, que se nombran <b>desde el punto de vista de Kafka</b>.</p>
+
+<table>
+<tr><th>Tipo</th><th>De dónde</th><th>A dónde</th><th>Cuál es hoy</th></tr>
+<tr><td><b>Source</b></td><td>Un sistema externo</td><td>Kafka</td><td><b>El del recorrido</b></td></tr>
+<tr><td><b>Sink</b></td><td>Kafka</td><td>Un sistema externo</td><td>El del <i>para profundizar</i> B</td></tr>
+</table>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 1 de 6</span>El tópico que todavía no existe</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Levantar el laboratorio y fijar el punto de partida. <b>La demostración entera depende de él</b>, así que conviene dejar los dos números a la vista.</p>
+
+<h3>Levantar</h3>
+
+<pre>cd Capitulo_5/lab-13-kafka-connect
+chmod +x bin/*.sh connect-cli/*.sh kafka-cli/*.sh
+bin/start-lab.sh</pre>
+
+<div class="desglose">
+<div><span class="flag">bin/start-lab.sh</span> — levanta los tres brokers, PostgreSQL, Kafka Connect y Kafbat UI. <b>Siembra cinco pedidos en la tabla</b> y crea vacía la tabla de destino del camino de vuelta</div>
+</div>
+
+<div class="salida-rot">El final de lo que vas a ver · recortado</div>
+<div class="salida">  El tópico 'novatech.lab09.pedidos' lo creará el Source connector al arrancar.
+
+════════════════════════════════════════════════════════════
+  CLÚSTER NOVATECH LAB 13 OPERATIVO
+════════════════════════════════════════════════════════════
+
+  Componentes:
+    Broker 1:           localhost:9092
+    Broker 2:           localhost:9093
+    Broker 3:           localhost:9094
+    Kafbat UI:          http://localhost:8090
+    PostgreSQL:         localhost:15432 (user: novatech, db: novatech_orders)
+    Kafka Connect:      http://localhost:8083    ← REST API
+
+  PostgreSQL:
+    5 pedidos seed creados en la tabla 'pedidos'
+    Tabla 'pedidos_procesados' creada vacía</div>
+
+<h3>Qué tópicos hay ahora</h3>
+
+<pre>kafka-cli/list-topics.sh</pre>
+
+<div class="desglose">
+<div><span class="flag">kafka-cli/list-topics.sh</span> — envoltorio del curso. Por dentro llama a <code>kafka-topics --list</code> dentro del contenedor. <b>Éste no usa <code>python3</code></b> y funciona en cualquier parte</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">_connect-configs
+_connect-offsets
+_connect-status
+novatech.lab09.pedidos.procesados</div>
+
+<p>Cuatro tópicos, y <b>ninguno se llama <code>novatech.lab09.pedidos</code></b>. Ése es el que va a aparecer solo.</p>
+
+<table>
+<tr><th>Tópico</th><th>Qué es</th></tr>
+<tr><td><code>_connect-configs</code>, <code>_connect-offsets</code>, <code>_connect-status</code></td><td><b>Son de Connect, y son de Kafka.</b> Connect no tiene base de datos propia. Guarda sus conectores, su avance y su estado en tres tópicos del propio clúster. Por eso, si el contenedor se cae y vuelve, <b>retoma exactamente donde iba</b></td></tr>
+<tr><td><code>novatech.lab09.pedidos.procesados</code></td><td>El del camino de vuelta, que el recorrido no usa. Está en el <i>para profundizar</i> B</td></tr>
+</table>
+
+<h3>Y del otro lado, la tabla que sí tiene datos</h3>
+
+<pre>docker exec postgres psql -U novatech -d novatech_orders \
+    -c "SELECT count(*) FROM pedidos;"</pre>
+
+<div class="desglose">
+<div><span class="flag">docker exec postgres</span> — ejecuta dentro del contenedor de PostgreSQL. <b>Sin <code>-i</code> ni <code>-t</code></b>, porque la sentencia va en el propio comando y no la vas a teclear</div>
+<div><span class="flag">psql -U novatech -d novatech_orders</span> — el cliente de línea de comandos de PostgreSQL, con su usuario y su base</div>
+<div><span class="flag">-c "SELECT …"</span> — ejecuta esa sentencia y sale. <b>Sin <code>-c</code> abriría una sesión interactiva</b> de la que habría que salir con <code>\q</code></div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida"> count
+-------
+     5
+(1 row)</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p style="margin-bottom:0"><b>Cinco filas en la base y cero mensajes en Kafka.</b> No existe todavía el tópico <code>novatech.lab09.pedidos</code>. <b>Ése es el antes</b>, y los dos números tienen que quedar anotados.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si <code>psql</code> dice <code>connection to server on socket … failed</code></span>
+  <p style="margin-bottom:0">Copiaste solo la línea del <code>psql</code>, sin el <code>docker exec postgres</code> de delante. <b>No es la base del laboratorio la que falla.</b> Es tu propia máquina diciendo que ahí no hay ningún PostgreSQL.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el <code>list-topics.sh</code> no muestra los tres <code>_connect-*</code></span>
+  <p style="margin-bottom:0">Connect todavía está arrancando y aún no los ha creado. Tarda más que los brokers. Espera medio minuto y repite. Si sigue:</p>
+  <pre style="margin-bottom:0">curl -s http://localhost:8083/</pre>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el puerto 15432 está ocupado</span>
+  <p style="margin-bottom:0">El laboratorio publica PostgreSQL en el <b>15432</b> y no en el 5432 estándar, justamente para no chocar con un PostgreSQL que ya tengas instalado. Si aun así está ocupado, mira quién lo tiene con <code>docker ps</code>.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 2 de 6</span>La instrucción, que es un JSON</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Éste es el paso donde no se escribe código. Antes de enviar la instrucción hay que leerla, porque es corta y <b>cada línea decide algo</b>.</p>
+
+<h3>Primero, leerla</h3>
+
+<pre>cat infra/connect/jdbc-source-pedidos.json</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">{
+  "name": "novatech-source-pedidos",
+  "config": {
+    "connector.class": "io.confluent.connect.jdbc.JdbcSourceConnector",
+    "tasks.max": "1",
+    "connection.url": "jdbc:postgresql://postgres:5432/novatech_orders",
+    "connection.user": "novatech",
+    "connection.password": "novatech_secret",
+    "table.whitelist": "pedidos",
+    "mode": "incrementing",
+    "incrementing.column.name": "id",
+    "topic.prefix": "novatech.lab09.",
+    "poll.interval.ms": "5000",
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "false",
+    "value.converter.schemas.enable": "false"
+  }
+}</div>
+
+<p><b>Ésa es la instrucción entera.</b> Línea por línea:</p>
+
+<table>
+<tr><th>Campo</th><th>Qué decide</th></tr>
+<tr><td><code>connector.class</code></td><td>Qué tipo de ayudante. Éste sabe hablar JDBC. Hay otros que saben S3, Elasticsearch o MongoDB. <b>Es lo único que cambia si mañana la fuente es otra</b></td></tr>
+<tr><td><code>tasks.max: 1</code></td><td>Cuántos ayudantes. Uno basta para una tabla</td></tr>
+<tr><td><code>connection.url</code></td><td>Fíjate en el <code>postgres:5432</code>. Es el nombre del contenedor y su puerto <b>interno</b>. <b>Desde tu máquina PostgreSQL está en el 15432</b>, pero Connect lo ve por la red de Docker</td></tr>
+<tr><td><code>table.whitelist: pedidos</code></td><td>Qué tabla mirar. Acepta varias, separadas por coma</td></tr>
+<tr><td><code>mode: incrementing</code></td><td>Cómo sabe qué es nuevo. <b>Es el dedo</b></td></tr>
+<tr><td><code>incrementing.column.name: id</code></td><td>Cuál es la columna del dedo</td></tr>
+<tr><td><code>topic.prefix</code></td><td><b>Aquí está la respuesta al título de esta guía.</b> El tópico no se nombra. Se arma, pegando este prefijo al nombre de la tabla, o sea <code>novatech.lab09.</code> más <code>pedidos</code></td></tr>
+<tr><td><code>poll.interval.ms: 5000</code></td><td>Cada cuánto vuelve a mirar</td></tr>
+<tr><td><code>value.converter</code></td><td>En qué formato deja el mensaje. Aquí JSON. En el laboratorio 11 hubiera sido Avro</td></tr>
+</table>
+
+<h3>Ahora se envía</h3>
+
+<pre>curl -s -w "\nHTTP %{http_code}\n" -X POST \
+    -H "Content-Type: application/json" \
+    --data @infra/connect/jdbc-source-pedidos.json \
+    http://localhost:8083/connectors \
+  | fold -s -w 88</pre>
+
+<div class="desglose">
+<div><span class="flag">-s</span> — silencia la barra de progreso de <code>curl</code></div>
+<div><span class="flag">-w "\nHTTP %{http_code}\n"</span> — <b>imprime el código HTTP al final.</b> Es el que dice si el conector quedó creado</div>
+<div><span class="flag">-X POST</span> a <code>/connectors</code> — crear un conector es una llamada REST y nada más</div>
+<div><span class="flag">-H "Content-Type: application/json"</span> — <b>sin esta cabecera Connect contesta <code>415</code></b></div>
+<div><span class="flag">--data @archivo</span> — <b>la arroba</b> le dice a <code>curl</code> que el cuerpo sale de ese archivo tal cual. El JSON ya tiene la forma que Connect espera, <b>así que aquí no hay que escapar nada</b>, al revés de lo que pasaba en el laboratorio 11</div>
+<div><span class="flag">| fold -s -w 88</span> — corta la respuesta en líneas de 88 caracteres, cortando en espacios. Sin esto es una sola línea larguísima</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver · el medio va recortado, porque devuelve la configuración entera</div>
+<div class="salida">{"name":"novatech-source-pedidos","config":{"connector.class":"io.confluent.connect.jdbc
+.JdbcSourceConnector","tasks.max":"1", ... ,"name":"novatech-source-pedidos"},"tasks":[]
+,"type":"source"}
+HTTP 201</div>
+
+<h3>Cómo se lee</h3>
+
+<p><b><code>HTTP 201 Created</code></b>. El conector quedó.</p>
+
+<p>Y <b><code>"tasks":[]</code>, vacío</b>. Todavía no hay ayudante. El conector quedó registrado, y el reparto de tasks ocurre un instante después. Por eso el paso 3 no es opcional.</p>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p style="margin-bottom:0"><code>HTTP 201</code>, y la respuesta te devuelve tu propia configuración con un <code>"type":"source"</code> al final. <b>Connect te está repitiendo lo que entendió.</b> Si algún campo no aparece, es que lo escribiste mal.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si contesta <code>HTTP 409</code></span>
+  <p>Ya existe un conector con ese nombre. Casi siempre es que corriste el comando dos veces.</p>
+  <p style="margin-bottom:0">Mira qué hay y, si quieres empezar de nuevo, bórralo:</p>
+  <pre style="margin-bottom:0">curl -s http://localhost:8083/connectors
+curl -s -X DELETE -w "HTTP %{http_code}\n" \
+    http://localhost:8083/connectors/novatech-source-pedidos</pre>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si contesta <code>HTTP 415</code></span>
+  <p style="margin-bottom:0">Falta la cabecera <code>Content-Type: application/json</code>. <b>El 415 quiere decir «no hablo ese formato»</b>, y lo dice Connect antes de mirar el contenido.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si contesta <code>HTTP 400</code> con algo sobre el <i>payload</i></span>
+  <p style="margin-bottom:0">Se te perdió la <code>@</code> del <code>--data @archivo</code>. <b>Sin la arroba, <code>curl</code> manda el texto <code>infra/connect/jdbc-source-pedidos.json</code> como si fuera el cuerpo</b>, en vez del contenido del archivo.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 3 de 6</span>Los dos estados, que no son el mismo</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Preguntar por el estado del conector. Y aprender la distinción que <b>más se confunde en producción</b>.</p>
+
+<h3>El comando</h3>
+
+<pre>curl -s http://localhost:8083/connectors/novatech-source-pedidos/status \
+  | tr ',' '\n'</pre>
+
+<div class="desglose">
+<div><span class="flag">/connectors/&lt;nombre&gt;/status</span> — el estado en vivo. <b>Es un <code>GET</code></b>, así que no lleva <code>-X</code> ni cabecera</div>
+<div><span class="flag">| tr ',' '\n'</span> — parte la respuesta en una línea por coma. <b>Es un corte bruto y no un formateador de JSON</b>, así que deja llaves y corchetes descolgados. Pero se lee, y no necesita nada instalado</div>
+</div>
+
+<div class="caja ojo">
+  <span class="rot">Si lo corres pegado al comando anterior, te va a contestar esto</span>
+  <div class="salida">{"error_code":404
+"message":"No status found for connector novatech-source-pedidos"}</div>
+  <p><b>No está roto y el conector no falló.</b> El estado se publica un instante después de aceptar la instrucción, y tú llegaste antes.</p>
+  <p style="margin-bottom:0"><b>Vuelve a correr el mismo comando.</b> Medido, la ventana dura decenas de milisegundos al recrear un conector, pero <b>en la primera creación después de levantar el laboratorio puede durar más</b>, y hacer falta dos o tres consultas. Es el único punto del recorrido donde hay que repetir un comando.</p>
+</div>
+
+<div class="salida-rot">Lo que vas a ver cuando ya haya estado</div>
+<div class="salida">{"name":"novatech-source-pedidos"
+"connector":{"state":"RUNNING"
+"worker_id":"kafka-connect:8083"
+"version":"10.9.0"}
+"tasks":[{"id":0
+"state":"RUNNING"
+"worker_id":"kafka-connect:8083"
+"version":"10.9.0"}]
+"type":"source"}</div>
+
+<h3>Cómo se lee</h3>
+
+<p><b>Hay dos <code>state</code>, y no son el mismo.</b></p>
+
+<table>
+<tr><th>Cuál</th><th>Dónde está en la salida</th><th>Qué dice</th></tr>
+<tr><td><code>connector.state</code></td><td>El <code>"state":"RUNNING"</code> que viene <b>debajo de <code>"connector":{</code></b></td><td>Si la <b>instrucción</b> está aceptada y vigente</td></tr>
+<tr><td><code>tasks[0].state</code></td><td>El <code>"state":"RUNNING"</code> que viene <b>debajo de <code>"tasks":[{</code></b></td><td>Si el <b>ayudante</b> está trabajando</td></tr>
+</table>
+
+<div class="caja sunat">
+  <span class="rot">Los dos tienen que decir <code>RUNNING</code></span>
+  <p style="margin-bottom:0">Un conector en <code>RUNNING</code> con su task en <code>FAILED</code> <b>es el caso que más caro sale</b>. La instrucción está ahí, se ve verde por encima, y no se está copiando nada. El <i>para profundizar</i> C lo provoca a propósito para que lo reconozcas.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p style="margin-bottom:0">Puedes señalar <b>los dos</b> <code>RUNNING</code> en la salida y decir cuál es cuál. <b>Anota una respuesta.</b> ¿Cuál de los dos miraría un tablero que solo muestra «el conector está bien»?</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el 404 no se va después de varios intentos</span>
+  <p style="margin-bottom:0">Comprueba primero que el conector existe, que es otra pregunta:</p>
+  <pre style="margin-bottom:0">curl -s http://localhost:8083/connectors</pre>
+  <p style="margin:3mm 0 0 0">Si la lista está vacía, el <code>POST</code> del paso 2 no llegó a crear nada. Vuelve a él y mira el código HTTP.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el <code>tasks[0].state</code> dice <code>FAILED</code></span>
+  <p>En la misma respuesta hay un campo <code>trace</code> con el motivo. Léelo entero:</p>
+  <pre style="margin-bottom:0">curl -s http://localhost:8083/connectors/novatech-source-pedidos/status \
+  | tr '{' '\n' | grep -A2 trace</pre>
+  <p style="margin:3mm 0 0 0">La causa más común aquí es que PostgreSQL todavía no aceptaba conexiones cuando el conector arrancó. <b>Reinicia solo la task:</b></p>
+  <pre style="margin-bottom:0">curl -s -X POST \
+  "http://localhost:8083/connectors/novatech-source-pedidos/restart?includeTasks=true&amp;onlyFailed=true"</pre>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 4 de 6</span>El tópico que apareció solo</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Nadie ejecutó un comando de creación de tópicos. Vamos a mirar qué hay ahora.</p>
+
+<pre>kafka-cli/list-topics.sh</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">_connect-configs
+_connect-offsets
+_connect-status
+novatech.lab09.pedidos
+novatech.lab09.pedidos.procesados</div>
+
+<p>Apareció <code>novatech.lab09.pedidos</code>. <b>Ésa es la respuesta al título de la guía.</b> Lo creó el conector, con el nombre que salió de pegar el <code>topic.prefix</code> al nombre de la tabla.</p>
+
+<div class="caja ojo">
+  <span class="rot">Si todavía no aparece, llegaste antes que el ayudante</span>
+  <p>El conector tarda hasta 5 segundos en su primera pasada. Según lo rápido que vayas te vas a topar con una de estas tres, <b>y las tres son la misma cosa</b>.</p>
+  <table>
+  <tr><th>Comando</th><th>Lo que contesta si aún no hay tópico</th></tr>
+  <tr><td><code>list-topics.sh</code></td><td>El tópico simplemente no está en la lista</td></tr>
+  <tr><td><code>kafka-get-offsets</code></td><td><code>Error occurred: Could not match any topic-partitions with the specified filters</code></td></tr>
+  <tr><td><code>kafka-console-consumer</code></td><td>Un <code>WARN … {novatech.lab09.pedidos=UNKNOWN_TOPIC_OR_PARTITION}</code>, y después <b>funciona igual</b> en cuanto el tópico nace</td></tr>
+  </table>
+  <p style="margin-bottom:0"><b>Espera unos segundos y repite.</b> Es el reloj del laboratorio, no un fallo.</p>
+</div>
+
+<h3>Y no apareció vacío</h3>
+
+<div class="concepto">
+  <span class="rot">Concepto · partición</span>
+  Cada uno de los pedazos en que se corta un tópico. <b>Éste tiene una sola</b>, porque el conector lo creó con los valores por defecto del broker y nadie le pidió otra cosa.
+</div>
+
+<pre>docker exec kafka-broker-1 kafka-get-offsets \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.lab09.pedidos --time -1</pre>
+
+<div class="desglose">
+<div><span class="flag">--time -1</span> — el offset <b>más nuevo</b>. Con <code>-2</code> pedirías el más antiguo</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">novatech.lab09.pedidos:0:5</div>
+
+<p>Es <code>tópico:partición:offset</code>. Partición 0, offset 5. <b>Cinco mensajes</b>, exactamente las cinco filas que el paso 1 contó en la tabla.</p>
+
+<p>El ayudante entró, encontró el libro con cinco líneas y el dedo en cero, y las copió todas.</p>
+
+<h3>Ahora mira lo que copió</h3>
+
+<pre>docker exec kafka-broker-1 kafka-console-consumer \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.lab09.pedidos \
+    --from-beginning --max-messages 5</pre>
+
+<div class="desglose">
+<div><span class="flag">--from-beginning</span> — empieza por el mensaje más viejo que el tópico conserva, no por lo que llegue de ahora en adelante</div>
+<div><span class="flag">--max-messages 5</span> — <b>sin esto el comando no termina nunca</b>, porque un consumidor se queda esperando. Con el tope lee cinco y sale solo</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">{"id":1,"cliente_id":1001,"producto":"Caja de bananos premium","cantidad":50,"monto":"ExLQ","estado":"pendiente","creado_en":1787975289752}
+{"id":2,"cliente_id":1002,"producto":"Pallet de cajas reforzadas","cantidad":20,"monto":"AIfNoA==","estado":"pendiente","creado_en":1787975289752}
+{"id":3,"cliente_id":1003,"producto":"Etiquetas RFID x1000","cantidad":1,"monto":"RKog","estado":"pendiente","creado_en":1787975289752}
+{"id":4,"cliente_id":1004,"producto":"Cinta adhesiva industrial 50m","cantidad":100,"monto":"C3Gw","estado":"pendiente","creado_en":1787975289752}
+{"id":5,"cliente_id":1005,"producto":"Stretch film 500m","cantidad":30,"monto":"G3dA","estado":"pendiente","creado_en":1787975289752}
+Processed a total of 5 messages</div>
+
+<p>Un JSON por línea, y <b>sus campos son las columnas de la tabla</b>. Nadie definió ese formato. Lo dedujo el conector del esquema de PostgreSQL.</p>
+
+<p>El <code>creado_en</code> es la hora en milisegundos desde 1970 y <b>va a ser distinto en tu corrida</b>. Los demás campos no.</p>
+
+<div class="caja tecnico">
+  <span class="rot">Y ahora lo que siempre se pregunta · el <code>"monto":"ExLQ"</code></span>
+  <p><b>No está corrupto.</b> La columna <code>monto</code> es un <code>NUMERIC(10,2)</code> de SQL, que es un decimal exacto. Y <b>JSON no tiene decimal exacto</b>. Solo tiene el número de coma flotante, que redondea.</p>
+  <p style="margin-bottom:0">Antes que entregarte un importe redondeado, el conector te entrega <b>los bytes originales en base64</b>. Es incómodo, y es la respuesta correcta. En un sistema tributario, un céntimo perdido por redondeo es un problema de verdad. Se puede cambiar, y el <i>para profundizar</i> D muestra qué se pierde al hacerlo.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p style="margin-bottom:0">El offset dice <b>5</b>, el consumidor trajo <b>cinco</b> JSON, y los cinco <code>id</code> van del 1 al 5. <b>Coinciden con las cinco filas del paso 1</b>, y tú no escribiste ni un mensaje.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el consumidor se queda colgado y no vuelve</span>
+  <p style="margin-bottom:0">Se te olvidó el <code>--max-messages 5</code>, o pediste más mensajes de los que hay. <b>Si pides 10 sobre un tópico que tiene 5, el consumidor espera los otros 5 para siempre.</b> Sal con <code>Ctrl+C</code>.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 5 de 6</span>La fila nueva, y el viaje</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Todo lo anterior se podría explicar como «el conector hizo una carga inicial». <b>Este paso demuestra que el ayudante sigue mirando.</b></p>
+
+<p>Vas a escribir un <code>INSERT</code> en SQL. <b>En Kafka no vas a tocar nada.</b></p>
+
+<h3>El comando</h3>
+
+<pre>kafka-cli/insertar-pedido.sh 2001 "Pedido de la clase" 5 25000.00</pre>
+
+<div class="desglose">
+<div><span class="flag">kafka-cli/insertar-pedido.sh</span> — envoltorio del curso. <b>A pesar de estar en <code>kafka-cli/</code>, no habla con Kafka.</b> Hace un <code>INSERT</code> en PostgreSQL y nada más</div>
+<div><span class="flag">2001</span> — el <code>cliente_id</code></div>
+<div><span class="flag">"Pedido de la clase"</span> — el producto. <b>Elige un texto reconocible</b>, porque lo vas a buscar dentro de un mensaje de Kafka en un minuto</div>
+<div><span class="flag">5</span> — la cantidad</div>
+<div><span class="flag">25000.00</span> — el monto</div>
+</div>
+
+<p>El comando real que corre por debajo es éste. <b>No lo ejecutes, porque ya lo hiciste.</b> Está aquí para que veas que no hay nada más.</p>
+
+<pre>docker exec postgres psql -U novatech -d novatech_orders -c \
+  "INSERT INTO pedidos (cliente_id, producto, cantidad, monto, estado)
+   VALUES (2001, 'Pedido de la clase', 5, 25000.00, 'pendiente') RETURNING id;"</pre>
+
+<div class="desglose">
+<div><span class="flag">docker exec postgres</span> — entra al contenedor de PostgreSQL. <b>En el servidor de SUNAT esta parte no existe</b>, porque allí <code>psql</code> está en el <code>PATH</code> y la base es local o se alcanza con <code>-h</code></div>
+<div><span class="flag">RETURNING id</span> — es de PostgreSQL. <b>Devuelve el <code>id</code> que le tocó a la fila nueva</b>, sin tener que consultarlo después</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida"> id
+----
+  6
+(1 row)
+
+INSERT 0 1</div>
+
+<p><code>RETURNING id</code> devolvió <b>6</b>. Es el <code>id</code> de la fila nueva, y por lo tanto <b>la línea a la que el dedo del ayudante todavía no llegó</b>. El <code>INSERT 0 1</code> es PostgreSQL diciendo que insertó una fila.</p>
+
+<h3>Y ahora se espera</h3>
+
+<p>Cuenta hasta cinco en voz alta, y pregunta.</p>
+
+<pre>docker exec kafka-broker-1 kafka-get-offsets \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.lab09.pedidos --time -1</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">novatech.lab09.pedidos:0:6</div>
+
+<div class="caja sunat">
+  <span class="rot">Ese 6 es toda la afirmación del laboratorio en un solo número</span>
+  <p style="margin-bottom:0">Pasó de 5 a 6. <b>Nadie ejecutó un productor. Nadie escribió código.</b> Se escribió una fila en una base de datos y apareció un mensaje en Kafka.</p>
+</div>
+
+<div class="caja ojo">
+  <span class="rot">Cuánto tarda, y por qué no siempre lo mismo</span>
+  <p style="margin-bottom:0">En la corrida medida el offset ya había subido <b>a los 10 segundos</b> del <code>INSERT</code>. El <code>poll.interval.ms</code> son 5, así que lo normal es <b>entre 5 y 10 segundos</b>, y depende de en qué punto de sus cinco segundos estaba el ayudante cuando insertaste. <b>Si a ti tarda 3 o tarda 9, está bien.</b> La latencia de este laboratorio no la pone tu máquina. La pone un temporizador.</p>
+</div>
+
+<h3>Y por último, el mensaje</h3>
+
+<pre>docker exec kafka-broker-1 kafka-console-consumer \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.lab09.pedidos \
+    --partition 0 --offset 5 --max-messages 1</pre>
+
+<div class="desglose">
+<div><span class="flag">--partition 0</span> — <b>obligatorio cuando se pide un offset concreto</b>, porque los offsets son por partición</div>
+<div><span class="flag">--offset 5</span> — <b>el sexto mensaje es el offset 5</b>, porque los offsets empiezan en 0. Si insertaste más filas, súmalas</div>
+<div><span class="flag">--max-messages 1</span> — lee uno y sale</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">{"id":6,"cliente_id":2001,"producto":"Pedido de la clase","cantidad":5,"monto":"JiWg","estado":"pendiente","creado_en":1787975408768}
+Processed a total of 1 messages</div>
+
+<p><code>"producto":"Pedido de la clase"</code>. <b>Es el texto que escribiste en el <code>INSERT</code></b>, dentro de un mensaje de Kafka, sin haber tocado Kafka.</p>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p>El offset pasó de 5 a 6, y el mensaje del offset 5 trae tu propio texto.</p>
+  <p style="margin-bottom:0"><b>Anota una respuesta.</b> ¿Cuántas líneas de código escribiste hoy para que ese dato llegara a Kafka?</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el offset no sube después de un minuto</span>
+  <p>Mira los dos <code>state</code> del paso 3. Si la task está en <code>FAILED</code>, el ayudante murió y el <code>INSERT</code> se quedó en la base.</p>
+  <p style="margin-bottom:0">Y comprueba que la fila entró de verdad:</p>
+  <pre style="margin-bottom:0">docker exec postgres psql -U novatech -d novatech_orders \
+    -tAc "SELECT max(id) FROM pedidos;"</pre>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el mensaje del offset 5 no es el tuyo</span>
+  <p style="margin-bottom:0">Insertaste más de una fila, o repetiste el paso. <b>El offset del último mensaje es siempre el total menos uno.</b> Mira el <code>kafka-get-offsets</code>, réstale 1, y usa ese número.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 6 de 6</span>El dedo, y dónde vive</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Buscar el dedo del ayudante. <b>Es la pieza que hace que Connect sea tolerante a fallos</b>, y la que explica la limitación con la que se cierra el laboratorio.</p>
+
+<h3>Pregúntale a Connect por dónde va</h3>
+
+<pre>curl -s http://localhost:8083/connectors/novatech-source-pedidos/offsets</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">{"offsets":[{"partition":{"protocol":"1","table":"public.pedidos"},"offset":{"incrementing":6}}]}</div>
+
+<p>Y contrástalo con la fuente, que es lo que hay que hacer siempre.</p>
+
+<pre>docker exec postgres psql -U novatech -d novatech_orders \
+    -tAc "SELECT max(id) FROM pedidos;"</pre>
+
+<div class="desglose">
+<div><span class="flag">-tAc</span> — tres opciones juntas. La <code>t</code> quita los encabezados, la <code>A</code> quita el alineado en columnas, y la <code>c</code> es la sentencia. <b>Deja solo el número</b>, que es lo que quieres comparar</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">6</div>
+
+<p><b>El <code>incrementing</code> del conector y el <code>max(id)</code> de la tabla dicen lo mismo.</b> Ése es el dedo. Si tumbas Connect y lo levantas, retoma en el 7, y por eso no republica lo que ya publicó ni necesita archivos locales.</p>
+
+<h3>Y dónde vive el dedo</h3>
+
+<pre>docker exec kafka-broker-1 kafka-get-offsets \
+    --bootstrap-server kafka-broker-1:29092 --topic _connect-offsets --time -1 \
+  | awk -F: '$3&gt;0'</pre>
+
+<div class="desglose">
+<div><span class="flag">| awk -F: '$3&gt;0'</span> — el tópico tiene 25 particiones y casi todas están vacías. <b>Esto deja solo las que tienen algo</b>. El <code>-F:</code> corta por los dos puntos y <code>$3</code> es el offset</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">_connect-offsets:20:2</div>
+
+<p>De las 25 particiones solo una tiene datos, porque <b>los registros de un conector van todos a la misma por su clave</b>. Y tiene 2 registros.</p>
+
+<div class="caja tecnico">
+  <span class="rot">El dedo vive en un tópico de Kafka, y eso lo explica todo</span>
+  <p style="margin-bottom:0">Connect no tiene base de datos ni archivos locales. <b>Su avance está en <code>_connect-offsets</code>, replicado como cualquier otro tópico.</b> Por eso, si el contenedor muere, otro <i>worker</i> puede retomar exactamente donde iba. Y por eso, si borras el conector y lo vuelves a crear con el mismo nombre, <b>no vuelve a copiar lo que ya copió</b>.</p>
+</div>
+
+<div class="caja ojo">
+  <span class="rot">Y aquí está la limitación, que es lo que hay que llevarse</span>
+  <p><b>El dedo solo avanza.</b> El modo <code>incrementing</code> pregunta por filas con <code>id</code> mayor que el último visto, y nada más.</p>
+  <p style="margin-bottom:0">Si alguien hace un <code>UPDATE</code> sobre la fila 3, <b>el conector no se entera</b>. Si alguien hace un <code>DELETE</code>, tampoco. <b>Este conector copia altas, no cambios.</b> Para capturar cambios hace falta otro modo, que es <code>timestamp</code>, o una herramienta de otra familia, que es la captura de cambios desde el registro de transacciones.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p>El <code>incrementing</code> del conector y el <code>max(id)</code> de la tabla te dan el mismo número, y sabes decir en qué tópico vive ese número.</p>
+  <p style="margin-bottom:0"><b>Anota una respuesta.</b> Si mañana alguien corrige el importe de un pedido ya publicado, ¿qué llega a Kafka?</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el <code>awk</code> no devuelve ninguna línea</span>
+  <p style="margin-bottom:0">Todas las particiones están en 0, o sea que el conector todavía no ha guardado su avance. <b>Espera una pasada más</b> y repite. Si sigue vacío después de un minuto, mira los dos <code>state</code> del paso 3.</p>
+</div>
+
+<div class="np"></div>
+<h2>Lo que aprendiste</h2>
+
+<div class="regla"><span class="num">1</span>
+<b>Mover datos a Kafka es una instrucción, no un programa.</b><br>
+Lo que escribiste hoy es un JSON de quince líneas, y se entregó con un <code>POST</code>. Y si mañana la fuente es S3 o Elasticsearch, <b>lo único que cambia es el <code>connector.class</code></b>. Todo lo demás, o sea los reintentos, el reparto y el estado, ya está resuelto.
+</div>
+
+<div class="regla"><span class="num">2</span>
+<b>Hay dos <code>state</code> y hay que mirar los dos.</b><br>
+Un conector en <code>RUNNING</code> con su task en <code>FAILED</code> es el caso que más caro sale, porque se ve verde por encima y no se está copiando nada. Cuando alguien te diga «el conector está arriba», la pregunta correcta es cuál de los dos está mirando.
+</div>
+
+<div class="regla"><span class="num">3</span>
+<b>Connect guarda su estado en Kafka, no en disco.</b><br>
+Sus conectores, su avance y su estado viven en <code>_connect-configs</code>, <code>_connect-offsets</code> y <code>_connect-status</code>. Por eso retoma donde iba después de una caída, y por eso recrear un conector con el mismo nombre no vuelve a copiar lo ya copiado.
+</div>
+
+<div class="regla"><span class="num">4</span>
+<b>El dedo solo avanza, y eso decide para qué sirve.</b><br>
+El modo <code>incrementing</code> copia altas. Un <code>UPDATE</code> o un <code>DELETE</code> sobre una fila ya publicada no llegan nunca. Antes de proponer este conector para un caso de SUNAT, la primera pregunta es si los datos de origen se corrigen después de escritos.
+</div>
+
+<div class="np"></div>
+<h2>Para profundizar</h2>
+
+<h3>A · Qué sabe hacer este Connect</h3>
+
+<pre>curl -s http://localhost:8083/
+curl -s http://localhost:8083/connector-plugins | tr '{' '\n' | grep -oE '"class":"[^"]*"'</pre>
+
+<div class="salida-rot">Lo que sale del primero</div>
+<div class="salida">{"version":"8.2.0-ccs","commit":"62a39a849020cb35fe97d7dbaa83962d8bde94b5","kafka_cluster_id":""}</div>
+
+<div class="caja ojo">
+  <span class="rot">Ojo con el <code>kafka_cluster_id</code>, que viene vacío</span>
+  <p style="margin-bottom:0"><b>No está roto y no es tu clúster mal configurado.</b> En esta versión ese campo no se llena. <b>Es un buen ejemplo de por qué las salidas se miran y no se suponen.</b></p>
+</div>
+
+<div class="salida-rot">Lo que sale del segundo · los cinco plugins de esta imagen</div>
+<div class="salida">"class":"io.confluent.connect.jdbc.JdbcSinkConnector"
+"class":"io.confluent.connect.jdbc.JdbcSourceConnector"
+"class":"org.apache.kafka.connect.mirror.MirrorCheckpointConnector"
+"class":"org.apache.kafka.connect.mirror.MirrorHeartbeatConnector"
+"class":"org.apache.kafka.connect.mirror.MirrorSourceConnector"</div>
+
+<p><b>Lo que hay que mirar.</b> Son cinco. En Confluent Hub hay cientos, o sea S3, Elasticsearch, MongoDB, Salesforce. <b>Instalar uno es dejar su <code>.jar</code> en la carpeta de plugins y reiniciar el <i>worker</i>.</b> No se compila nada.</p>
+
+<h3>B · El camino de vuelta, que es el Sink</h3>
+
+<p>Es la otra mitad de Connect, y va de Kafka a la base de datos.</p>
+
+<pre>kafka-cli/verificar-tabla-procesados.sh
+
+curl -s -w "\nHTTP %{http_code}\n" -X POST -H "Content-Type: application/json" \
+    --data @infra/connect/jdbc-sink-procesados.json \
+    http://localhost:8083/connectors | fold -s -w 88
+
+curl -s http://localhost:8083/connectors/novatech-sink-procesados/status | tr ',' '\n'
+
+kafka-cli/publicar-procesado.sh 6
+kafka-cli/verificar-tabla-procesados.sh</pre>
+
+<div class="salida-rot">Lo que sale de la primera línea · la tabla está vacía</div>
+<div class="salida"> id | cliente_id | producto | estado | procesado_en
+----+------------+----------+--------+--------------
+(0 rows)</div>
+
+<div class="salida-rot">Y lo que sale de la última, medido cuatro segundos después de publicar</div>
+<div class="salida"> id | cliente_id |           producto           |  estado   |        procesado_en
+----+------------+------------------------------+-----------+----------------------------
+  6 |       1001 | Pedido procesado en 23:50:53 | procesado | 2026-08-29 03:50:55.081539
+(1 row)</div>
+
+<p><b>Lo que hay que mirar.</b> Publicaste en un tópico y apareció una fila en SQL. Otra vez sin código, y esta vez en la dirección contraria.</p>
+
+<p>Y dos detalles del JSON del Sink que vale leer en <code>infra/connect/jdbc-sink-procesados.json</code>.</p>
+
+<table>
+<tr><th>Campo</th><th>Qué decide</th></tr>
+<tr><td><code>insert.mode: upsert</code> con <code>pk.fields: id</code></td><td>Si publicas dos veces el mismo <code>id</code>, <b>actualiza en vez de duplicar</b>. Es lo que hace que el flujo sea repetible sin ensuciar la tabla</td></tr>
+<tr><td><code>auto.create: false</code></td><td>Connect <b>no</b> crea la tabla. Podría, pero con tipos genéricos. Aquí la creó el <code>init-novatech.sql</code> con los tipos correctos</td></tr>
+</table>
+
+<h3>C · Romper el Sink a propósito, y ver los dos <code>state</code> separarse</h3>
+
+<p>Publica un mensaje sin el envoltorio que el Sink exige.</p>
+
+<pre>echo '{"cliente_id":99,"producto":"sin id","cantidad":1,"monto":1.0,"estado":"x"}' \
+| docker exec -i kafka-broker-1 kafka-console-producer \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.lab09.pedidos.procesados
+
+curl -s http://localhost:8083/connectors/novatech-sink-procesados/status | tr ',' '\n'</pre>
+
+<p><b>Lo que hay que mirar.</b> El <b>conector sigue en <code>RUNNING</code></b> y el que murió es el <b>task</b>, con un <code>FAILED</code> y un <code>trace</code> larguísimo. La causa raíz está más abajo en el mismo <code>trace</code>, y dice que el <code>JsonConverter</code> con <code>schemas.enable</code> exige los campos <code>schema</code> y <code>payload</code>.</p>
+
+<p><b>Y lo que no funciona</b>, que es lo instructivo:</p>
+
+<pre>curl -s -X POST \
+  "http://localhost:8083/connectors/novatech-sink-procesados/restart?includeTasks=true&amp;onlyFailed=true"</pre>
+
+<p>Devuelve <code>HTTP 202</code> y el task <b>vuelve a <code>FAILED</code></b>. Es correcto que así sea, porque el mensaje malo sigue en el mismo offset y lo vuelve a leer. <b>Un <i>restart</i> no arregla un dato malo.</b> Las salidas de verdad son configurar <code>errors.tolerance: all</code> con una cola de mensajes muertos, o <code>bin/reset-lab.sh</code>.</p>
+
+<h3>D · El importe en base64, y qué se pierde al arreglarlo</h3>
+
+<pre>curl -s -X DELETE -w "HTTP %{http_code}\n" \
+    http://localhost:8083/connectors/novatech-source-pedidos</pre>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">HTTP 204</div>
+
+<p>El <code>204 No Content</code> es la respuesta correcta a un borrado. Se hizo, y no hay nada que devolver.</p>
+
+<p>Agrega <code>"numeric.mapping": "best_fit"</code> al JSON del conector y vuelve a crearlo. El <code>"ExLQ"</code> pasa a ser <code>12500.0</code>.</p>
+
+<div class="caja ojo">
+  <span class="rot">Lee esto antes de usarlo en producción</span>
+  <p style="margin-bottom:0"><code>best_fit</code> elige el tipo que quepa, y para un decimal grande eso significa un <code>double</code>. <b>Es decir, redondeo.</b> El base64 era feo y era exacto. <b>En un sistema tributario, esa fealdad es una característica.</b></p>
+</div>
+
+<h3>E · La inserción masiva</h3>
+
+<pre>for i in 1 2 3 4 5 6 7 8 9 10; do
+    kafka-cli/insertar-pedido.sh $((3000+i)) "Pedido masivo $i" $i $((10000*i))
+done
+docker exec kafka-broker-1 kafka-get-offsets \
+    --bootstrap-server kafka-broker-1:29092 --topic novatech.lab09.pedidos --time -1</pre>
+
+<p><b>Lo que hay que mirar.</b> Las diez filas tardan lo mismo en llegar que <b>una sola</b> del paso 5, porque viajaron en la misma pasada. <b>No es una fila por pasada. Es todo lo que haya bajo el dedo.</b></p>
+
+<p><b>La pregunta que vale.</b> ¿Qué le pasa a este conector el día que alguien haga una carga de dos millones de filas de una vez?</p>
+
+<h3>F · Los envoltorios de <code>connect-cli/</code>, medidos sin <code>python3</code></h3>
+
+<p>El laboratorio trae cinco envoltorios que hacen lo mismo que los <code>curl</code> del recorrido, más cortos.</p>
+
+<pre>connect-cli/list-connectors.sh
+connect-cli/status-connector.sh &lt;nombre&gt;
+connect-cli/create-source.sh
+connect-cli/create-sink.sh
+connect-cli/delete-connector.sh &lt;nombre&gt;</pre>
+
+<p><b>Funcionan, e imprimen la respuesta ya formateada</b>, que se lee mucho mejor que el <code>tr ',' '\n'</code> del recorrido. Úsalos si te sirven y tienes <code>python3</code>.</p>
+
+<pre>python3 --version
+grep -c python3 connect-cli/*.sh</pre>
+
+<p>Ahora, lo que pasa en Git Bash para Windows, que <b>no trae <code>python3</code></b>. Esto está medido corriendo los cinco con un <code>PATH</code> sin Python, y <b>no se comportan igual</b>.</p>
+
+<table>
+<tr><th>Envoltorio</th><th>Qué hace sin <code>python3</code></th></tr>
+<tr><td><code>delete-connector.sh</code></td><td><b>Funciona.</b> No usa Python, así que borra y avisa</td></tr>
+<tr><td><code>list-connectors.sh</code></td><td><b>Funciona.</b> Tiene un <code>||</code> de repuesto y te da el JSON sin formatear</td></tr>
+<tr><td><code>status-connector.sh</code></td><td>Imprime su encabezado y <b>nada más</b>. Sin error</td></tr>
+<tr><td><code>create-source.sh</code> y <code>create-sink.sh</code></td><td><b>La trampa.</b> Ver abajo</td></tr>
+</table>
+
+<div class="caja ojo">
+  <span class="rot">La trampa de <code>create-source.sh</code>, medida</span>
+  <p>Sin <code>python3</code>, la salida es ésta y nada más:</p>
+  <div class="salida">[Create Source Connector] novatech-source-pedidos
+────────────────────────────────────────────────────────</div>
+  <p><b>Pero el conector sí se creó.</b> El <code>POST</code> ya se ejecutó. Lo que murió fue el formateo de la respuesta, y el mensaje de error se lo tragó el <code>2&gt;/dev/null</code> del final de la línea.</p>
+  <p style="margin-bottom:0">Así que el alumno cree que falló y lo vuelve a correr. <b>El segundo intento tampoco dice nada</b>, y por debajo Connect está contestando un <code>409</code> que nadie ve. <b>Puede pasarse media hora reintentando algo que funcionó a la primera.</b> Por eso el recorrido va por <code>curl</code>, que enseña el código HTTP en la cara.</p>
+</div>
+
+<h3>G · Inspección visual</h3>
+
+<p>Kafbat UI, en <code>http://localhost:8090</code>. Compara lo que la interfaz muestra con lo que devolvió el <code>/status</code>. <b>Fíjate en si la interfaz distingue los dos <code>state</code></b>, que es el punto del bloque C.</p>
+
+<h3>H · El reporte del laboratorio</h3>
+
+<p><code>plantillas/reporte-entregable.md</code> recorre las actividades con sus preguntas. Las respuestas de referencia están en <code>soluciones/reporte-resuelto.md</code> y en <code>soluciones/respuestas-desafio.md</code>.</p>
+
+<h2>Antes de cerrar</h2>
+
+<div class="caja ojo">
+  <span class="rot">Deja el terreno limpio</span>
+  <pre>bin/90-test-lab.sh   # ver el estado del laboratorio
+bin/stop-lab.sh      # apagar los contenedores</pre>
+  <p style="margin-bottom:0"><code>bin/stop-lab.sh</code> solo detiene los contenedores y no borra nada. <b>Ojo al reanudar</b>, porque <code>bin/start-lab.sh</code> reconstruye el laboratorio desde cero y los conectores que creaste no sobreviven. Si modificaste un JSON de conector, guárdatelo antes.</p>
+</div>
+
+<div class="salida-rot">Lo que dice el validador si todo está en orden</div>
+<div class="salida">Validador del Lab 13 — estado actual
+  ✓ los 3 brokers están healthy
+  ✓ Kafka Connect responde en :8083/connectors
+  ✓ el connector novatech-source-pedidos existe ("state":"RUNNING")
+
+✓ LAB EN BUEN ESTADO (3 verificaciones OK)</div>
+
+<div class="caja sunat">
+  <span class="rot">Lo que te llevas</span>
+  <p>El programa que no escribiste hoy es el que no vas a tener que mantener el año que viene. <b>No tiene dueño que se vaya, ni versiones que migrar, ni métricas que inventar.</b></p>
+  <p style="margin-bottom:0">A cambio hay que saber dos cosas que hoy viste. <b>Que los estados son dos</b>, y que el de arriba puede mentir. <b>Y que el dedo solo avanza</b>, así que antes de proponer esto para un caso de SUNAT hay que preguntar si los datos de origen se corrigen después de escritos.</p>
+</div>
+
+</body></html>

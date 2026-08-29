@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><link rel="stylesheet" href="estilo-alumno.css"></head>
+<body>
+
+<div class="portada">
+  <div class="kicker">C U R S O &nbsp; D E &nbsp; A D M I N I S T R A C I Ó N &nbsp; D E &nbsp; K A F K A</div>
+  <div class="labnum">LABORATORIO 11</div>
+  <h1>¿Quién<br>autorizó ese<br>campo nuevo?</h1>
+  <div class="sub">Schema Registry, la única pieza del ecosistema cuyo trabajo es decir que no.<br>Guía para hacerlo por tu cuenta, paso a paso</div>
+  <div class="meta">
+    Confluent Platform 8.2.0 · 3 brokers KRaft · Schema Registry · Avro<br>
+    Duración estimada · 45 minutos<br>
+    NovaTech Logistics · caso de estudio
+  </div>
+</div>
+
+<h2>Antes de empezar</h2>
+
+<h3>Qué vas a lograr</h3>
+
+<p>Éste es el laboratorio donde Kafka deja de confiar en la buena voluntad. Hasta ahora, todo lo que escribiste en un tópico entró. <b>Kafka no miró adentro ni una sola vez.</b></p>
+
+<p>Hoy vas a poner en el camino la única pieza del ecosistema cuyo trabajo es decir que no. Y la vas a ver decir que no <b>y decir que sí</b>, con el mismo comando, porque una compuerta que rechaza todo no sirve de nada.</p>
+
+<div class="afirmacion">
+  <span class="rot">Lo que este laboratorio demuestra</span>
+  <div class="txt">El contrato de datos no es un documento. Es una compuerta, y se demuestra con lo que rechaza.</div>
+</div>
+
+<p>Tres partes, y las tres se ven en pantalla.</p>
+
+<table>
+<tr><th>La parte</th><th>Dónde se comprueba</th></tr>
+<tr><td><b>Es una compuerta</b></td><td>Paso 3. Hay un momento exacto y una respuesta exacta en que el cambio no entra</td></tr>
+<tr><td><b>Y no rechaza en silencio</b></td><td>Paso 3. Dice qué campo, por qué, y contra qué versión lo comparó</td></tr>
+<tr><td><b>No hay puerta trasera</b></td><td>Paso 4. Al que escribe con <code>curl</code> y al que escribe con un productor le pasa lo mismo</td></tr>
+</table>
+
+<h3>Qué necesitas tener listo</h3>
+
+<table>
+<tr><th>Requisito</th><th>Cómo lo compruebas</th></tr>
+<tr><td>Docker Desktop corriendo, con 6 GB de RAM</td><td>Ajustes de Docker Desktop, pestaña <i>Resources</i></td></tr>
+<tr><td>Git Bash abierto en la carpeta del lab</td><td><code>cd Capitulo_4/lab-11-schema-registry</code></td></tr>
+<tr><td>Los puertos 9092, 9093, 9094, <b>8081</b> y 8090 libres</td><td>El paso 1 te avisa si no lo están</td></tr>
+<tr><td><b>Nada más</b></td><td>Todo el laboratorio va por <code>curl</code>, que ya tienes. <b>No hace falta instalar nada</b></td></tr>
+</table>
+
+<div class="caja ojo">
+  <span class="rot">Sobre por qué esta guía usa <code>curl</code> y no los envoltorios del curso</span>
+  <p>El laboratorio trae unos scripts en <code>schema-cli/</code> que hacen lo mismo en una línea. <b>Esta guía no los usa en el recorrido</b>, y conviene que sepas por qué antes de que los descubras solo.</p>
+  <p>Schema Registry es una API REST y nada más. El <code>curl</code> que vas a escribir aquí es <b>exactamente el que vas a escribir en el servidor de SUNAT</b>, donde no hay envoltorios de curso.</p>
+  <p style="margin-bottom:0">Y hay una razón práctica. <b>Esos envoltorios necesitan <code>python3</code>, que Git Bash para Windows no trae</b>, y ningún README lo declara. En el <i>para profundizar</i> está medido qué pasa exactamente cuando falta, porque uno de ellos falla de una forma que engaña.</p>
+</div>
+
+<h3>El caso</h3>
+
+<div class="caja">
+  <p>Un martes, un desarrollador del equipo de <i>fulfillment</i> de <b>NovaTech Logistics</b> agrega un campo al pedido. Necesita guardar el medio de pago, y agregar un campo es la cosa más inocente que se le puede hacer a un registro.</p>
+  <p>Lo prueba en su máquina, funciona, lo sube. El productor no falla. El tópico sigue recibiendo. Los tableros siguen dibujando. <b>Nadie se entera de nada, porque no hay nada de qué enterarse.</b></p>
+  <p>El jueves, el equipo de <i>analytics</i> corre el reproceso del mes para el cierre. Y el proceso se cae. No en el primer mensaje. Se cae <b>en el mensaje cuarenta mil y algo</b>, que es donde el histórico viejo se junta con lo que se escribió desde el martes.</p>
+  <p style="margin-bottom:0">Nadie rompió nada a propósito. El del martes agregó un campo. El de <i>analytics</i> no tocó una línea de código. <b>Y el cierre no salió.</b></p>
+</div>
+
+<div class="caja abuelita">
+  <span class="rot">La metáfora · hoy entran el formato de la comanda y el talonario</span>
+  <p>Kafka sigue siendo <b>el restaurante</b>. El <b>mozo</b> es el broker, el <b>tipo de comanda</b> es el tópico, los <b>sectores del salón</b> son las particiones, las <b>libretas de respaldo</b> son las réplicas y el <b>cocinero</b> es el consumidor.</p>
+  <p>Hoy entran dos piezas. <b>El formato de la comanda</b>, o sea qué casillas trae y cuáles son obligatorias, que es el <b>schema</b>. Y <b>el talonario oficial del local</b>, el único lugar donde está definido cómo es una comanda válida y quién decide si se puede cambiar, que es el <b>Schema Registry</b>.</p>
+  <p>Hasta ahora, en este curso, el salón y la cocina se entendían porque sí. Nadie había escrito nunca en qué casilla va cada cosa. Funcionaba porque el local es chico y todos se conocen.</p>
+  <p>Ahora imagina que alguien del salón manda a imprimir un talonario nuevo. Le agrega una casilla, que dice <b>número de tarjeta</b>, y la deja <b>obligatoria</b>. Una comanda sin esa casilla llena no es una comanda válida. Los mozos empiezan a usar el talonario nuevo esa misma tarde. Nadie avisó a la cocina, porque para el salón no cambió nada.</p>
+  <p>Y entonces la cocina, que viene con retraso, sigue sacando comandas del pincho del turno anterior. Comandas escritas con el talonario <b>viejo</b>. El cocinero, que ya aprendió el formato nuevo, llega a la casilla del número de tarjeta y <b>no está</b>. No está en blanco. No existe. Y nadie le dijo nunca qué hacer cuando no está.</p>
+  <p style="margin-bottom:0">La cocina se detiene. Y no se detuvo por culpa de la comanda que tiene en la mano, que está perfecta. <b>Se detuvo por culpa de un talonario que se cambió sin preguntar.</b></p>
+</div>
+
+<div class="caja sunat">
+  <span class="rot">La regla que sale de ahí</span>
+  <p style="margin-bottom:0">El talonario no se cambia sin preguntarle a la cocina <b>si va a poder seguir leyendo lo que ya está escrito</b>. Eso es exactamente lo que hace Schema Registry, y para lo que hoy nos importa es lo único que hace.</p>
+</div>
+
+<h3>Las tres piezas, con sus nombres</h3>
+
+<div class="concepto">
+  <span class="rot">Concepto · <i>schema</i></span>
+  La declaración de qué campos tiene un mensaje, de qué tipo es cada uno, y cuáles pueden faltar. Aquí está escrito en <b>Avro</b>, que es un archivo <code>.avsc</code> con formato JSON. <b>Es el formato de la comanda.</b>
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · Schema Registry</span>
+  Un servicio <b>aparte del clúster</b>, aquí el contenedor <code>schema-registry</code>, que responde en <code>http://localhost:8081</code>. No es parte del broker. Es una pieza más del ecosistema Confluent, con su propia API REST. <b>Es el talonario oficial.</b>
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · <i>subject</i></span>
+  El nombre bajo el que se guarda <b>la historia</b> de un schema. Por convención es <code>&lt;tópico&gt;-value</code> para el valor y <code>&lt;tópico&gt;-key</code> para la clave. El tuyo va a ser <code>novatech.lab10.pedidos-value</code>. <b>Un subject no tiene un schema. Tiene una lista de versiones, y esa lista solo crece.</b>
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · compatibilidad <code>BACKWARD</code></span>
+  El modo con el que viene configurado este clúster. Dice que <b>un lector que ya tiene el schema nuevo tiene que poder leer los datos escritos con el schema viejo</b>. Es el cocinero de la metáfora, que aprendió el talonario nuevo y sigue sacando comandas viejas del pincho.
+</div>
+
+<p>La palabra <i>backward</i> confunde a todo el mundo la primera vez, así que conviene fijar quién es quién.</p>
+
+<table>
+<tr><th>Quién</th><th>Qué tiene</th><th>Qué se le exige</th></tr>
+<tr><td><b>El lector</b>, o sea el consumidor</td><td>El schema <b>nuevo</b></td><td>Que <b>no se caiga</b></td></tr>
+<tr><td><b>El dato</b></td><td>Escrito con el schema <b>viejo</b></td><td>Nada. Ya está escrito y no se puede cambiar</td></tr>
+</table>
+
+<div class="caja tecnico">
+  <span class="rot">Y aquí está la consecuencia que ninguna definición de una línea dice</span>
+  <p>Bajo <code>BACKWARD</code>, <b>agregar un campo obligatorio es un cambio incompatible.</b></p>
+  <p style="margin-bottom:0">Agregar campos no está mal. Lo que pasa es que el lector nuevo, al toparse con un dato viejo, va a buscar ese campo y no lo va a encontrar. <b>Y nadie le dijo qué poner en su lugar.</b></p>
+</div>
+
+<div class="concepto">
+  <span class="rot">Concepto · valor por defecto, o <i>default</i></span>
+  Lo que el lector debe asumir cuando el campo no viene en el dato. <b>Un campo con <i>default</i> se puede agregar sin romper a nadie</b>, porque el lector nuevo lee un dato viejo, no encuentra el campo y usa el <i>default</i>. Un campo sin <i>default</i> no tiene salida.
+</div>
+
+<p>El campo que el desarrollador del martes agregó es <code>tarjeta_credito</code>, obligatorio y sin <i>default</i>. <b>Es exactamente el caso que no tiene salida</b>, y es el que vas a intentar registrar en el paso 3.</p>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 1 de 6</span>Levantar el clúster y mirar el talonario vacío</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Encender el laboratorio y comprobar, antes de nada, que <b>el Registry está vacío</b>. Es un dato que importa, porque explica de dónde sale todo lo demás.</p>
+
+<h3>El comando</h3>
+
+<pre>cd Capitulo_4/lab-11-schema-registry
+chmod +x bin/*.sh schema-cli/*.sh kafka-cli/*.sh
+bin/start-lab.sh</pre>
+
+<div class="desglose">
+<div><span class="flag">chmod +x</span> — permiso de ejecución para las <b>tres</b> carpetas de scripts de este lab</div>
+<div><span class="flag">bin/start-lab.sh</span> — levanta los tres brokers, el Schema Registry y Kafbat UI, y crea dos tópicos. <b>Y borra los volúmenes</b>, que es lo que deja el contador de schemas en cero</div>
+</div>
+
+<div class="salida-rot">El final de lo que vas a ver · recortado</div>
+<div class="salida">Created topic novatech.lab10.pedidos.
+  ✓ Tópico novatech.lab10.pedidos creado (12 particiones, RF=3)
+Created topic novatech.lab10.clientes.
+  ✓ Tópico novatech.lab10.clientes creado (3 particiones, RF=3)
+✓ Tópicos del Lab 11 inicializados
+
+════════════════════════════════════════════════════════════
+  CLÚSTER NOVATECH LAB 11 OPERATIVO
+════════════════════════════════════════════════════════════
+
+  Componentes:
+    Broker 1:           localhost:9092
+    Broker 2:           localhost:9093
+    Broker 3:           localhost:9094
+    Kafbat UI:          http://localhost:8090
+    Schema Registry:    http://localhost:8081    ← API REST
+
+  Tópicos del Lab 11:
+    novatech.lab10.pedidos    - 12 particiones, datos Avro
+    novatech.lab10.clientes   - 3 particiones, datos Avro</div>
+
+<div class="caja ojo">
+  <span class="rot">Dos cosas del arranque que sorprenden</span>
+  <p><b>Los tópicos se llaman <code>lab10</code> y estás en el laboratorio 11.</b> No es un error. Este lab continúa el conjunto de datos del anterior y conserva sus nombres a propósito, para que se vea que el contrato se le pone a un tópico que ya existía.</p>
+  <p style="margin-bottom:0"><b>Y <code>novatech.lab10.pedidos</code> tiene 12 particiones</b>, no 3 como los de los labs anteriores. Por eso, cuando cuentes mensajes, vas a tener que sumar doce líneas. El paso 4 lo resuelve con un <code>awk</code>.</p>
+</div>
+
+<h3>El talonario, antes de que nadie escriba en él</h3>
+
+<pre>curl -s http://localhost:8081/subjects</pre>
+
+<div class="desglose">
+<div><span class="flag">curl</span> — el cliente HTTP de línea de comandos. <b>Aquí no hay ningún <code>docker</code> adelante</b>, porque el Registry publica su puerto 8081 hacia tu máquina y le hablas directo</div>
+<div><span class="flag">-s</span> — modo silencioso. Sin esto <code>curl</code> dibuja una barra de progreso encima de la respuesta</div>
+<div><span class="flag">/subjects</span> — la lista de contratos registrados</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">[]</div>
+
+<p>Una lista vacía. <b>Un clúster recién levantado no trae ni un contrato.</b> Todo lo que haya en el Registry lo puso alguien, y hoy ese alguien vas a ser tú.</p>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>El <code>curl</code> contestó <code>[]</code>, con los corchetes y nada dentro. Y hay cinco contenedores arriba:</p>
+  <pre>docker ps --filter "label=com.docker.compose.project=novatech-lab11" \
+    --format 'table {{.Names}}\t{{.Status}}'</pre>
+  <p style="margin-bottom:0">Tienen que estar los tres brokers, <code>schema-registry</code> y <code>kafbat-ui</code>.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el <code>curl</code> dice <code>Failed to connect to localhost port 8081</code></span>
+  <p>El Registry no está arriba, o todavía está arrancando. Tarda más que los brokers porque espera a que ellos estén listos.</p>
+  <p style="margin-bottom:0">Dale medio minuto y repite. Si sigue, mira sus registros:</p>
+  <pre style="margin-bottom:0">docker logs --tail 30 schema-registry</pre>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el <code>curl</code> te devuelve una lista con cosas dentro</span>
+  <p style="margin-bottom:0">Ya corriste este laboratorio antes y no volviste a levantarlo desde cero. <b>No es un problema para el recorrido</b>, pero los números del paso 2 te van a salir distintos. Si quieres las salidas exactas de esta guía, corre <code>bin/reset-lab.sh</code> y luego <code>bin/start-lab.sh</code>.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el puerto 8081 está ocupado</span>
+  <p style="margin-bottom:0">En este curso lo usa también la aplicación de Spring del laboratorio 09. Comprueba que no quedó corriendo, y si la levantaste tú a mano, bájala con <code>Ctrl+C</code> en su terminal.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 2 de 6</span>Escribir el contrato</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Mirar el contrato que van a firmar los tres equipos, y registrarlo. Es el pedido tal como lo conocen hoy, con seis campos.</p>
+
+<h3>Primero, mirarlo</h3>
+
+<pre>cat infra/schemas/pedido.avsc</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">{
+  "type": "record",
+  "name": "Pedido",
+  "namespace": "com.novatech.lab10",
+  "fields": [
+    {"name": "id", "type": "int"},
+    {"name": "cliente_id", "type": "int"},
+    {"name": "producto", "type": "string"},
+    {"name": "cantidad", "type": "int"},
+    {"name": "monto", "type": "double"},
+    {"name": "estado", "type": "string"}
+  ]
+}</div>
+
+<p>Seis campos, cada uno con su tipo. <b>Ninguno tiene la palabra <code>default</code>.</b> Los seis son obligatorios, así que un mensaje al que le falte cualquiera de ellos no es un pedido válido.</p>
+
+<p><b>Guarda eso</b>, porque es la mitad de la explicación del paso 3.</p>
+
+<h3>Ahora se registra</h3>
+
+<pre>curl -s -w "\nHTTP %{http_code}\n" -X POST \
+    -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+    --data "{\"schema\": \"$(tr -d '\n' &lt; infra/schemas/pedido.avsc | sed 's/"/\\"/g')\"}" \
+    http://localhost:8081/subjects/novatech.lab10.pedidos-value/versions</pre>
+
+<p>Es el comando más incómodo del laboratorio, y conviene desarmarlo entero, porque <b>los mismos pedazos se repiten en los pasos 3 y 5</b>.</p>
+
+<div class="desglose">
+<div><span class="flag">-s</span> — silencia la barra de progreso, que en una respuesta corta estorba más que ayuda</div>
+<div><span class="flag">-w "\nHTTP %{http_code}\n"</span> — <b>imprime el código HTTP al final.</b> Sin esto no lo ves, y en este laboratorio el código <i>es</i> la respuesta</div>
+<div><span class="flag">-X POST</span> — registrar es escribir. Un <code>GET</code> sobre la misma URL solo lista las versiones</div>
+<div><span class="flag">-H "Content-Type: …v1+json"</span> — el tipo de contenido propio del Registry. <b>Sin esta cabecera contesta <code>415</code></b></div>
+<div><span class="flag">--data "{\"schema\": \"…\"}"</span> — el cuerpo. <b>El schema no viaja como JSON. Viaja como una cadena de texto dentro de un JSON</b>, y de ahí sale todo lo feo de esta línea</div>
+<div><span class="flag">tr -d '\n' &lt; …avsc</span> — aplasta el archivo a una sola línea. <b>Una cadena JSON no puede llevar saltos de línea</b></div>
+<div><span class="flag">sed 's/"/\\"/g'</span> — escapa cada comilla del schema, para que no cierre la cadena que lo contiene</div>
+<div><span class="flag">/subjects/&lt;subject&gt;/versions</span> — la URL. El subject es <code>novatech.lab10.pedidos-value</code>, y <b>el <code>-value</code> no es decorativo</b>. Dice que este contrato es para el valor del mensaje, no para su clave</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver · recortado, porque devuelve el schema entero</div>
+<div class="salida">{"id":1,"version":1,"guid":"f7c3dc5b-9a9f-1792-4c66-77095fdbd42d","schemaType":"AVRO","schema":"{\"type\":\"record\",\"name\":\"Pedido\",...}"}
+HTTP 200</div>
+
+<h3>Cómo se lee</h3>
+
+<p>Son dos números distintos, y conviene no confundirlos nunca.</p>
+
+<table>
+<tr><th>Campo</th><th>Qué dice</th></tr>
+<tr><td><code>version: 1</code></td><td>La versión <b>dentro de este subject</b>. Es la que le importa a la gente, o sea «el contrato de pedidos va en la v1»</td></tr>
+<tr><td><code>id: 1</code></td><td>El identificador <b>global del Registry</b>, único en todo el clúster. <b>Es el que viaja pegado a cada mensaje.</b> Hoy coinciden porque es el primer schema del laboratorio. En un clúster con veinte tópicos no coinciden nunca</td></tr>
+<tr><td><code>schemaType: AVRO</code></td><td>El Registry también acepta JSON Schema y Protobuf. Aquí es Avro</td></tr>
+</table>
+
+<div class="caja tecnico">
+  <span class="rot">El <code>id</code> es la pieza que hace que Avro pese tan poco</span>
+  <p style="margin-bottom:0">Cada mensaje que se escriba desde ahora <b>no lleva el schema adentro. Lleva ese número, en cuatro bytes.</b> El que lee usa el número para pedirle el schema al Registry una sola vez. Los nombres de los campos, o sea <code>cliente_id</code>, <code>producto</code> y <code>monto</code>, no se repiten en cada mensaje como sí pasa en JSON.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p style="margin-bottom:0"><code>HTTP 200</code>, y la respuesta trae <code>version</code> e <code>id</code>. <b>El contrato está firmado.</b> Desde este momento el tópico tiene reglas.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si los dos números no te salen en 1</span>
+  <p>No está roto. <b>El <code>id</code> es un contador global del Registry que nunca reutiliza valores.</b> Si ya corriste este laboratorio antes sin volver a levantar el clúster, tu <code>id</code> será 3, o 7.</p>
+  <p style="margin-bottom:0">El único que vuelve a 1 es el <code>version</code>, y solo si el subject se borró permanentemente. Para tener la salida exacta de esta guía, arranca con <code>bin/start-lab.sh</code>, que borra los volúmenes y con ellos el tópico <code>_schemas</code> donde vive ese contador.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si contesta <code>HTTP 415</code></span>
+  <p style="margin-bottom:0">Falta la cabecera <code>Content-Type</code>, o la escribiste incompleta. Tiene que ser <code>application/vnd.schemaregistry.v1+json</code> entera. <b>El 415 quiere decir «no hablo ese formato»</b>, y lo dice el Registry.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si contesta <code>HTTP 422</code> o se queja del cuerpo</span>
+  <p style="margin-bottom:0">El escape se rompió. Casi siempre es que copiaste el comando partido en varias líneas y se perdió una barra invertida del final. <b>Cópialo entero de nuevo</b>, y comprueba primero qué está generando el escape:</p>
+  <pre style="margin-bottom:0">tr -d '\n' &lt; infra/schemas/pedido.avsc | sed 's/"/\\"/g'</pre>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 3 de 6</span>El cambio que parece inocente</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Exactamente lo que hizo el desarrollador del martes. <b>Agregar un campo.</b></p>
+
+<h3>Primero, la única diferencia</h3>
+
+<pre>diff infra/schemas/pedido.avsc infra/schemas/pedido-v3-incompatible.avsc</pre>
+
+<div class="desglose">
+<div><span class="flag">diff</span> — compara dos archivos línea por línea. <b>No toca nada ni habla con el clúster</b></div>
+<div><span class="flag">el primer archivo</span> — el contrato <b>vigente</b>, el que ya está registrado</div>
+<div><span class="flag">el segundo archivo</span> — el contrato <b>propuesto</b></div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">11c11,12
+&lt;     {"name": "estado", "type": "string"}
+---
+&gt;     {"name": "estado", "type": "string"},
+&gt;     {"name": "tarjeta_credito", "type": "string"}</div>
+
+<p>El <code>11c11,12</code> dice que la línea 11 del primero cambia por las líneas 11 y 12 del segundo. Lo que va después del <code>&lt;</code> es lo viejo y lo que va después del <code>&gt;</code> es lo nuevo.</p>
+
+<p><b>El cambio es una sola línea.</b> Un campo llamado <code>tarjeta_credito</code>, de tipo <code>string</code>. Sin <i>default</i>.</p>
+
+<div class="caja ojo">
+  <span class="rot">Detente aquí y contesta antes de seguir</span>
+  <p style="margin-bottom:0">Es un campo nuevo, al final, que no toca ninguno de los seis que ya estaban. No renombra nada, no borra nada, no cambia ningún tipo. <b>Para casi cualquier persona esto es el cambio más seguro que existe.</b> ¿Va a entrar?</p>
+</div>
+
+<h3>Preguntar sin escribir</h3>
+
+<p>Esto importa en la vida real. <b>Existe una forma de preguntar sin registrar nada.</b></p>
+
+<p>El comando es el del paso 2 con <b>una sola diferencia</b>, que es la URL. En vez de <code>/subjects/…/versions</code>, que registra, va a <code>/compatibility/…</code>, que solo pregunta.</p>
+
+<pre>curl -s -w "\nHTTP %{http_code}\n" -X POST \
+    -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+    --data "{\"schema\": \"$(tr -d '\n' &lt; infra/schemas/pedido-v3-incompatible.avsc | sed 's/"/\\"/g')\"}" \
+    http://localhost:8081/compatibility/subjects/novatech.lab10.pedidos-value/versions/latest</pre>
+
+<div class="desglose">
+<div><span class="flag">/compatibility/subjects/&lt;subject&gt;/versions/latest</span> — <b>es de solo consulta.</b> Pregunta y no registra nada, pase lo que pase. El <code>latest</code> dice contra qué versión comparar</div>
+<div><span class="flag">todo lo demás</span> — idéntico al paso 2. El mismo escape, la misma cabecera, el mismo <code>-w</code></div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">{"is_compatible":false}
+HTTP 200</div>
+
+<div class="caja ojo">
+  <span class="rot">Fíjate en la trampa del <code>HTTP 200</code></span>
+  <p style="margin-bottom:0">El código dice que <b>la pregunta se respondió</b>, no que la respuesta sea que sí. Un <i>pipeline</i> que solo mire el código HTTP de este comando va a creer que todo está bien y va a desplegar igual. <b>Lo que hay que leer es el cuerpo.</b></p>
+</div>
+
+<p>Éste es el comando que un equipo pone en su integración continua. <b>Se pregunta antes de desplegar, no después.</b></p>
+
+<h3>Y ahora sí, se intenta registrar</h3>
+
+<pre>curl -s -w "\nHTTP %{http_code}\n" -X POST \
+    -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+    --data "{\"schema\": \"$(tr -d '\n' &lt; infra/schemas/pedido-v3-incompatible.avsc | sed 's/"/\\"/g')\"}" \
+    http://localhost:8081/subjects/novatech.lab10.pedidos-value/versions \
+  | fold -s -w 88</pre>
+
+<div class="desglose">
+<div><span class="flag">| fold -s -w 88</span> — corta la respuesta en líneas de 88 caracteres. El <code>-s</code> corta en espacios y no a mitad de palabra. <b>Sin esto la respuesta es una sola línea larguísima</b> y no hay forma de leerla</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver · el <code>oldSchema</code> del medio va recortado</div>
+<div class="salida">{"error_code":40901,"message":"Schema being registered is incompatible with an earlier
+schema for subject \"novatech.lab10.pedidos-value\", details:
+[{errorType:'READER_FIELD_MISSING_DEFAULT_VALUE', description:'The field
+'tarjeta_credito' at path '/fields/6' in the new schema has no default value and is
+missing in the old schema', additionalInfo:'tarjeta_credito'}, {oldSchemaVersion: 1},
+{oldSchema: '{\"type\":\"record\",\"name\":\"Pedido\",...}'},
+{validateFields: 'false', compatibility: 'BACKWARD'}]"}
+HTTP 409</div>
+
+<h3>Cómo se lee</h3>
+
+<p>Esa pared de texto es el laboratorio entero. Léela despacio, porque <b>el Registry está explicando su propia decisión</b>, y hay cuatro datos adentro.</p>
+
+<table>
+<tr><th>Lo que dice</th><th>Qué significa</th></tr>
+<tr><td><code>errorType: READER_FIELD_MISSING_DEFAULT_VALUE</code></td><td>El nombre del motivo. Traducido, <b>al que lee le falta un campo y no tiene qué poner en su lugar</b>. Es el cocinero de la metáfora, exacto</td></tr>
+<tr><td><code>The field 'tarjeta_credito' … has no default value and is missing in the old schema</code></td><td><b>Nombra el campo culpable.</b> No dice «hay una incompatibilidad». Dice cuál, y dice las dos condiciones que la causan</td></tr>
+<tr><td><code>oldSchemaVersion: 1</code></td><td>Contra qué versión comparó. Bajo <code>BACKWARD</code> compara contra <b>la última</b>, no contra todas</td></tr>
+<tr><td><code>compatibility: 'BACKWARD'</code></td><td><b>Con qué regla juzgó.</b> El mismo cambio, bajo otro modo, tendría otro veredicto. La compuerta no es una ley universal. Es una política que alguien configuró, y el paso 6 va a buscar a ese alguien</td></tr>
+</table>
+
+<p>Y abajo del todo, <b><code>HTTP 409</code></b>. No es un <code>400 Bad Request</code>. <b>El schema no está mal escrito</b>, porque es Avro perfectamente válido. Está en conflicto con algo que ya existe. El <code>error_code: 40901</code> del cuerpo es el subcódigo propio del Registry dentro de ese 409.</p>
+
+<div class="caja tecnico">
+  <span class="rot">Compara este 409 con el 200 de hace un minuto</span>
+  <p style="margin-bottom:0">El mismo archivo, la misma cabecera, el mismo escape. <b>Lo único que cambió fue la URL.</b> Preguntar siempre devuelve 200. Registrar es el que se atreve a devolver 409.</p>
+</div>
+
+<div class="caja sunat">
+  <span class="rot">Y aquí está la lección, que no se deduce sola</span>
+  <p style="margin-bottom:0"><b>El desarrollador del martes no habría llegado al jueves.</b> Su despliegue se cae el martes, en su propia pantalla, con el nombre del campo que lo rompió. Eso es todo lo que compra Schema Registry. <b>Adelantar el error al momento y a la persona que lo puede arreglar.</b></p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p>La consulta te dio <code>false</code> con <code>HTTP 200</code>, y el registro te dio <code>HTTP 409</code> con el nombre <code>tarjeta_credito</code> dentro del mensaje.</p>
+  <p style="margin-bottom:0"><b>Anota una respuesta.</b> ¿Por qué la consulta devolvió 200 si la respuesta era que no?</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el registro te devuelve <code>HTTP 200</code> en vez de 409</span>
+  <p>Pasa una de dos cosas.</p>
+  <p><b>Una.</b> Te saltaste el paso 2 y no hay contrato vigente contra el que comparar. <b>El primer schema de un subject siempre entra</b>, porque no hay nada con lo que pueda chocar. Comprueba con <code>curl -s http://localhost:8081/subjects</code>.</p>
+  <p style="margin-bottom:0"><b>Dos.</b> El modo de compatibilidad no es <code>BACKWARD</code>. Míralo con el comando del paso 6.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si la respuesta sale como una sola línea ilegible</span>
+  <p style="margin-bottom:0">Se te olvidó el <code>| fold -s -w 88</code> del final. Vuelve a correr el comando con él. <b>No cambia la respuesta</b>, solo la parte en líneas.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 4 de 6</span>Y no hay puerta trasera</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Aquí siempre aparece la misma objeción, y es buena. <i>Eso es porque usaste el comando del Registry. Yo escribo con un productor de Kafka, y el broker no sabe nada de contratos.</i></p>
+
+<p>Es cierto que el broker no sabe nada. <b>El contrato no lo aplica el broker. Lo aplica la biblioteca del cliente, antes de que el mensaje salga.</b></p>
+
+<p>Y la forma de demostrarlo es la que vale para cualquier compuerta. <b>Hacerla decir que no, y después hacerla decir que sí, con el mismo comando.</b></p>
+
+<h3>Primero, cuántos mensajes hay</h3>
+
+<pre>docker exec kafka-broker-1 kafka-get-offsets \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.lab10.pedidos --time -1 \
+  | awk -F: '{s+=$3} END {print s" mensajes"}'</pre>
+
+<div class="desglose">
+<div><span class="flag">docker exec kafka-broker-1</span> — ejecuta dentro del contenedor del broker 1, que es donde vive la herramienta. <b>Sin <code>-i</code> ni <code>-t</code></b>, porque no le vas a escribir nada</div>
+<div><span class="flag">kafka-get-offsets</span> — pregunta por los offsets de un tópico. Solo consulta</div>
+<div><span class="flag">--time -1</span> — el offset <b>más nuevo</b>. Con <code>-2</code> pedirías el más antiguo</div>
+<div><span class="flag">| awk -F: '{s+=$3} …'</span> — la salida trae una línea por partición, con formato <code>tópico:partición:offset</code>. El <code>awk</code> corta por los dos puntos, suma la tercera columna y deja un solo número. <b>Este tópico tiene 12 particiones y sumarlas a ojo no funciona</b></div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">0 mensajes</div>
+
+<h3>Ahora el productor, con el contrato que el Registry rechazó</h3>
+
+<pre>echo '{"id":99,"cliente_id":1001,"producto":"Caja premium","cantidad":1,"monto":25000.00,"estado":"pendiente","tarjeta_credito":"4111-1111-1111-1111"}' \
+| MSYS_NO_PATHCONV=1 docker exec -i \
+    -e SCHEMA_REGISTRY_LOG4J_OPTS="-Dlog4j2.configurationFile=/etc/cp-base-java/log4j2.yaml" \
+    schema-registry kafka-avro-console-producer \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.lab10.pedidos \
+    --reader-property schema.registry.url=http://schema-registry:8081 \
+    --reader-property value.schema="$(tr -d '\n ' &lt; infra/schemas/pedido-v3-incompatible.avsc)" \
+  2&gt;&amp;1 | grep -oE "^org[^:]*Exception"</pre>
+
+<p>Es el comando más largo del laboratorio, y cada pedazo hace falta.</p>
+
+<div class="desglose">
+<div><span class="flag">echo '{…}' |</span> — el mensaje, con los siete campos del contrato nuevo. El productor de consola lee de la entrada estándar</div>
+<div><span class="flag">MSYS_NO_PATHCONV=1</span> — <b>solo para Git Bash en Windows.</b> Sin esto, Git Bash ve el <code>/etc/cp-base-java/…</code> de la línea siguiente, cree que es una ruta y la traduce a una ruta de Windows <b>antes de que Docker la vea</b>. El contenedor recibe entonces algo como <code>C:/Program Files/Git/etc/…</code>, que dentro no existe. Fuera de Windows nadie lee esta variable y no molesta</div>
+<div><span class="flag">docker exec -i</span> — el <code>-i</code> mantiene abierta la entrada estándar, que es por donde entra el <code>echo</code>. <b>Aquí no va <code>-t</code></b>, porque no hay una persona tecleando</div>
+<div><span class="flag">-e SCHEMA_REGISTRY_LOG4J_OPTS=…</span> — silencia el volcado de configuración que la imagen imprime por defecto. Sin esto la pantalla se llena con cuarenta líneas de <code>INFO</code> antes del error</div>
+<div><span class="flag">schema-registry kafka-avro-console-producer</span> — corre dentro del contenedor <b>del Registry</b>, no del broker. Las herramientas de Avro vienen en esa imagen y no en la de Kafka</div>
+<div><span class="flag">--reader-property schema.registry.url=…</span> — a qué Registry preguntarle. Sin esto el productor no sabe traducir a Avro y falla</div>
+<div><span class="flag">--reader-property value.schema=…</span> — el contrato con el que este productor dice que va a escribir</div>
+<div><span class="flag">$(tr -d '\n ' &lt; …)</span> — aplasta el <code>.avsc</code> a una sola línea, porque el flag no acepta saltos de línea</div>
+<div><span class="flag">2&gt;&amp;1 | grep -oE "^org[^:]*Exception"</span> — el error viene con veinte líneas de traza de Java. Esto deja <b>solo el nombre de la excepción</b>. El motivo detallado ya lo leíste en el paso 3, y es el mismo</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">org.apache.kafka.common.errors.SerializationException</div>
+
+<p>Dice <i>Serialization</i>, y no <i>Authorization</i> ni <i>Broker</i>. <b>El mensaje nunca llegó a la red.</b> Se cayó al convertirlo a bytes, dentro del proceso del productor, porque el paso de convertir a Avro incluye ir a preguntarle al Registry, y el Registry dijo que no.</p>
+
+<h3>Y el número que cierra el argumento</h3>
+
+<pre>docker exec kafka-broker-1 kafka-get-offsets \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.lab10.pedidos --time -1 \
+  | awk -F: '{s+=$3} END {print s" mensajes"}'</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">0 mensajes</div>
+
+<p><b>Sigue en cero.</b> No entró un mensaje a medias, ni un mensaje corrupto que haya que limpiar después. No entró nada.</p>
+
+<h3>Y ahora la mitad que hace que esto sea una demostración</h3>
+
+<p>El mismo comando, con lo único distinto siendo <b>el archivo del contrato</b>.</p>
+
+<pre>echo '{"id":1,"cliente_id":1001,"producto":"Caja premium","cantidad":10,"monto":25000.00,"estado":"pendiente"}' \
+| MSYS_NO_PATHCONV=1 docker exec -i \
+    -e SCHEMA_REGISTRY_LOG4J_OPTS="-Dlog4j2.configurationFile=/etc/cp-base-java/log4j2.yaml" \
+    schema-registry kafka-avro-console-producer \
+    --bootstrap-server kafka-broker-1:29092 \
+    --topic novatech.lab10.pedidos \
+    --reader-property schema.registry.url=http://schema-registry:8081 \
+    --reader-property value.schema="$(tr -d '\n ' &lt; infra/schemas/pedido.avsc)" \
+  2&gt;&amp;1 | grep -oE "^org[^:]*Exception"</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">(nada, ni una línea)</div>
+
+<p><b>Nada.</b> El <code>grep</code> no encontró ninguna excepción que mostrar, porque no hubo ninguna. Y el tópico:</p>
+
+<div class="salida-rot">El mismo <code>kafka-get-offsets</code> de antes</div>
+<div class="salida">1 mensajes</div>
+
+<h3>Cómo se lee</h3>
+
+<p>Mismo productor, mismo broker, mismo tópico, mismo mensaje de seis campos. Lo único que cambió es <b>con qué contrato dijo que escribía</b>. Uno pasó y el otro no.</p>
+
+<table>
+<tr><th>Momento</th><th>Contrato declarado</th><th>Resultado</th><th>Mensajes en el tópico</th></tr>
+<tr><td>Antes de intentar nada</td><td>ninguno</td><td>ninguno</td><td><b>0</b></td></tr>
+<tr><td>Intento 1</td><td><code>pedido-v3-incompatible.avsc</code></td><td><code>SerializationException</code></td><td><b>0</b></td></tr>
+<tr><td>Intento 2</td><td><code>pedido.avsc</code></td><td>Sin error</td><td><b>1</b></td></tr>
+</table>
+
+<div class="caja sunat">
+  <span class="rot">Ésa es la prueba de que la compuerta es una compuerta</span>
+  <p style="margin-bottom:0">Una que rechaza todo no sirve de nada. <b>Hay que verla dejar pasar.</b> Y ésta la viste hacer las dos cosas, con el mismo comando y en el mismo minuto.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p style="margin-bottom:0">Tu tabla dice <b>0, 0, 1</b>. <b>Anota una respuesta.</b> Si el broker no sabe nada de contratos, ¿quién rechazó el primer mensaje, y en qué máquina se ejecutó ese rechazo?</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el comando se queja de una ruta rarísima con <code>C:/Program Files/Git/…</code></span>
+  <p style="margin-bottom:0">Se te olvidó el <code>MSYS_NO_PATHCONV=1</code> del principio, o lo pusiste después del <code>docker</code>. <b>Va delante de <code>docker exec</code>, no en otro sitio.</b> Es la traducción de rutas de Git Bash actuando donde no debe.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si salen cuarenta líneas de <code>INFO</code> antes del error</span>
+  <p style="margin-bottom:0">Falta el <code>-e SCHEMA_REGISTRY_LOG4J_OPTS=…</code>. <b>El resultado es el mismo</b>, solo que enterrado. Busca la línea que empieza con <code>org.apache.kafka</code>.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el segundo intento también falla</span>
+  <p>Comprueba que estás usando <code>infra/schemas/pedido.avsc</code>, sin el <code>-v3-incompatible</code>. Es el error más fácil de cometer, porque los dos comandos son idénticos salvo esa palabra.</p>
+  <p style="margin-bottom:0">Y comprueba que el mensaje del <code>echo</code> tiene <b>seis campos y no siete</b>. Si le dejaste el <code>tarjeta_credito</code>, el productor va a fallar por otra razón, que es que el dato no calza con el contrato que declaró.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si el contador no sube a 1</span>
+  <p style="margin-bottom:0">El <code>awk</code> suma las 12 particiones. Si te da otro número mayor, es que ya habías producido antes en este tópico, y no es un problema. <b>Lo que importa no es el número exacto, sino que subió respecto del intento anterior.</b> Vuelve a correr el <code>kafka-get-offsets</code> antes y después para verlo.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 5 de 6</span>El cambio que sí pasa</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>Si el laboratorio terminara en el paso 4, te llevarías una conclusión falsa y peligrosa, que es <i>con Schema Registry no se pueden agregar campos</i>. <b>Se pueden.</b> Hay exactamente una condición.</p>
+
+<h3>La otra propuesta</h3>
+
+<pre>diff infra/schemas/pedido.avsc infra/schemas/pedido-v2-compatible.avsc</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">11c11,12
+&lt;     {"name": "estado", "type": "string"}
+---
+&gt;     {"name": "estado", "type": "string"},
+&gt;     {"name": "prioridad", "type": ["null", "string"], "default": null}</div>
+
+<p>Otra vez <b>una sola línea</b>, y un campo nuevo al final. La misma forma de cambio que el paso 3. Y dos diferencias que lo cambian todo.</p>
+
+<table>
+<tr><th>Lo que trae</th><th>Qué significa</th></tr>
+<tr><td><code>"type": ["null", "string"]</code></td><td>Un tipo <b>unión</b>. Este campo puede ser un texto <b>o</b> puede ser nulo. En Avro, un campo que admite nulo se declara así, con una lista</td></tr>
+<tr><td><code>"default": null</code></td><td><b>La pieza que faltaba en el paso 3.</b> Le dice al lector nuevo qué asumir cuando el dato viejo no trae este campo</td></tr>
+</table>
+
+<h3>Pregúntale otra vez</h3>
+
+<p>Los mismos dos comandos del paso 3, con el archivo cambiado.</p>
+
+<pre>curl -s -w "\nHTTP %{http_code}\n" -X POST \
+    -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+    --data "{\"schema\": \"$(tr -d '\n' &lt; infra/schemas/pedido-v2-compatible.avsc | sed 's/"/\\"/g')\"}" \
+    http://localhost:8081/compatibility/subjects/novatech.lab10.pedidos-value/versions/latest</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">{"is_compatible":true}
+HTTP 200</div>
+
+<p><b>El mismo <code>HTTP 200</code> que devolvió el <code>false</code> del paso 3.</b> Es la prueba de lo que se dijo allá, o sea que el código no es el veredicto.</p>
+
+<h3>Y se registra</h3>
+
+<pre>curl -s -w "\nHTTP %{http_code}\n" -X POST \
+    -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+    --data "{\"schema\": \"$(tr -d '\n' &lt; infra/schemas/pedido-v2-compatible.avsc | sed 's/"/\\"/g')\"}" \
+    http://localhost:8081/subjects/novatech.lab10.pedidos-value/versions \
+  | fold -s -w 88</pre>
+
+<div class="salida-rot">Lo que vas a ver · el schema del medio va recortado</div>
+<div class="salida">{"id":2,"version":2,"guid":"8039c9ea-b34f-edeb-4674-e9dd977a4b01","schemaType":"AVRO","s
+chema":"{\"type\":\"record\",\"name\":\"Pedido\",...,{\"name\":\"prioridad\",
+\"type\":[\"null\",\"string\"],\"default\":null}]}"}
+HTTP 200</div>
+
+<p><b><code>HTTP 200</code>, no 409.</b> Es el mismo comando que hace dos minutos devolvió un conflicto, contra el mismo subject y la misma versión vigente. Lo único distinto es que este schema trae <i>default</i>.</p>
+
+<h3>Y la vieja no se borró</h3>
+
+<pre>curl -s http://localhost:8081/subjects/novatech.lab10.pedidos-value/versions</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">[1,2]</div>
+
+<div class="caja tecnico">
+  <span class="rot">Las dos siguen ahí, y tienen que seguir</span>
+  <p style="margin-bottom:0">El mensaje que escribiste en el paso 4 lleva pegado el <code>id: 1</code>. <b>Si la v1 desapareciera, ese mensaje quedaría ilegible para siempre.</b> El Registry no es un archivo de configuración que se sobrescribe. Es un registro histórico, y por eso vive en un tópico de Kafka llamado <code>_schemas</code> y no en un archivo.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Vas bien si…</span>
+  <p style="margin-bottom:0">La consulta te dio <code>true</code>, el registro te dio <code>HTTP 200</code> con <code>version: 2</code>, y la lista de versiones dice <code>[1,2]</code>.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si te devuelve <code>version: 1</code> otra vez</span>
+  <p style="margin-bottom:0">Registraste el mismo schema dos veces. <b>El Registry no crea una versión nueva si el schema es idéntico a uno que ya tiene.</b> Te devuelve el que ya existía. Comprueba que el archivo es el <code>-v2-compatible</code>.</p>
+</div>
+
+<div class="np"></div>
+<h2><span class="paso">Paso 6 de 6</span>Quién puso esa regla</h2>
+
+<h3>Qué vamos a hacer</h3>
+
+<p>El mensaje de error del paso 3 terminaba con <code>compatibility: 'BACKWARD'</code>. <b>Alguien eligió eso.</b> Vamos a buscar dónde está puesto, porque la respuesta sorprende y es la que importa en SUNAT.</p>
+
+<h3>Pregúntale al subject</h3>
+
+<pre>curl -s http://localhost:8081/config/novatech.lab10.pedidos-value</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">{"error_code":40408,"message":"Subject 'novatech.lab10.pedidos-value' does not have subject-level compatibility configured"}</div>
+
+<p><b>El subject no tiene modo propio.</b> El <code>BACKWARD</code> con que te rechazó el paso 3 no estaba puesto ahí.</p>
+
+<h3>Está un nivel más arriba</h3>
+
+<pre>curl -s http://localhost:8081/config</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">{"compatibilityLevel":"BACKWARD"}</div>
+
+<p>Estaba puesto <b>en el clúster entero</b>. Todos los subjects que no digan lo contrario heredan esa regla.</p>
+
+<div class="caja sunat">
+  <span class="rot">Por qué esto importa, y mucho</span>
+  <p style="margin-bottom:0">Significa que <b>una sola persona, cambiando una sola línea, cambia las reglas de todos los tópicos a la vez.</b> Y que un tópico puede tener su propia regla sin que nadie lo note, porque el <code>/config</code> global no la muestra. <b>Cuando alguien te diga «nuestro Registry está en BACKWARD», la pregunta correcta es en qué nivel.</b></p>
+</div>
+
+<h3>Compruébalo poniéndole un modo propio</h3>
+
+<pre>curl -s -X PUT -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+    --data '{"compatibility":"FORWARD"}' \
+    http://localhost:8081/config/novatech.lab10.pedidos-value
+
+curl -s -X POST -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+    --data "{\"schema\": \"$(tr -d '\n' &lt; infra/schemas/pedido-v3-incompatible.avsc | sed 's/"/\\"/g')\"}" \
+    http://localhost:8081/compatibility/subjects/novatech.lab10.pedidos-value/versions/latest</pre>
+
+<div class="desglose">
+<div><span class="flag">-X PUT</span> — cambiar una configuración es un <code>PUT</code>, no un <code>POST</code>. <b>Un <code>PUT</code> reemplaza lo que hubiera</b></div>
+<div><span class="flag">/config/&lt;subject&gt;</span> — con el subject al final, pone la regla <b>solo en ese subject</b>. Sin el subject, la pondría en el clúster entero</div>
+</div>
+
+<div class="salida-rot">Lo que vas a ver · las dos respuestas salen pegadas</div>
+<div class="salida">{"compatibility":"FORWARD"}{"is_compatible":true}</div>
+
+<div class="caja ojo">
+  <span class="rot">Salen pegadas y no es un error</span>
+  <p style="margin-bottom:0"><b>El Registry no termina sus respuestas con un salto de línea.</b> Como corriste dos <code>curl</code> seguidos, la segunda respuesta empieza donde acabó la primera. Es feo y es lo que imprime. Si te molesta, agrega <code>; echo</code> al final de cada uno.</p>
+</div>
+
+<h3>Y ahora lo importante</h3>
+
+<p><b>El mismo schema que hace tres pasos era incompatible ahora es compatible.</b> No cambió el schema. No cambió el contrato vigente. <b>Cambió la regla con la que se juzga.</b></p>
+
+<table>
+<tr><th>Modo</th><th>Qué exige</th><th>Cuándo se usa</th></tr>
+<tr><td><code>BACKWARD</code></td><td>El lector <b>nuevo</b> lee datos <b>viejos</b></td><td>El de fábrica. Primero se actualizan los consumidores</td></tr>
+<tr><td><code>FORWARD</code></td><td>El lector <b>viejo</b> lee datos <b>nuevos</b></td><td>Cuando hay consumidores que no puedes actualizar, como un <i>mainframe</i> o el sistema de un tercero</td></tr>
+<tr><td><code>FULL</code></td><td>Las dos cosas a la vez</td><td>Máxima seguridad, mínima libertad para cambiar</td></tr>
+<tr><td><code>NONE</code></td><td>Nada. Entra cualquier cosa</td><td>Solo desarrollo local. <b>En producción es lo mismo que no tener Registry</b></td></tr>
+</table>
+
+<h3>Déjalo como estaba</h3>
+
+<pre>curl -s -X PUT -H "Content-Type: application/vnd.schemaregistry.v1+json" \
+    --data '{"compatibility":"BACKWARD"}' \
+    http://localhost:8081/config/novatech.lab10.pedidos-value</pre>
+
+<div class="salida-rot">Lo que vas a ver</div>
+<div class="salida">{"compatibility":"BACKWARD"}</div>
+
+<div class="caja ojo">
+  <span class="rot">Ojo, esto no lo devuelve del todo a como estaba</span>
+  <p style="margin-bottom:0">El subject ahora <b>tiene</b> una regla propia, que da la casualidad de que dice lo mismo que la global. <b>Antes no tenía ninguna.</b> Si vuelves a correr el <code>/config/&lt;subject&gt;</code> del principio de este paso, ya no te va a dar el <code>40408</code>. Para volver de verdad al estado inicial hay que borrar la regla del subject con un <code>DELETE</code>, o levantar el lab de nuevo.</p>
+</div>
+
+<div class="check">
+  <span class="rot">Lo lograste si…</span>
+  <p>Viste el <code>40408</code> del subject, el <code>BACKWARD</code> del clúster, y el mismo schema del paso 3 devolviendo <code>is_compatible: true</code> bajo <code>FORWARD</code>.</p>
+  <p style="margin-bottom:0"><b>Anota una respuesta.</b> De los tópicos que tu equipo tiene hoy en producción, ¿cuántos tienen subject registrado, y quién decidió su modo de compatibilidad?</p>
+</div>
+
+<div class="np"></div>
+<h2>Lo que aprendiste</h2>
+
+<div class="regla"><span class="num">1</span>
+<b>Un tópico sin subject registrado no tiene contrato.</b><br>
+No importa cuánta documentación exista. Si no está en el Registry, no lo aplica nadie. Lo comprobaste en el paso 1, con un clúster recién levantado que contestó una lista vacía.
+</div>
+
+<div class="regla"><span class="num">2</span>
+<b>Todo campo que se agregue lleva <i>default</i>.</b><br>
+Es la única diferencia entre el schema del paso 3 y el del paso 5, y es la diferencia entre un despliegue que sale y uno que no. Y la comprobación cuesta un segundo, con el <code>/compatibility</code> que pregunta sin escribir. Eso va en el <i>pipeline</i>, no en la consola.
+</div>
+
+<div class="regla"><span class="num">3</span>
+<b>No hay puerta trasera, y el que rechaza no es el broker.</b><br>
+El contrato lo aplica la biblioteca del cliente, antes de que el mensaje salga a la red. Por eso el error dice <code>SerializationException</code> y el tópico se queda en cero. El broker nunca se enteró de que alguien intentó escribir.
+</div>
+
+<div class="regla"><span class="num">4</span>
+<b>El modo de compatibilidad es una decisión, y las versiones viejas no se borran.</b><br>
+El propio mensaje de error dice <code>compatibility: 'BACKWARD'</code>, y el paso 6 mostró que estaba puesto en el clúster entero y no en el tópico. En SUNAT ese alguien tiene que tener nombre. Y cada mensaje escrito lleva el <code>id</code> de su schema, así que borrar una versión es dejar ilegibles los datos que la usaron.
+</div>
+
+<div class="np"></div>
+<h2>Para profundizar</h2>
+
+<h3>A · Producir y consumir Avro de verdad</h3>
+
+<p>El paso 4 escribió un mensaje con un comando crudo, para poder romperlo a propósito. Los envoltorios del curso hacen lo mismo, más corto.</p>
+
+<pre>kafka-cli/produce-pedido-avro.sh 7 1001 "Caja premium" 10 25000.00 pendiente
+kafka-cli/consume-avro.sh novatech.lab10.pedidos</pre>
+
+<p><i>Ctrl+C para salir del consumidor, que no termina solo.</i></p>
+
+<div class="salida-rot">Lo que sale del consumidor · las dos primeras líneas</div>
+<div class="salida">{"id":7,"cliente_id":1001,"producto":"Caja premium","cantidad":10,"monto":25000.0,"estado":"pendiente"}
+{"id":1,"cliente_id":1001,"producto":"Caja premium","cantidad":10,"monto":25000.0,"estado":"pendiente"}</div>
+
+<p><b>Lo que hay que mirar.</b> El consumidor imprime JSON, pero <b>en el tópico no hay JSON</b>. Hay bytes binarios con el <code>id</code> del schema adelante. Quien traduce es el consumidor, que va al Registry con ese número y baja el contrato.</p>
+
+<p>El productor imprime además un aviso que sale siempre, <code>Warning: --property is deprecated and will be removed in a future version</code>. <b>Es del envoltorio, no tuyo</b>, y no afecta a nada.</p>
+
+<p><b>La pregunta que vale.</b> ¿Qué pasa si apagas el contenedor <code>schema-registry</code> con <code>docker stop schema-registry</code> y vuelves a consumir?</p>
+
+<h3>B · La carga masiva y el contrato de la clave</h3>
+
+<pre>kafka-cli/produce-flood-pedidos.sh 50
+kafka-cli/produce-clientes-seed.sh
+curl -s http://localhost:8081/subjects</pre>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">["novatech.lab10.clientes-key","novatech.lab10.clientes-value","novatech.lab10.pedidos-value"]</div>
+
+<p><b>Lo que hay que mirar.</b> Después de los clientes hay <b>tres</b> subjects, no dos. Apareció un <code>-key</code>.</p>
+
+<p>El <i>seed</i> de clientes escribe con clave, y <b>la clave tiene su propio contrato, independiente del valor</b>. Es la convención <code>TopicNameStrategy</code> funcionando en las dos mitades del mensaje.</p>
+
+<h3>C · El tópico donde vive el talonario</h3>
+
+<pre>docker exec kafka-broker-1 kafka-topics \
+    --bootstrap-server kafka-broker-1:29092 \
+    --describe --topic _schemas</pre>
+
+<div class="salida-rot">Lo que sale</div>
+<div class="salida">Topic: _schemas	TopicId: lrTNQ3gSQgy--jmkd7B6yw	PartitionCount: 1	ReplicationFactor: 3	Configs: min.insync.replicas=2,cleanup.policy=compact
+	Topic: _schemas	Partition: 0	Leader: 3	Replicas: 3,1,2	Isr: 3,1,2	Elr: 	LastKnownElr:</div>
+
+<p><b>Lo que hay que mirar.</b> Tres cosas, y las tres son decisiones de diseño.</p>
+
+<p><b>Una sola partición.</b> El orden de los cambios de contrato importa, y una sola partición es la única forma de garantizar orden total en Kafka.</p>
+
+<p><b><code>cleanup.policy=compact</code></b>, que es la compactación del laboratorio 05. Kafka conserva el último valor de cada clave para siempre, en vez de borrar por antigüedad. <b>Un contrato no puede caducar a los siete días.</b></p>
+
+<p><b>Factor de réplica 3.</b> Si se pierde este tópico, todos los datos Avro del clúster quedan ilegibles.</p>
+
+<h3>D · Los envoltorios de <code>schema-cli/</code>, y por qué esta guía no los usa</h3>
+
+<p>Hacen lo mismo que los <code>curl</code> del recorrido, en una línea.</p>
+
+<pre>schema-cli/list-subjects.sh
+schema-cli/register-schema.sh novatech.lab10.pedidos-value infra/schemas/pedido.avsc
+schema-cli/check-compatibility.sh novatech.lab10.pedidos-value infra/schemas/pedido-v3-incompatible.avsc</pre>
+
+<p><b>Y los cuatro dependen de <code>python3</code></b>, que Git Bash para Windows no trae y que ningún README declara. Compruébalo:</p>
+
+<pre>grep -n python3 schema-cli/*.sh</pre>
+
+<div class="caja ojo">
+  <span class="rot">Lo que pasa sin <code>python3</code>, medido, y por qué uno es peor que el otro</span>
+  <p><b><code>register-schema.sh</code> falla de frente</b>, y eso está bien:</p>
+  <div class="salida">schema-cli/register-schema.sh: line 17: python3: command not found</div>
+  <p><b><code>list-subjects.sh</code> falla en silencio</b>, y eso es una trampa:</p>
+  <div class="salida">[List Subjects]
+────────────────────────────────────────────────────────</div>
+  <p style="margin-bottom:0">Imprime su encabezado y <b>nada más</b>. Ni un error. La razón es que el mensaje de <code>command not found</code> cae dentro del <code>2&gt;/dev/null</code> del final de la línea. <b>Un alumno en Windows leería eso como «no hay ningún subject registrado», que es una respuesta falsa y no un fallo.</b> Por eso el recorrido va por <code>curl</code>.</p>
+</div>
+
+<h3>E · El desafío del contrato propio</h3>
+
+<p>Escribe tú un <code>.avsc</code> que agregue dos campos al pedido, uno compatible y otro no, y predice el veredicto de cada uno <b>antes</b> de preguntarle al Registry. Documenta en el reporte qué predijiste, qué contestó y por qué.</p>
+
+<p>Es el ejercicio que convierte la regla del <i>default</i> en algo que sabes aplicar y no solo repetir.</p>
+
+<h3>F · El reporte del laboratorio</h3>
+
+<p><code>plantillas/reporte-entregable.md</code> recorre las actividades con sus preguntas. Las respuestas de referencia están en <code>soluciones/reporte-resuelto.md</code>.</p>
+
+<h2>Antes de cerrar</h2>
+
+<div class="caja ojo">
+  <span class="rot">Deja el terreno limpio</span>
+  <pre>bin/90-test-lab.sh   # ver el estado del laboratorio
+bin/stop-lab.sh      # apagar los contenedores</pre>
+  <p><code>bin/stop-lab.sh</code> solo detiene los contenedores y no borra nada.</p>
+  <p style="margin-bottom:0"><b>Ojo al reanudar.</b> <code>bin/start-lab.sh</code> reconstruye el laboratorio desde cero, así que <b>los schemas que registraste no sobreviven</b>, porque se van con el tópico <code>_schemas</code>. Si escribiste un contrato propio en el bloque E, guárdate el archivo antes.</p>
+</div>
+
+<div class="salida-rot">Lo que dice el validador si todo está en orden</div>
+<div class="salida">Validador del Lab 11 — estado actual
+  ✓ los 3 brokers están healthy
+  ✓ Schema Registry responde en :8081/subjects
+  ✓ el subject novatech.lab10.pedidos-value está registrado
+
+✓ LAB EN BUEN ESTADO (3 verificaciones OK)</div>
+
+<div class="caja sunat">
+  <span class="rot">Lo que te llevas</span>
+  <p>El desarrollador del martes no era descuidado. Hizo el cambio más inocente que existe, lo probó, y funcionó. <b>Lo que le faltaba era una compuerta que le dijera que no el martes</b>, en su pantalla, con el nombre del campo.</p>
+  <p style="margin-bottom:0">Eso es todo lo que compra Schema Registry, y es muchísimo. <b>Adelantar el error al momento y a la persona que lo puede arreglar.</b></p>
+</div>
+
+</body></html>
