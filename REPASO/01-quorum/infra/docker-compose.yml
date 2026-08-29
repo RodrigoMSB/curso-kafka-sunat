@@ -1,0 +1,78 @@
+# REPASO 01 · El quorum, en tres actos
+#
+# Proyecto propio, deliberadamente FUERA del espacio de nombres novatech-lab*:
+# los start-lab de los laboratorios barren los contenedores y las redes que
+# empiezan por ese prefijo, y este repaso no debe irse en esa limpieza ni
+# llevarse la de un laboratorio.
+name: repaso-01-quorum
+
+# Puertos 19092-19094: los quince laboratorios ocupan 8081-8083, 8088, 8090,
+# 9092-9095 y 15432, asi que este rango no choca con ninguno. Eso permite
+# repasar con un laboratorio levantado.
+x-comun: &comun
+  image: confluentinc/cp-kafka:8.2.0
+  environment: &entorno
+    KAFKA_PROCESS_ROLES: 'broker,controller'
+    KAFKA_CONTROLLER_QUORUM_VOTERS: '1@repaso-quorum-1:39092,2@repaso-quorum-2:39093,3@repaso-quorum-3:39094'
+    KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT'
+    KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+    KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+    CLUSTER_ID: 'UmVwYXNvUXVvcnVtMDFBQg'
+    KAFKA_LOG_DIRS: '/var/lib/kafka/data'
+    # Replicacion 3 y min ISR 2: el cluster se comporta como el del curso.
+    KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+    KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+    KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+    KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+    KAFKA_MIN_INSYNC_REPLICAS: 2
+    # Sin creacion automatica: el acto 3 necesita que un --create falle de
+    # verdad, no que Kafka lo resuelva por su cuenta.
+    KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'false'
+
+services:
+  repaso-quorum-1:
+    <<: *comun
+    hostname: repaso-quorum-1
+    container_name: repaso-quorum-1
+    ports:
+      - "19092:19092"
+    environment:
+      <<: *entorno
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENERS: 'PLAINTEXT://repaso-quorum-1:29092,CONTROLLER://repaso-quorum-1:39092,EXTERNAL://0.0.0.0:19092'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://repaso-quorum-1:29092,EXTERNAL://localhost:19092'
+    volumes:
+      - datos-1:/var/lib/kafka/data
+
+  repaso-quorum-2:
+    <<: *comun
+    hostname: repaso-quorum-2
+    container_name: repaso-quorum-2
+    ports:
+      - "19093:19093"
+    environment:
+      <<: *entorno
+      KAFKA_NODE_ID: 2
+      KAFKA_LISTENERS: 'PLAINTEXT://repaso-quorum-2:29093,CONTROLLER://repaso-quorum-2:39093,EXTERNAL://0.0.0.0:19093'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://repaso-quorum-2:29093,EXTERNAL://localhost:19093'
+    volumes:
+      - datos-2:/var/lib/kafka/data
+
+  repaso-quorum-3:
+    <<: *comun
+    hostname: repaso-quorum-3
+    container_name: repaso-quorum-3
+    ports:
+      - "19094:19094"
+    environment:
+      <<: *entorno
+      KAFKA_NODE_ID: 3
+      KAFKA_LISTENERS: 'PLAINTEXT://repaso-quorum-3:29094,CONTROLLER://repaso-quorum-3:39094,EXTERNAL://0.0.0.0:19094'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://repaso-quorum-3:29094,EXTERNAL://localhost:19094'
+    volumes:
+      - datos-3:/var/lib/kafka/data
+
+volumes:
+  datos-1:
+  datos-2:
+  datos-3:
