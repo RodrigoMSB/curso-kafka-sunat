@@ -172,8 +172,21 @@ kafka-broker-2   Up 2 minutes (healthy)   0.0.0.0:9093-&gt;9093/tcp, [::]:9093-&
 <p>Antes de abrir un archivo Java hay que tener fresco con qué se lo va a comparar. Éste es el comando con el que produjiste en el laboratorio 06, tal cual.</p>
 
 <div class="caja ojo">
-  <span class="rot">Este comando se mira, no se ejecuta</span>
-  <p style="margin-bottom:0">El tópico <code>novatech.validacion</code> es de otro laboratorio y aquí no existe. <b>Está escrito para que lo leas.</b> Si lo ejecutas por error, el comando se queda esperando y no pasa nada malo. Sal con <code>Ctrl+C</code>.</p>
+  <span class="rot">No lo ejecutes · este comando se mira</span>
+  <p>El tópico <code>novatech.validacion</code> es del laboratorio 06 y <b>aquí no existe</b>. En el lab 06 lo creaste tú a mano, y este laboratorio no lo crea. <b>Está escrito para que lo leas.</b></p>
+  <p style="margin-bottom:0">Si lo ejecutas por error <b>no rompes nada</b>, pero lo que pasa merece que lo veas, porque es una trampa que se paga cara en producción. Está en el rescate de abajo.</p>
+</div>
+
+<div class="rescate">
+  <span class="rot">Si lo ejecutaste, y por qué vale la pena mirar lo que salió</span>
+  <p>No se queda colgado. <b>Tarda 61 segundos, termina solo, y esto es lo último que imprime:</b></p>
+  <div class="salida">[2026-08-29 04:57:09,374] ERROR Error when sending message to topic novatech.validacion with key: 15 bytes, value: 13 bytes with error: (org.apache.kafka.clients.producer.internals.ErrorLoggingCallback)
+org.apache.kafka.common.errors.TimeoutException: Topic novatech.validacion not present in metadata after 60000 ms.
+Caused by: org.apache.kafka.common.errors.UnknownTopicOrPartitionException: This server does not host this topic-partition.</div>
+  <p>Antes de eso repite unas sesenta veces un <code>WARN</code> con <code>{novatech.validacion=UNKNOWN_TOPIC_OR_PARTITION}</code>, uno por segundo. <b>El mensaje nunca se entregó.</b></p>
+  <p><b>Y ahora lo que de verdad importa, medido.</b> El código de salida de ese comando es <b>cero</b>, que en la línea de comandos significa éxito.</p>
+  <div class="salida">rc del docker exec = 0   ·   duracion = 61 segundos</div>
+  <p style="margin-bottom:0"><b>Un guion que solo mire el código de salida daría este envío por bueno.</b> Perdió el mensaje y reportó éxito. Es exactamente el laboratorio de hoy visto desde el otro lado, o sea que el clúster estaba perfecto y el problema estaba en el cliente. <b>Cuando automatices envíos, no te fíes del código de salida. Comprueba el offset.</b></p>
 </div>
 
 <h3>El comando del laboratorio 06</h3>
