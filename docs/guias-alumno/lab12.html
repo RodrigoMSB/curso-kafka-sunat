@@ -166,6 +166,17 @@ Estos IDs (1001, 1010, 1017, 1055, 1098) se usarán para los JOINs.</div>
 </div>
 
 <div class="rescate">
+  <span class="rot">Si <code>register-schema.sh</code> no dice <b>nada</b></span>
+  <p>Distinto del anterior, y desconcertante porque no hay error que leer. <b>La salida completa es una sola línea, la del encabezado, y ahí se acaba:</b></p>
+  <div class="salida">[Register Schema] Subject: novatech.lab10.pedidos-value</div>
+  <p><b>No es que se haya quedado pensando: ya terminó, y falló.</b> Medido, devuelve código de salida <code>1</code> y sesenta y seis bytes, que son exactamente ese encabezado. El mensaje de error existe, pero el script lo manda a la basura en su última línea, así que nunca lo ves.</p>
+  <p><b>Significa que el Schema Registry no está contestando.</b> Compruébalo:</p>
+  <pre>curl -s http://localhost:8081/subjects</pre>
+  <p>Si contesta una lista entre corchetes, el Registry está bien y el problema es otro. <b>Si no contesta nada</b>, todavía está arrancando o se cayó por falta de memoria. Espera medio minuto y vuelve a probar; si sigue mudo, levanta el laboratorio otra vez con <code>bin/start-lab.sh</code>.</p>
+  <p style="margin-bottom:0"><b>Y para que no lo confundas con el otro caso:</b> cuando el Registry sí está vivo pero rechaza tu schema, no hay silencio ninguno. Te contesta con un <code>error_code</code> y varias líneas explicando qué campo no le cuadra. <b>Silencio es Registry caído. Texto largo es Registry vivo diciéndote que no.</b></p>
+</div>
+
+<div class="rescate">
   <span class="rot">Si el contador te da menos de 30 mensajes</span>
   <p style="margin-bottom:0">Alguno de los 30 falló, casi siempre por falta de memoria. <b>No hace falta empezar de cero.</b> Vuelve a correr <code>produce-flood-pedidos.sh</code> con la diferencia, o simplemente sigue: el laboratorio funciona igual con 20 pedidos que con 30.</p>
 </div>

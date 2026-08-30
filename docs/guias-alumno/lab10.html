@@ -201,6 +201,20 @@ kafka-broker-3   Up 24 seconds (healthy)   0.0.0.0:9094-&gt;9094/tcp, [::]:9094-
   <pre style="margin-bottom:0">rest-cli/rest-produce.sh novatech.lab10.pedidos '{"pedido":1,"cliente":"ACME","monto":1500}'</pre>
 </div>
 
+<div class="rescate">
+  <span class="rot">El <code>✓</code> verde de <code>rest-produce.sh</code> no prueba que el mensaje llegó</span>
+  <p><b>Este envoltorio siempre dice que sí.</b> Imprime <code>✓ Mensaje enviado vía HTTP</code> y termina en éxito aunque el REST Proxy haya rechazado el envío. <b>Está medido.</b> Si te equivocas al escribir el nombre del tópico, el comando tarda un minuto y luego contesta esto:</p>
+  <div class="salida">{"offsets":[{"partition":null,"offset":null,"error_code":50003,"error":"Topic novatech.topico.que.no.existe not present in metadata after 60000 ms."}],"key_schema_id":null,"value_schema_id":null}
+✓ Mensaje enviado vía HTTP</div>
+  <p>Y si el JSON del segundo argumento está mal escrito, contesta esto otro, también con su <code>✓</code> debajo:</p>
+  <div class="salida">{"error_code":400,"message":"Unrecognized token 'ESTO_NO_ES_JSON': was expecting (JSON String, Number, Array, Object or token 'null', 'true' or 'false')"}
+✓ Mensaje enviado vía HTTP</div>
+  <p><b>En los dos casos el mensaje se perdió y el envoltorio informó éxito.</b> No es un defecto del REST Proxy, que contestó la verdad: es que el envoltorio no mira la respuesta antes de felicitarte.</p>
+  <p style="margin-bottom:0"><b>Así que no leas el <code>✓</code>. Lee la línea de arriba.</b> Cuando el envío es bueno trae un <code>offset</code> con un número y <code>error_code: null</code>, así:<br>
+  <code>{"offsets":[{"partition":0,"offset":3,"error_code":null,"error":null}]…</code><br>
+  <b>Si ves un <code>error_code</code> con número, no llegó nada</b>, por muy verde que esté el ✓. Es la misma regla del laboratorio 09: cuando automatices envíos, comprueba el offset, no el código de salida.</p>
+</div>
+
 <div class="np"></div>
 <h2><span class="paso">Paso 2 de 5</span>La misma verdad, dos veces</h2>
 
