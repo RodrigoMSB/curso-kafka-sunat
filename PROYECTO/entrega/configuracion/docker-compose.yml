@@ -1,0 +1,122 @@
+# Clúster del proyecto final · NovaTech Logistics
+#
+# Tres brokers en KRaft, en modo combinado. Cada nodo es broker y controlador
+# a la vez, que es el dimensionamiento que el hito 2 pide demostrar.
+#
+# Está hecho para convivir con los laboratorios del curso. Puedes tener un lab
+# levantado y este clúster al mismo tiempo, sin que uno pise al otro.
+#
+#   Nombre de proyecto   novatech-proyecto
+#   Puertos del host     9192  9193  9194
+#   Contenedores         proyecto-broker-1  proyecto-broker-2  proyecto-broker-3
+#
+# Ninguno de esos tres nombres choca con los quince laboratorios, y el prefijo
+# del proyecto no empieza por "novatech-lab", que es lo que el barrido de
+# limpieza de los labs busca para borrar. Por eso los labs no se lo llevan.
+#
+# Levantar y bajar está en el LEEME.md de esta misma carpeta.
+
+name: novatech-proyecto
+
+x-broker-comun: &broker-comun
+  image: confluentinc/cp-kafka:8.2.0
+  networks:
+    - proyecto-network
+
+# El healthcheck de cada broker apunta a SU propio listener interno. No se
+# puede compartir en el ancla, porque cada nodo escucha en un puerto distinto.
+x-salud: &salud
+  interval: 10s
+  timeout: 10s
+  retries: 18
+  start_period: 30s
+
+x-kafka-comun: &kafka-comun
+  KAFKA_PROCESS_ROLES: 'broker,controller'
+  KAFKA_CONTROLLER_QUORUM_VOTERS: '1@proyecto-broker-1:39192,2@proyecto-broker-2:39193,3@proyecto-broker-3:39194'
+  KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT'
+  KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+  KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+
+  # Ya viene puesto. Generarlo es la lección del lab 01 y aquí no toca
+  # repetirla. Los tres nodos tienen que compartir el mismo valor, o no
+  # forman clúster.
+  CLUSTER_ID: 'aHPLoxydSTyq4xknldI3AA'
+
+  # Con tres brokers, tres copias de cada partición y dos al día como mínimo
+  # para aceptar escrituras. Son los valores que el hito 4 te va a pedir
+  # justificar, así que míralos antes de escribir esa sección.
+  KAFKA_DEFAULT_REPLICATION_FACTOR: 3
+  KAFKA_MIN_INSYNC_REPLICAS: 2
+  KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+  KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 3
+  KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 2
+
+  # En false a propósito. Con la creación automática encendida, un tópico mal
+  # escrito se crea solo, con la retención de fábrica y sin que nadie avise.
+  # Tu evidencia mostraría un tópico que existe y una política que nunca
+  # pusiste. Aquí los tópicos se crean a mano, con su --config.
+  KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'false'
+
+  KAFKA_LOG_DIRS: '/var/lib/kafka/data'
+
+services:
+  proyecto-broker-1:
+    <<: *broker-comun
+    hostname: proyecto-broker-1
+    container_name: proyecto-broker-1
+    healthcheck:
+      <<: *salud
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "proyecto-broker-1:29192"]
+    ports:
+      - "9192:9192"
+    environment:
+      <<: *kafka-comun
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENERS: 'PLAINTEXT://proyecto-broker-1:29192,CONTROLLER://proyecto-broker-1:39192,EXTERNAL://0.0.0.0:9192'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://proyecto-broker-1:29192,EXTERNAL://localhost:9192'
+    volumes:
+      - proyecto-broker-1-data:/var/lib/kafka/data
+
+  proyecto-broker-2:
+    <<: *broker-comun
+    hostname: proyecto-broker-2
+    container_name: proyecto-broker-2
+    healthcheck:
+      <<: *salud
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "proyecto-broker-2:29193"]
+    ports:
+      - "9193:9193"
+    environment:
+      <<: *kafka-comun
+      KAFKA_NODE_ID: 2
+      KAFKA_LISTENERS: 'PLAINTEXT://proyecto-broker-2:29193,CONTROLLER://proyecto-broker-2:39193,EXTERNAL://0.0.0.0:9193'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://proyecto-broker-2:29193,EXTERNAL://localhost:9193'
+    volumes:
+      - proyecto-broker-2-data:/var/lib/kafka/data
+
+  proyecto-broker-3:
+    <<: *broker-comun
+    hostname: proyecto-broker-3
+    container_name: proyecto-broker-3
+    healthcheck:
+      <<: *salud
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "proyecto-broker-3:29194"]
+    ports:
+      - "9194:9194"
+    environment:
+      <<: *kafka-comun
+      KAFKA_NODE_ID: 3
+      KAFKA_LISTENERS: 'PLAINTEXT://proyecto-broker-3:29194,CONTROLLER://proyecto-broker-3:39194,EXTERNAL://0.0.0.0:9194'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://proyecto-broker-3:29194,EXTERNAL://localhost:9194'
+    volumes:
+      - proyecto-broker-3-data:/var/lib/kafka/data
+
+volumes:
+  proyecto-broker-1-data:
+  proyecto-broker-2-data:
+  proyecto-broker-3-data:
+
+networks:
+  proyecto-network:
+    driver: bridge
