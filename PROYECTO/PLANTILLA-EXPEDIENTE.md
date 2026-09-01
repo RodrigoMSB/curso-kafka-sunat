@@ -17,6 +17,8 @@
 > Cuando termines, exporta a PDF y borra este recuadro.
 >
 > Si no sabes cuánto escribir en una sección, mira `EJEMPLOS-DE-RESPUESTA.md`.
+>
+> Los nombres de archivo de evidencia que aparecen citados son los que propone la `GUIA-DE-EVIDENCIAS.md`. Si guardaste tus archivos con otro nombre, corrígelos aquí para que coincidan.
 
 ---
 ---
@@ -65,6 +67,8 @@
 | Factor de replicación | [ ] | [por qué] |
 
 ## 2.4 Tópicos definidos
+
+*Los nombres los eliges tú. Son los mismos que vas a crear y a describir en el hito 3, así que anótalos aquí primero y después no los cambies.*
 
 | Tópico | Particiones | Réplicas | Política de retención | Para qué sirve |
 |---|---|---|---|---|
@@ -125,6 +129,8 @@
 [Explica por qué cada tópico tiene la configuración que tiene. Aquí lo que se evalúa es que las decisiones respondan a necesidades distintas, no que todos estén configurados igual.]
 
 **Evidencias:** `evidencias/hito-3/topico-*.txt`
+
+*Los mismos tres tópicos de la tabla 2.4, con los nombres que tú les pusiste.*
 
 | Tópico | Configuración distintiva | Por qué |
 |---|---|---|

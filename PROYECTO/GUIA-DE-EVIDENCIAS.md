@@ -13,6 +13,22 @@ Una evidencia sirve cuando **muestra un antes y un después**, o cuando **muestr
 Una captura del clúster corriendo no prueba casi nada: cualquiera levanta un `docker compose up`. Una captura del quórum eligiendo un líder nuevo después de matar al anterior **sí prueba** que construiste algo resiliente.
 
 ---
+
+## Sobre los nombres que ves en los comandos
+
+Los comandos de esta guía están escritos sobre los laboratorios del curso, porque es el clúster que ya tienes armado. Por eso aparecen nombres concretos. **Todos son de ejemplo.**
+
+**Los nombres de tópico son de muestra.** Los tuyos son los que definiste en el hito 1 y anotaste en la tabla 2.4 del expediente. Si copias los del ejemplo, tu expediente va a hablar de unos tópicos y tus evidencias van a mostrar otros. Eso se nota de inmediato.
+
+**Los `cd` apuntan a la carpeta de un laboratorio.** Si desplegaste tu propio clúster en otra carpeta, párate ahí. Y ajusta lo que va después del `>`, porque esa ruta es relativa a donde estés parado.
+
+**Los nombres de archivo de evidencia son una sugerencia.** Puedes usar otros. Lo obligatorio es que el nombre diga qué es y que el expediente lo cite igual.
+
+Cuando veas algo `<entre-ángulos>`, es un valor que pones tú.
+
+Una última cosa sobre los scripts de los laboratorios. Cuando los corres en la terminal te explican el comando de Kafka que hay detrás y cómo se lee la salida. Cuando los corres con `>` para guardar la evidencia, esa explicación no aparece y solo queda lo que devolvió Kafka. **Si quieres entender lo que estás guardando, córrelo primero sin el `>`.**
+
+---
 ---
 
 # Hito 1 · Diseño de la arquitectura · 4 puntos
@@ -51,9 +67,20 @@ La palabra que importa es *demostración*. No basta con decir que tolera: hay qu
 
 ### Evidencia 1 · El clúster formado y con quórum
 
+Ejemplo sobre el laboratorio 02, que ya trae el script armado.
+
 ```bash
 cd Capitulo_2/lab-02-validacion-quorum-resiliencia
 bin/check-quorum.sh > ../../PROYECTO/entrega/evidencias/hito-2/quorum-inicial.txt
+```
+
+Si desplegaste tu propio clúster, esos dos comandos hacen lo mismo desde cualquier carpeta. Son los que el script corre por dentro.
+
+```bash
+docker exec <tu-broker> kafka-metadata-quorum \
+    --bootstrap-server <tu-broker>:<tu-puerto> describe --status
+docker exec <tu-broker> kafka-metadata-quorum \
+    --bootstrap-server <tu-broker>:<tu-puerto> describe --replication
 ```
 
 **Qué demuestra:** que los tres nodos se reconocen entre sí, que hay un líder electo y que los tres están al día.
@@ -62,28 +89,34 @@ bin/check-quorum.sh > ../../PROYECTO/entrega/evidencias/hito-2/quorum-inicial.tx
 
 ### Evidencia 2 · El estado antes de la caída
 
+Elige uno de **tus** tópicos, el que más te importe conservar.
+
 ```bash
-docker exec kafka-broker-1 kafka-topics \
-    --bootstrap-server kafka-broker-1:29092 \
-    --describe --topic novatech.pedidos > ../../PROYECTO/entrega/evidencias/hito-2/topico-antes.txt
+docker exec <tu-broker> kafka-topics \
+    --bootstrap-server <tu-broker>:<tu-puerto> \
+    --describe --topic <tu-topico> > <ruta-a-tu-entrega>/evidencias/hito-2/topico-antes.txt
 ```
+
+En los laboratorios del curso el broker se llama `kafka-broker-1` y escucha en el puerto `29092`. En tu propio despliegue son los que hayas configurado tú.
 
 **Qué demuestra:** que el tópico tiene sus réplicas completas. Fíjate en la columna `Isr`.
 
 ### Evidencia 3 · La caída
 
 ```bash
-docker stop kafka-broker-1
+docker stop <el-broker-que-elegiste>
 ```
 
 Guarda también qué apagaste y por qué elegiste ese nodo.
 
 ### Evidencia 4 · El quórum después de la caída
 
+Ojo con el broker que consultas. Tiene que ser uno que siga en pie, no el que acabas de detener.
+
 ```bash
-docker exec kafka-broker-2 kafka-metadata-quorum \
-    --bootstrap-server kafka-broker-2:29093 \
-    describe --status > ../../PROYECTO/entrega/evidencias/hito-2/quorum-tras-caida.txt
+docker exec <otro-broker-vivo> kafka-metadata-quorum \
+    --bootstrap-server <otro-broker-vivo>:<su-puerto> \
+    describe --status > <ruta-a-tu-entrega>/evidencias/hito-2/quorum-tras-caida.txt
 ```
 
 **Qué demuestra:** el líder cambió, el `LeaderEpoch` subió, y el clúster sigue operando. **Esta es la evidencia más importante del hito.**
@@ -91,20 +124,22 @@ docker exec kafka-broker-2 kafka-metadata-quorum \
 ### Evidencia 5 · El tópico con el ISR incompleto
 
 ```bash
-docker exec kafka-broker-2 kafka-topics \
-    --bootstrap-server kafka-broker-2:29093 \
-    --describe --topic novatech.pedidos > ../../PROYECTO/entrega/evidencias/hito-2/topico-tras-caida.txt
+docker exec <otro-broker-vivo> kafka-topics \
+    --bootstrap-server <otro-broker-vivo>:<su-puerto> \
+    --describe --topic <tu-topico> > <ruta-a-tu-entrega>/evidencias/hito-2/topico-tras-caida.txt
 ```
+
+Tiene que ser **el mismo tópico** de la evidencia 2. Si comparas tópicos distintos, la comparación no vale.
 
 **Qué demuestra:** `Replicas` sigue con tres números y `Isr` bajó a dos. **Esa diferencia es la prueba de que el sistema sabe que perdió un nodo y sigue funcionando igual.**
 
 ### Evidencia 6 · La recuperación
 
 ```bash
-docker start kafka-broker-1
+docker start <el-broker-que-detuviste>
 ```
 
-Espera veinte segundos y vuelve a correr el `check-quorum.sh`, guardándolo como `quorum-recuperado.txt`.
+Espera veinte segundos y vuelve a correr el comando de la evidencia 1, guardando la salida como `quorum-recuperado.txt`.
 
 **Qué demuestra:** el nodo se reincorporó solo y volvió a estar al día.
 
@@ -123,16 +158,58 @@ Son cuatro cosas distintas y cada una necesita su evidencia.
 
 ### Evidencia 1 · Los tópicos con sus políticas
 
+Aquí van **tus tres tópicos**, los que definiste en el hito 1 y anotaste en la tabla 2.4 del expediente. No los del laboratorio 05.
+
+#### Primero, cómo se le pone la política a un tópico
+
+La política no se configura aparte. Va en el flag `--config` al crear el tópico, y el flag se puede repetir tantas veces como configuraciones quieras fijar.
+
 ```bash
-cd Capitulo_3/lab-05-operacion-topicos
-kafka-cli/describe-topic.sh novatech.gps.realtime > ../../PROYECTO/entrega/evidencias/hito-3/topico-retencion-corta.txt
-kafka-cli/describe-topic.sh novatech.audit.events > ../../PROYECTO/entrega/evidencias/hito-3/topico-retencion-infinita.txt
-kafka-cli/describe-topic.sh novatech.vehicle.state > ../../PROYECTO/entrega/evidencias/hito-3/topico-compactado.txt
+docker exec <tu-broker> kafka-topics \
+    --bootstrap-server <tu-broker>:<tu-puerto> --create \
+    --topic <tu-topico> --partitions 6 --replication-factor 3 \
+    --config retention.ms=3600000
 ```
 
-**Qué demuestra:** que configuraste tópicos distintos para necesidades distintas. **Fíjate en la línea `Configs` de cada uno: ahí está la diferencia.**
+Estas son las tres políticas que pide el proyecto.
+
+| Lo que necesitas | El flag |
+|---|---|
+| Retención corta | `--config retention.ms=3600000` (una hora) |
+| Retención infinita | `--config retention.ms=-1` (no se borra nunca) |
+| Compactado | `--config cleanup.policy=compact` (solo el último valor por clave) |
+
+**Ojo con el `-1`.** Significa «para siempre», no «cero». Un dedo de más en ese signo convierte un tópico efímero en uno que nunca se limpia.
+
+**Si ya creaste el tópico sin el flag, no hace falta borrarlo.** La configuración se cambia en caliente, sin reiniciar nada y sin tocar los mensajes que ya tiene.
+
+```bash
+docker exec <tu-broker> kafka-configs \
+    --bootstrap-server <tu-broker>:<tu-puerto> --alter \
+    --entity-type topics --entity-name <tu-topico> \
+    --add-config retention.ms=3600000
+```
+
+#### Después, la evidencia
+
+Un `describe` por tópico, uno por política.
+
+```bash
+docker exec <tu-broker> kafka-topics --bootstrap-server <tu-broker>:<tu-puerto> \
+    --describe --topic <tu-topico-de-retencion-corta> > <ruta-a-tu-entrega>/evidencias/hito-3/topico-retencion-corta.txt
+docker exec <tu-broker> kafka-topics --bootstrap-server <tu-broker>:<tu-puerto> \
+    --describe --topic <tu-topico-de-retencion-infinita> > <ruta-a-tu-entrega>/evidencias/hito-3/topico-retencion-infinita.txt
+docker exec <tu-broker> kafka-topics --bootstrap-server <tu-broker>:<tu-puerto> \
+    --describe --topic <tu-topico-compactado> > <ruta-a-tu-entrega>/evidencias/hito-3/topico-compactado.txt
+```
+
+**Si estás trabajando dentro del laboratorio 05**, tienes envoltorios que hacen lo mismo y además te explican la salida. `kafka-cli/create-topic.sh <topico> --config K=V` para crear, `kafka-cli/alter-topic-config.sh <topico> --add K=V` para cambiar en caliente, y `kafka-cli/describe-topic.sh <topico>` para la evidencia. Existen solo dentro de la carpeta del lab.
+
+**Qué demuestra:** que configuraste tópicos distintos para necesidades distintas. **Fíjate en la línea `Configs` de cada uno**, que ahí está la diferencia.
 
 ### Evidencia 2 · La conectividad resuelta
+
+Ejemplo sobre el laboratorio 04. Con tu propio despliegue, cambia el nombre del contenedor y la ruta de salida.
 
 ```bash
 cd Capitulo_3/lab-04-multibroker-advertised-listeners
@@ -145,12 +222,12 @@ docker exec kafka-broker-1 bash -c 'grep listeners /etc/kafka/kafka.properties' 
 
 ### Evidencia 3 · La retención funcionando
 
-Del laboratorio 05, el tópico efímero:
+Sirve cualquier tópico con retención corta. Puede ser el tuyo o el efímero del laboratorio 05, que se llama `novatech.lab05.efimero`.
 
 ```bash
-docker exec kafka-broker-1 kafka-get-offsets \
-    --bootstrap-server kafka-broker-1:29092 \
-    --topic novatech.lab05.efimero
+docker exec <tu-broker> kafka-get-offsets \
+    --bootstrap-server <tu-broker>:<tu-puerto> \
+    --topic <tu-topico-de-retencion-corta>
 ```
 
 **Corre esto dos veces**, con dos minutos de diferencia, y guarda las dos salidas como `retencion-antes.txt` y `retencion-despues.txt`.
@@ -158,6 +235,8 @@ docker exec kafka-broker-1 kafka-get-offsets \
 **Qué demuestra:** que la política de retención no es teoría — Kafka borró mensajes solo, porque tú se lo dijiste.
 
 ### Evidencia 4 · El ajuste de rendimiento
+
+El laboratorio 07 trae las herramientas de medición listas. También puedes medir contra tu propio clúster.
 
 ```bash
 cd Capitulo_3/lab-07-pruebas-rendimiento
@@ -180,12 +259,16 @@ Entregar una sola medición. **Rendimiento sin comparación no es evidencia**: u
 
 > **Se evalúa:** cifrado, autenticación y autorización aplicados, esquema de alta disponibilidad y plan de recuperación.
 
+Las evidencias de este hito están escritas sobre el laboratorio 14, que trae los scripts hechos. Si montaste tu propio clúster con seguridad, cambia las rutas y los nombres por los tuyos.
+
 ### Evidencia 1 · El material criptográfico existe
 
 ```bash
 cd Capitulo_5/lab-14-capstone-resiliencia-seguridad
 ls -la infra/certs/ > ../../PROYECTO/entrega/evidencias/hito-4/pki-generada.txt
 ```
+
+Con tu propio despliegue, es un `ls -la` sobre la carpeta donde guardaste los certificados.
 
 **Qué demuestra:** que la infraestructura de certificados está creada. **No entregues el contenido de las llaves privadas**, solo el listado.
 
@@ -202,6 +285,8 @@ kafka-cli/describe-confidencial.sh > ../../PROYECTO/entrega/evidencias/hito-4/co
 ```bash
 kafka-cli/list-acls.sh > ../../PROYECTO/entrega/evidencias/hito-4/acls.txt
 ```
+
+Con tu propio despliegue, el comando por dentro es `kafka-acls --bootstrap-server <tu-broker>:<tu-puerto> --list --command-config <tu-properties-de-admin>`.
 
 **Qué demuestra:** que definiste quién puede hacer qué. **Esta es la evidencia central del hito.**
 
@@ -221,8 +306,8 @@ kafka-cli/consume-confidencial-app2.sh > ../../PROYECTO/entrega/evidencias/hito-
 ### Evidencia 5 · La alta disponibilidad configurada
 
 ```bash
-docker exec kafka-broker-1 kafka-topics \
-    --bootstrap-server kafka-broker-1:29092 \
+docker exec <tu-broker> kafka-topics \
+    --bootstrap-server <tu-broker>:<tu-puerto> \
     --describe --topic <tu-topico-critico>
 ```
 

@@ -68,13 +68,15 @@ En cada carpeta de `entrega/configuracion/` hay un `LEEME.md` con un espacio par
 
 ## Cómo nombrar las evidencias
 
-Un nombre que diga qué es y de dónde salió:
+La `GUIA-DE-EVIDENCIAS.md` propone un nombre para cada archivo y la plantilla del expediente los cita con ese mismo nombre. **Si sigues esos nombres, no tienes que decidir nada.**
+
+Los nombres son una sugerencia, no un formato obligatorio. Si prefieres otros, cámbialos también en el expediente para que sigan coincidiendo. Sirve cualquier nombre que diga qué es y de dónde salió.
 
 ```
-hito-2-quorum-antes-de-la-caida.txt
-hito-2-quorum-despues-de-la-caida.txt
-hito-3-describe-topico-gps.txt
-hito-4-acls-cargadas.png
+quorum-inicial.txt
+quorum-tras-caida.txt
+topico-retencion-corta.txt
+acls.txt
 ```
 
 **Nada de `captura1.png` ni `imagen final.jpg`.** Quien evalúa tiene que poder abrir el ZIP y entender qué es cada archivo sin abrirlo.
@@ -88,7 +90,7 @@ Dos formas, las dos válidas:
 **Copiar y pegar en un archivo de texto** — sirve para salidas cortas y es lo más limpio:
 
 ```bash
-bin/check-quorum.sh > evidencia.txt
+<tu-comando> > evidencia.txt
 ```
 
 **Captura de pantalla** — sirve cuando el color o el formato importan, o cuando la salida está en una interfaz web.
